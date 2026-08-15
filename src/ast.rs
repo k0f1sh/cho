@@ -20,6 +20,9 @@ pub enum Predicate {
         target: Value,
         pattern: String,
     },
+    Not(Box<Predicate>),
+    And(Vec<Predicate>),
+    Or(Vec<Predicate>),
 }
 
 #[derive(Debug, PartialEq)]

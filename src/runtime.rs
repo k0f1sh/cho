@@ -11,6 +11,21 @@ struct Record<'line, 'separator> {
     field_separator: Option<&'separator Regex>,
 }
 
+enum PreparedPredicate<'a> {
+    Compare {
+        operator: &'a ComparisonOperator,
+        left: &'a Value,
+        right: &'a Value,
+    },
+    Regex {
+        target: &'a Value,
+        regex: Regex,
+    },
+    Not(Box<PreparedPredicate<'a>>),
+    And(Vec<PreparedPredicate<'a>>),
+    Or(Vec<PreparedPredicate<'a>>),
+}
+
 impl Record<'_, '_> {
     fn field(&self, number: usize) -> Option<&str> {
         match self.field_separator {
@@ -43,16 +58,21 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> String {
     }
 }
 
-fn matches(predicate: &Predicate, regex: Option<&Regex>, record: &Record<'_, '_>) -> bool {
+fn matches(predicate: &PreparedPredicate<'_>, record: &Record<'_, '_>) -> bool {
     match predicate {
-        Predicate::Compare {
+        PreparedPredicate::Compare {
             operator,
             left,
             right,
         } => compare(operator, &evaluate(left, record), &evaluate(right, record)),
-        Predicate::Regex { target, .. } => regex
-            .expect("a regex predicate must have a compiled regex")
-            .is_match(&evaluate(target, record)),
+        PreparedPredicate::Regex { target, regex } => regex.is_match(&evaluate(target, record)),
+        PreparedPredicate::Not(predicate) => !matches(predicate, record),
+        PreparedPredicate::And(predicates) => predicates
+            .iter()
+            .all(|predicate| matches(predicate, record)),
+        PreparedPredicate::Or(predicates) => predicates
+            .iter()
+            .any(|predicate| matches(predicate, record)),
     }
 }
 
@@ -83,7 +103,7 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
     let program = parse(program)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid program"))?;
     let field_separator = compile_field_separator(field_separator)?;
-    let regexes = compile_predicate_regexes(&program.expressions)?;
+    let predicates = prepare_predicates(&program.expressions)?;
 
     for (index, line) in input.lines().enumerate() {
         let line = line?;
@@ -92,7 +112,7 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
             number: index + 1,
             field_separator: field_separator.as_ref(),
         };
-        for (expression, regex) in program.expressions.iter().zip(&regexes) {
+        for (expression, predicate) in program.expressions.iter().zip(&predicates) {
             match expression {
                 Expr::Print(values) => {
                     let rendered = values
@@ -102,7 +122,16 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
                         .join(" ");
                     writeln!(output, "{rendered}")?;
                 }
-                Expr::Filter(predicate) if !matches(predicate, regex.as_ref(), &record) => break,
+                Expr::Filter(_)
+                    if !matches(
+                        predicate
+                            .as_ref()
+                            .expect("a filter must have a prepared predicate"),
+                        &record,
+                    ) =>
+                {
+                    break;
+                }
                 Expr::Filter(_) => {}
             }
         }
@@ -127,13 +156,46 @@ fn compile_field_separator(pattern: Option<&str>) -> io::Result<Option<Regex>> {
     Ok(separator)
 }
 
-fn compile_predicate_regexes(expressions: &[Expr]) -> io::Result<Vec<Option<Regex>>> {
+fn prepare_predicates(expressions: &[Expr]) -> io::Result<Vec<Option<PreparedPredicate<'_>>>> {
     expressions
         .iter()
         .map(|expression| match expression {
-            Expr::Filter(Predicate::Regex { pattern, .. }) => Regex::new(pattern).map(Some),
+            Expr::Filter(predicate) => prepare_predicate(predicate).map(Some),
             _ => Ok(None),
         })
-        .collect::<Result<_, _>>()
-        .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))
+        .collect()
+}
+
+fn prepare_predicate(predicate: &Predicate) -> io::Result<PreparedPredicate<'_>> {
+    match predicate {
+        Predicate::Compare {
+            operator,
+            left,
+            right,
+        } => Ok(PreparedPredicate::Compare {
+            operator,
+            left,
+            right,
+        }),
+        Predicate::Regex { target, pattern } => Ok(PreparedPredicate::Regex {
+            target,
+            regex: Regex::new(pattern)
+                .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))?,
+        }),
+        Predicate::Not(predicate) => Ok(PreparedPredicate::Not(Box::new(prepare_predicate(
+            predicate,
+        )?))),
+        Predicate::And(predicates) => Ok(PreparedPredicate::And(
+            predicates
+                .iter()
+                .map(prepare_predicate)
+                .collect::<io::Result<_>>()?,
+        )),
+        Predicate::Or(predicates) => Ok(PreparedPredicate::Or(
+            predicates
+                .iter()
+                .map(prepare_predicate)
+                .collect::<io::Result<_>>()?,
+        )),
+    }
 }
