@@ -38,7 +38,8 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> String {
         Value::FieldCount => record.field_count().to_string(),
         Value::String(value) => value.clone(),
         Value::Number(number) => number.to_string(),
-        Value::Format(values) => values.iter().map(|value| evaluate(value, record)).collect(),
+        Value::Concat(values) => values.iter().map(|value| evaluate(value, record)).collect(),
+        Value::Count(value) => evaluate(value, record).chars().count().to_string(),
     }
 }
 

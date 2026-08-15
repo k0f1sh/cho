@@ -46,12 +46,27 @@ Alice score: 20
 Bob score: 30
 ```
 
-Join values without separators using `fmt`:
+Join values without separators using `str`:
 
 ```console
-$ printf 'Alice 20\nBob 30\n' | cho '(print (fmt $1 ":" $2))'
+$ printf 'Alice 20\nBob 30\n' | cho '(print (str $1 ":" $2))'
 Alice:20
 Bob:30
+```
+
+Count Unicode characters:
+
+```console
+$ printf 'Alice\n東京\n' | cho '(print $1 (count $1))'
+Alice 5
+東京 2
+```
+
+`count` can also be used in a filter:
+
+```lisp
+(filter (> (count $1) 3))
+(print $1)
 ```
 
 Run multiple expressions for every input line:

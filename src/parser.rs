@@ -129,9 +129,19 @@ impl Parser {
                 Ok(Value::Field(number))
             }
             Some(Token::String(value)) => Ok(Value::String(value)),
-            Some(Token::LeftParen) if self.next() == Some(Token::Atom("fmt".into())) => {
-                Ok(Value::Format(self.parse_values_until_right_paren()?))
-            }
+            Some(Token::LeftParen) => match self.next() {
+                Some(Token::Atom(operator)) if operator == "str" => {
+                    Ok(Value::Concat(self.parse_values_until_right_paren()?))
+                }
+                Some(Token::Atom(operator)) if operator == "count" => {
+                    let value = self.parse_value()?;
+                    if self.next() != Some(Token::RightParen) {
+                        return Err(ParseError::InvalidSyntax);
+                    }
+                    Ok(Value::Count(Box::new(value)))
+                }
+                _ => Err(ParseError::InvalidSyntax),
+            },
             _ => Err(ParseError::InvalidSyntax),
         }
     }
@@ -148,15 +158,15 @@ mod tests {
     #[test]
     fn parses_a_complete_program() {
         assert_eq!(
-            parse(r#"(filter (> $2 20)) (print (fmt NR ":" $1))"#),
+            parse(r#"(filter (> (count $1) 3)) (print (str NR ":" $1))"#),
             Ok(Program {
                 expressions: vec![
                     Expr::Filter(Predicate::Compare {
                         operator: ComparisonOperator::GreaterThan,
-                        left: Value::Field(2),
-                        right: Value::Number(20.0),
+                        left: Value::Count(Box::new(Value::Field(1))),
+                        right: Value::Number(3.0),
                     }),
-                    Expr::Print(vec![Value::Format(vec![
+                    Expr::Print(vec![Value::Concat(vec![
                         Value::RecordNumber,
                         Value::String(":".into()),
                         Value::Field(1),
@@ -178,6 +188,12 @@ mod tests {
         assert_eq!(parse("print $1"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(filter (> $1))"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(filter (reg $1))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(print (fmt $1))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(print (count))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(
+            parse("(print (count $1 $2))"),
+            Err(ParseError::InvalidSyntax)
+        );
         assert_eq!(
             parse("(print \"unfinished)"),
             Err(ParseError::UnterminatedString)
