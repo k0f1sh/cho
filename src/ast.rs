@@ -39,5 +39,6 @@ pub enum Value {
     FieldCount,
     String(String),
     Number(f64),
-    Format(Vec<Value>),
+    Concat(Vec<Value>),
+    Count(Box<Value>),
 }

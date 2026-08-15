@@ -14,13 +14,32 @@ fn output_with_separator(program: &str, separator: &str, input: &str) -> String 
 }
 
 #[test]
-fn prints_fields_strings_and_formats() {
+fn prints_fields_strings_and_concatenated_values() {
     assert_eq!(
         output(
-            r#"(print $1 "score:" $2) (print (fmt $1 ":" $2))"#,
+            r#"(print $1 "score:" $2) (print (str $1 ":" $2))"#,
             "Alice 20\nBob 30\n"
         ),
         "Alice score: 20\nAlice:20\nBob score: 30\nBob:30\n"
+    );
+}
+
+#[test]
+fn count_counts_unicode_characters() {
+    assert_eq!(
+        output("(print (count $1))", "Alice\n東京\n🦀\n"),
+        "5\n2\n1\n"
+    );
+}
+
+#[test]
+fn count_can_be_used_in_filters() {
+    assert_eq!(
+        output(
+            "(filter (> (count $1) 3)) (print $1)",
+            "Al\nAlice\n東京\nCarol\n"
+        ),
+        "Alice\nCarol\n"
     );
 }
 
