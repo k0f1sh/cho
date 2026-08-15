@@ -8,6 +8,11 @@ pub enum ParseError {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct Program {
+    pub expressions: Vec<Expr>,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Expr {
     Print(Vec<Value>),
 }
@@ -99,7 +104,16 @@ impl Parser {
         token
     }
 
-    fn parse_program(&mut self) -> Result<Expr, ParseError> {
+    fn parse_program(&mut self) -> Result<Program, ParseError> {
+        let mut expressions = Vec::new();
+        while self.position < self.tokens.len() {
+            expressions.push(self.parse_expression()?);
+        }
+
+        Ok(Program { expressions })
+    }
+
+    fn parse_expression(&mut self) -> Result<Expr, ParseError> {
         if self.next() != Some(Token::LeftParen)
             || self.next() != Some(Token::Atom("print".to_owned()))
         {
@@ -107,10 +121,6 @@ impl Parser {
         }
 
         let values = self.parse_values_until_right_paren()?;
-        if self.next().is_some() {
-            return Err(ParseError::InvalidSyntax);
-        }
-
         Ok(Expr::Print(values))
     }
 
@@ -150,7 +160,7 @@ impl Parser {
     }
 }
 
-pub fn parse(program: &str) -> Result<Expr, ParseError> {
+pub fn parse(program: &str) -> Result<Program, ParseError> {
     Parser::new(tokenize(program)?).parse_program()
 }
 
@@ -168,22 +178,24 @@ fn evaluate(value: &Value, line: &str) -> String {
 }
 
 pub fn run<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::Result<()> {
-    let expression = parse(program).map_err(|_| {
+    let program = parse(program).map_err(|_| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
             "invalid program (expected a print expression)",
         )
     })?;
 
-    let Expr::Print(values) = expression;
     for line in input.lines() {
         let line = line?;
-        let rendered = values
-            .iter()
-            .map(|value| evaluate(value, &line))
-            .collect::<Vec<_>>()
-            .join(" ");
-        writeln!(output, "{rendered}")?;
+        for expression in &program.expressions {
+            let Expr::Print(values) = expression;
+            let rendered = values
+                .iter()
+                .map(|value| evaluate(value, &line))
+                .collect::<Vec<_>>()
+                .join(" ");
+            writeln!(output, "{rendered}")?;
+        }
     }
 
     Ok(())
@@ -204,7 +216,9 @@ mod tests {
     fn parses_print_with_multiple_values() {
         assert_eq!(
             parse("(print $1 $2)"),
-            Ok(Expr::Print(vec![Value::Field(1), Value::Field(2)]))
+            Ok(Program {
+                expressions: vec![Expr::Print(vec![Value::Field(1), Value::Field(2)])]
+            })
         );
     }
 
@@ -212,14 +226,29 @@ mod tests {
     fn parses_strings_and_nested_formats() {
         assert_eq!(
             parse(r#"(print (fmt $1 ":" $2) "points")"#),
-            Ok(Expr::Print(vec![
-                Value::Format(vec![
-                    Value::Field(1),
-                    Value::String(":".to_owned()),
-                    Value::Field(2),
-                ]),
-                Value::String("points".to_owned()),
-            ]))
+            Ok(Program {
+                expressions: vec![Expr::Print(vec![
+                    Value::Format(vec![
+                        Value::Field(1),
+                        Value::String(":".to_owned()),
+                        Value::Field(2),
+                    ]),
+                    Value::String("points".to_owned()),
+                ])]
+            })
+        );
+    }
+
+    #[test]
+    fn parses_multiple_top_level_expressions() {
+        assert_eq!(
+            parse("(print $1) (print $2)"),
+            Ok(Program {
+                expressions: vec![
+                    Expr::Print(vec![Value::Field(1)]),
+                    Expr::Print(vec![Value::Field(2)]),
+                ]
+            })
         );
     }
 
@@ -264,6 +293,14 @@ mod tests {
         assert_eq!(
             output_for(r#"(print (fmt $1 ":" $2))"#, "Alice 20\nBob 30\n"),
             "Alice:20\nBob:30\n"
+        );
+    }
+
+    #[test]
+    fn runs_top_level_expressions_in_order_for_each_line() {
+        assert_eq!(
+            output_for("(print $1) (print $2)", "Alice 20\nBob 30\n"),
+            "Alice\n20\nBob\n30\n"
         );
     }
 
