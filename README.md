@@ -163,6 +163,31 @@ Multiple filters work like an AND condition:
 (print $1)
 ```
 
+Combine filters with `not`, `and`, and `or`:
+
+```lisp
+(filter
+  (not
+    (reg "debug")))
+(print $0)
+```
+
+```lisp
+(filter
+  (or
+    (= $1 "Alice")
+    (= $1 "Bob")))
+(print $0)
+```
+
+```lisp
+(filter
+  (and
+    (> $2 20)
+    (< $2 40)))
+(print $1 $2)
+```
+
 A failed filter skips the remaining expressions for that input line. Expressions before the
 filter have already run.
 

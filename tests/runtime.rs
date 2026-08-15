@@ -87,6 +87,50 @@ fn multiple_filters_form_an_and_condition() {
 }
 
 #[test]
+fn not_inverts_a_predicate() {
+    assert_eq!(
+        output(
+            r#"(filter (not (reg "debug"))) (print $0)"#,
+            "info ready\ndebug details\nerror failed\n"
+        ),
+        "info ready\nerror failed\n"
+    );
+}
+
+#[test]
+fn and_requires_every_predicate_to_match() {
+    assert_eq!(
+        output(
+            "(filter (and (> $2 20) (< $2 40))) (print $1)",
+            "Alice 18\nBob 30\nCarol 45\n"
+        ),
+        "Bob\n"
+    );
+}
+
+#[test]
+fn or_requires_any_predicate_to_match() {
+    assert_eq!(
+        output(
+            r#"(filter (or (= $1 "Alice") (= $1 "Bob"))) (print $1)"#,
+            "Alice 20\nBob 30\nCarol 40\n"
+        ),
+        "Alice\nBob\n"
+    );
+}
+
+#[test]
+fn boolean_predicates_can_be_nested_with_regexes() {
+    assert_eq!(
+        output(
+            r#"(filter (and (not (reg "debug")) (or (reg "error") (>= $2 40)))) (print $0)"#,
+            "info 10\ndebug error 50\nerror 20\ninfo 40\n"
+        ),
+        "error 20\ninfo 40\n"
+    );
+}
+
+#[test]
 fn supports_all_comparison_operators() {
     let input = "low 10\nequal 20\nhigh 30\n";
     assert_eq!(output("(filter (> $2 20)) (print $1)", input), "high\n");
