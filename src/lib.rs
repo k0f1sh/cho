@@ -68,10 +68,6 @@ pub fn parse(program: &str) -> Result<Expr, ParseError> {
         .parse::<usize>()
         .map_err(|_| ParseError::InvalidField)?;
 
-    if number == 0 {
-        return Err(ParseError::InvalidField);
-    }
-
     Ok(Expr::Print(Value::Field(number)))
 }
 
@@ -79,7 +75,7 @@ pub fn run<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::
     let expression = parse(program).map_err(|_| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
-            "invalid program (expected `(print $N)`, where N is 1 or greater)",
+            "invalid program (expected `(print $N)`, where N is 0 or greater)",
         )
     })?;
 
@@ -87,7 +83,11 @@ pub fn run<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::
 
     for line in input.lines() {
         let line = line?;
-        let field = line.split_whitespace().nth(field_number - 1).unwrap_or("");
+        let field = if field_number == 0 {
+            line.as_str()
+        } else {
+            line.split_whitespace().nth(field_number - 1).unwrap_or("")
+        };
         writeln!(output, "{field}")?;
     }
 
@@ -102,6 +102,7 @@ mod tests {
     #[test]
     fn parses_a_print_expression() {
         assert_eq!(parse("(print $2)"), Ok(Expr::Print(Value::Field(2))));
+        assert_eq!(parse("(print $0)"), Ok(Expr::Print(Value::Field(0))));
     }
 
     #[test]
@@ -111,7 +112,6 @@ mod tests {
 
     #[test]
     fn rejects_invalid_programs() {
-        assert_eq!(parse("(print $0)"), Err(ParseError::InvalidField));
         assert_eq!(parse("(print $x)"), Err(ParseError::InvalidField));
         assert_eq!(parse("(print $1 $2)"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("print $1"), Err(ParseError::InvalidSyntax));
@@ -125,6 +125,19 @@ mod tests {
         run("(print $1)", input, &mut output).unwrap();
 
         assert_eq!(String::from_utf8(output).unwrap(), "Alice\nBob\n\n");
+    }
+
+    #[test]
+    fn field_zero_prints_the_whole_line() {
+        let input = Cursor::new("  Alice   20  \nBob\t30\n\n");
+        let mut output = Vec::new();
+
+        run("(print $0)", input, &mut output).unwrap();
+
+        assert_eq!(
+            String::from_utf8(output).unwrap(),
+            "  Alice   20  \nBob\t30\n\n"
+        );
     }
 
     #[test]
