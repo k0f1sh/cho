@@ -116,7 +116,7 @@ Filter the complete line with a regular expression:
 
 ```console
 $ printf 'info: ready\nerror: failed\n' | \
-    cho $'(filter (reg "^error:"))\n(print NR $0)'
+    cho $'(filter (reg /^error:/))\n(print NR $0)'
 2 error: failed
 ```
 
@@ -124,9 +124,21 @@ Or match a specific value:
 
 ```console
 $ printf 'Alice 20\nbob 30\n' | \
-    cho $'(filter (reg $1 "^[A-Z]"))\n(print $1)'
+    cho $'(filter (reg $1 /^[A-Z]/))\n(print $1)'
 Alice
 ```
+
+`~` is a short form of `reg`. Backslashes in `/.../` regular expression literals are
+preserved, so regex escapes need no extra escaping:
+
+```console
+$ printf '123\n12a\n456\n' | cho '(filter (~ $1 /^\d+$/)) (print $1)'
+123
+456
+```
+
+Escape a literal `/` as `\/`. String patterns remain supported, but their backslashes
+must be escaped: `(reg $1 "^\\d+$")`.
 
 Choose a field separator with `-F`. The separator is a regular expression:
 
@@ -168,7 +180,7 @@ Combine filters with `not`, `and`, and `or`:
 ```lisp
 (filter
   (not
-    (reg "debug")))
+    (reg /debug/)))
 (print $0)
 ```
 

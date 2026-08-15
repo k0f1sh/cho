@@ -6,6 +6,7 @@ pub(crate) enum Token {
     RightParen,
     Atom(String),
     String(String),
+    Regex(String),
 }
 
 pub(crate) fn tokenize(program: &str) -> Result<Vec<Token>, ParseError> {
@@ -18,6 +19,7 @@ pub(crate) fn tokenize(program: &str) -> Result<Vec<Token>, ParseError> {
             '(' => tokens.push(Token::LeftParen),
             ')' => tokens.push(Token::RightParen),
             '"' => tokens.push(Token::String(read_string(&mut characters)?)),
+            '/' => tokens.push(Token::Regex(read_regex(&mut characters)?)),
             first => {
                 let mut atom = String::from(first);
                 while let Some(character) = characters.peek() {
@@ -32,6 +34,27 @@ pub(crate) fn tokenize(program: &str) -> Result<Vec<Token>, ParseError> {
     }
 
     Ok(tokens)
+}
+
+fn read_regex<I>(characters: &mut I) -> Result<String, ParseError>
+where
+    I: Iterator<Item = char>,
+{
+    let mut pattern = String::new();
+    while let Some(character) = characters.next() {
+        match character {
+            '/' => return Ok(pattern),
+            '\\' => {
+                let escaped = characters.next().ok_or(ParseError::UnterminatedRegex)?;
+                if escaped != '/' {
+                    pattern.push('\\');
+                }
+                pattern.push(escaped);
+            }
+            other => pattern.push(other),
+        }
+    }
+    Err(ParseError::UnterminatedRegex)
 }
 
 fn read_string<I>(characters: &mut I) -> Result<String, ParseError>
@@ -85,5 +108,18 @@ mod tests {
     #[test]
     fn rejects_an_unterminated_string() {
         assert_eq!(tokenize(r#""oops"#), Err(ParseError::UnterminatedString));
+    }
+
+    #[test]
+    fn tokenizes_regex_literals_without_consuming_regex_escapes() {
+        assert_eq!(
+            tokenize(r#"/^\d+\/path$/"#),
+            Ok(vec![Token::Regex(r#"^\d+/path$"#.into())])
+        );
+    }
+
+    #[test]
+    fn rejects_an_unterminated_regex_literal() {
+        assert_eq!(tokenize(r#"/^oops"#), Err(ParseError::UnterminatedRegex));
     }
 }
