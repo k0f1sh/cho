@@ -20,6 +20,8 @@ pub enum Expr {
 #[derive(Debug, PartialEq)]
 pub enum Value {
     Field(usize),
+    RecordNumber,
+    FieldCount,
     String(String),
     Format(Vec<Value>),
 }
@@ -141,6 +143,13 @@ impl Parser {
     fn parse_value(&mut self) -> Result<Value, ParseError> {
         match self.next() {
             Some(Token::Atom(field)) => {
+                if field == "NR" {
+                    return Ok(Value::RecordNumber);
+                }
+                if field == "NF" {
+                    return Ok(Value::FieldCount);
+                }
+
                 let number = field
                     .strip_prefix('$')
                     .ok_or(ParseError::InvalidSyntax)?
@@ -164,16 +173,24 @@ pub fn parse(program: &str) -> Result<Program, ParseError> {
     Parser::new(tokenize(program)?).parse_program()
 }
 
-fn evaluate(value: &Value, line: &str) -> String {
+struct Record<'a> {
+    line: &'a str,
+    number: usize,
+}
+
+fn evaluate(value: &Value, record: &Record<'_>) -> String {
     match value {
-        Value::Field(0) => line.to_owned(),
-        Value::Field(number) => line
+        Value::Field(0) => record.line.to_owned(),
+        Value::Field(number) => record
+            .line
             .split_whitespace()
             .nth(number - 1)
             .unwrap_or("")
             .to_owned(),
+        Value::RecordNumber => record.number.to_string(),
+        Value::FieldCount => record.line.split_whitespace().count().to_string(),
         Value::String(value) => value.clone(),
-        Value::Format(values) => values.iter().map(|value| evaluate(value, line)).collect(),
+        Value::Format(values) => values.iter().map(|value| evaluate(value, record)).collect(),
     }
 }
 
@@ -185,13 +202,17 @@ pub fn run<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::
         )
     })?;
 
-    for line in input.lines() {
+    for (index, line) in input.lines().enumerate() {
         let line = line?;
+        let record = Record {
+            line: &line,
+            number: index + 1,
+        };
         for expression in &program.expressions {
             let Expr::Print(values) = expression;
             let rendered = values
                 .iter()
-                .map(|value| evaluate(value, &line))
+                .map(|value| evaluate(value, &record))
                 .collect::<Vec<_>>()
                 .join(" ");
             writeln!(output, "{rendered}")?;
@@ -218,6 +239,16 @@ mod tests {
             parse("(print $1 $2)"),
             Ok(Program {
                 expressions: vec![Expr::Print(vec![Value::Field(1), Value::Field(2)])]
+            })
+        );
+    }
+
+    #[test]
+    fn parses_record_number_and_field_count() {
+        assert_eq!(
+            parse("(print NR NF)"),
+            Ok(Program {
+                expressions: vec![Expr::Print(vec![Value::RecordNumber, Value::FieldCount,])]
             })
         );
     }
@@ -315,5 +346,29 @@ mod tests {
     #[test]
     fn a_missing_field_is_an_empty_string() {
         assert_eq!(output_for("(print $3)", "Alice 20\n"), "\n");
+    }
+
+    #[test]
+    fn nr_is_the_one_based_record_number() {
+        assert_eq!(
+            output_for("(print NR $1)", "Alice 20\nBob 30\n"),
+            "1 Alice\n2 Bob\n"
+        );
+    }
+
+    #[test]
+    fn nf_is_the_number_of_fields() {
+        assert_eq!(
+            output_for("(print NF)", "Alice 20\nBob\t30 Osaka\n\n"),
+            "2\n3\n0\n"
+        );
+    }
+
+    #[test]
+    fn nr_and_nf_can_be_used_inside_fmt() {
+        assert_eq!(
+            output_for(r#"(print (fmt NR ":" NF))"#, "Alice 20\nBob\n"),
+            "1:2\n2:1\n"
+        );
     }
 }
