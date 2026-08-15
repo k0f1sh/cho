@@ -7,12 +7,12 @@ fn main() -> ExitCode {
     let command = args.next().unwrap_or_else(|| "lispawk".to_owned());
 
     let Some(program) = args.next() else {
-        eprintln!("usage: {command} '(print $1)'");
+        eprintln!("usage: {command} '(print $N)'");
         return ExitCode::from(2);
     };
 
     if args.next().is_some() {
-        eprintln!("usage: {command} '(print $1)'");
+        eprintln!("usage: {command} '(print $N)'");
         return ExitCode::from(2);
     }
 
