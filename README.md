@@ -55,6 +55,18 @@ $ printf 'Alice 20\nBob 30 Osaka\n' | cargo run --quiet -- '(print NR NF $1)'
 2 3 Bob
 ```
 
+`filter` の条件が偽なら、現在行に対する残りの式をスキップします。現在は数値の
+`>` 比較を利用できます。数値に変換できない値は条件に一致しません。
+
+```console
+$ printf 'Alice 18\nBob 30\nCarol 25\n' | \
+    cargo run --quiet -- $'(filter (> $2 20))\n(print $1 $2)'
+Bob 30
+Carol 25
+```
+
+式は上から実行されるため、`filter` より前に置いた式はすべての行で実行されます。
+
 ## テスト
 
 ```console
