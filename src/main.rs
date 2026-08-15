@@ -3,7 +3,7 @@ use std::io;
 use std::process::ExitCode;
 
 const USAGE: &str = "Usage: cho [-F SEPARATOR] 'PROGRAM'";
-const HELP: &str = "cho — a Lisp-flavored text processing language
+const HELP: &str = "cho — a tiny Lisp-flavored text processing tool
 
 Usage: cho [-F SEPARATOR] 'PROGRAM'
 

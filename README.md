@@ -1,9 +1,10 @@
 # cho
 
-cho is a small, Lisp-flavored text processing language inspired by awk.
+cho is a tiny command-line tool for filtering and formatting text with Lisp-like expressions.
+It is inspired by awk.
 
 > [!WARNING]
-> cho is experimental and its language may change.
+> cho is experimental. Its syntax and behavior may change.
 
 ## Install
 
