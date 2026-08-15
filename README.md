@@ -46,6 +46,15 @@ Bob
 30
 ```
 
+`NR` は現在の行番号（1始まり）、`NF` は現在行のフィールド数です。通常の値と
+同じように `print` や `fmt` の中で使えます。
+
+```console
+$ printf 'Alice 20\nBob 30 Osaka\n' | cargo run --quiet -- '(print NR NF $1)'
+1 2 Alice
+2 3 Bob
+```
+
 ## テスト
 
 ```console
