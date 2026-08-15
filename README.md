@@ -55,8 +55,9 @@ $ printf 'Alice 20\nBob 30 Osaka\n' | cargo run --quiet -- '(print NR NF $1)'
 2 3 Bob
 ```
 
-`filter` の条件が偽なら、現在行に対する残りの式をスキップします。現在は数値の
-`>` 比較を利用できます。数値に変換できない値は条件に一致しません。
+`filter` の条件が偽なら、現在行に対する残りの式をスキップします。
+`>`、`>=`、`<`、`<=` は数値比較で、数値に変換できない値は一致しません。
+`=` と `!=` は両辺が数値なら数値として、それ以外なら文字列として比較します。
 
 ```console
 $ printf 'Alice 18\nBob 30\nCarol 25\n' | \
@@ -66,6 +67,12 @@ Carol 25
 ```
 
 式は上から実行されるため、`filter` より前に置いた式はすべての行で実行されます。
+
+```console
+$ printf 'Alice 20\nBob 30\n' | \
+    cargo run --quiet -- $'(filter (= $1 "Alice"))\n(print $0)'
+Alice 20
+```
 
 ## テスト
 

@@ -20,7 +20,21 @@ pub enum Expr {
 
 #[derive(Debug, PartialEq)]
 pub enum Predicate {
-    GreaterThan(Value, Value),
+    Compare {
+        operator: ComparisonOperator,
+        left: Value,
+        right: Value,
+    },
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ComparisonOperator {
+    GreaterThan,
+    GreaterThanOrEqual,
+    LessThan,
+    LessThanOrEqual,
+    Equal,
+    NotEqual,
 }
 
 #[derive(Debug, PartialEq)]
@@ -143,10 +157,21 @@ impl Parser {
     }
 
     fn parse_predicate(&mut self) -> Result<Predicate, ParseError> {
-        if self.next() != Some(Token::LeftParen) || self.next() != Some(Token::Atom(">".to_owned()))
-        {
+        if self.next() != Some(Token::LeftParen) {
             return Err(ParseError::InvalidSyntax);
         }
+
+        let operator = match self.next() {
+            Some(Token::Atom(operator)) if operator == ">" => ComparisonOperator::GreaterThan,
+            Some(Token::Atom(operator)) if operator == ">=" => {
+                ComparisonOperator::GreaterThanOrEqual
+            }
+            Some(Token::Atom(operator)) if operator == "<" => ComparisonOperator::LessThan,
+            Some(Token::Atom(operator)) if operator == "<=" => ComparisonOperator::LessThanOrEqual,
+            Some(Token::Atom(operator)) if operator == "=" => ComparisonOperator::Equal,
+            Some(Token::Atom(operator)) if operator == "!=" => ComparisonOperator::NotEqual,
+            _ => return Err(ParseError::InvalidSyntax),
+        };
 
         let left = self.parse_value()?;
         let right = self.parse_value()?;
@@ -154,7 +179,11 @@ impl Parser {
             return Err(ParseError::InvalidSyntax);
         }
 
-        Ok(Predicate::GreaterThan(left, right))
+        Ok(Predicate::Compare {
+            operator,
+            left,
+            right,
+        })
     }
 
     fn parse_values_until_right_paren(&mut self) -> Result<Vec<Value>, ParseError> {
@@ -231,14 +260,28 @@ fn evaluate(value: &Value, record: &Record<'_>) -> String {
 
 fn matches(predicate: &Predicate, record: &Record<'_>) -> bool {
     match predicate {
-        Predicate::GreaterThan(left, right) => {
-            let Ok(left) = evaluate(left, record).parse::<f64>() else {
-                return false;
-            };
-            let Ok(right) = evaluate(right, record).parse::<f64>() else {
-                return false;
-            };
-            left > right
+        Predicate::Compare {
+            operator,
+            left,
+            right,
+        } => {
+            let left = evaluate(left, record);
+            let right = evaluate(right, record);
+            let numbers = || Some((left.parse::<f64>().ok()?, right.parse::<f64>().ok()?));
+
+            match operator {
+                ComparisonOperator::GreaterThan => numbers().is_some_and(|(a, b)| a > b),
+                ComparisonOperator::GreaterThanOrEqual => numbers().is_some_and(|(a, b)| a >= b),
+                ComparisonOperator::LessThan => numbers().is_some_and(|(a, b)| a < b),
+                ComparisonOperator::LessThanOrEqual => numbers().is_some_and(|(a, b)| a <= b),
+                ComparisonOperator::Equal | ComparisonOperator::NotEqual => {
+                    let equal = match numbers() {
+                        Some((a, b)) => a == b,
+                        None => left == right,
+                    };
+                    equal == matches!(operator, ComparisonOperator::Equal)
+                }
+            }
         }
     }
 }
@@ -343,7 +386,11 @@ mod tests {
             parse("(filter (> $2 20)) (print $0)"),
             Ok(Program {
                 expressions: vec![
-                    Expr::Filter(Predicate::GreaterThan(Value::Field(2), Value::Number(20.0),)),
+                    Expr::Filter(Predicate::Compare {
+                        operator: ComparisonOperator::GreaterThan,
+                        left: Value::Field(2),
+                        right: Value::Number(20.0),
+                    }),
                     Expr::Print(vec![Value::Field(0)]),
                 ]
             })
@@ -480,6 +527,51 @@ mod tests {
         assert_eq!(
             output_for("(filter (> $2 20)) (print $1)", "Alice unknown\n"),
             ""
+        );
+    }
+
+    #[test]
+    fn supports_all_numeric_comparison_operators() {
+        let input = "low 10\nequal 20\nhigh 30\n";
+
+        assert_eq!(
+            output_for("(filter (>= $2 20)) (print $1)", input),
+            "equal\nhigh\n"
+        );
+        assert_eq!(output_for("(filter (< $2 20)) (print $1)", input), "low\n");
+        assert_eq!(
+            output_for("(filter (<= $2 20)) (print $1)", input),
+            "low\nequal\n"
+        );
+        assert_eq!(
+            output_for("(filter (= $2 20)) (print $1)", input),
+            "equal\n"
+        );
+        assert_eq!(
+            output_for("(filter (!= $2 20)) (print $1)", input),
+            "low\nhigh\n"
+        );
+    }
+
+    #[test]
+    fn equality_falls_back_to_string_comparison() {
+        let input = "Alice 20\nBob 30\n";
+
+        assert_eq!(
+            output_for(r#"(filter (= $1 "Alice")) (print $2)"#, input),
+            "20\n"
+        );
+        assert_eq!(
+            output_for(r#"(filter (!= $1 "Alice")) (print $1)"#, input),
+            "Bob\n"
+        );
+    }
+
+    #[test]
+    fn numeric_equality_compares_numeric_values() {
+        assert_eq!(
+            output_for("(filter (= $1 20)) (print $0)", "020\n20.0\n21\n"),
+            "020\n20.0\n"
         );
     }
 }
