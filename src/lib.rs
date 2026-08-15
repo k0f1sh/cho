@@ -15,6 +15,12 @@ pub struct Program {
 #[derive(Debug, PartialEq)]
 pub enum Expr {
     Print(Vec<Value>),
+    Filter(Predicate),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Predicate {
+    GreaterThan(Value, Value),
 }
 
 #[derive(Debug, PartialEq)]
@@ -23,6 +29,7 @@ pub enum Value {
     RecordNumber,
     FieldCount,
     String(String),
+    Number(f64),
     Format(Vec<Value>),
 }
 
@@ -116,14 +123,38 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Result<Expr, ParseError> {
-        if self.next() != Some(Token::LeftParen)
-            || self.next() != Some(Token::Atom("print".to_owned()))
+        if self.next() != Some(Token::LeftParen) {
+            return Err(ParseError::InvalidSyntax);
+        }
+
+        match self.next() {
+            Some(Token::Atom(operator)) if operator == "print" => {
+                Ok(Expr::Print(self.parse_values_until_right_paren()?))
+            }
+            Some(Token::Atom(operator)) if operator == "filter" => {
+                let predicate = self.parse_predicate()?;
+                if self.next() != Some(Token::RightParen) {
+                    return Err(ParseError::InvalidSyntax);
+                }
+                Ok(Expr::Filter(predicate))
+            }
+            _ => Err(ParseError::InvalidSyntax),
+        }
+    }
+
+    fn parse_predicate(&mut self) -> Result<Predicate, ParseError> {
+        if self.next() != Some(Token::LeftParen) || self.next() != Some(Token::Atom(">".to_owned()))
         {
             return Err(ParseError::InvalidSyntax);
         }
 
-        let values = self.parse_values_until_right_paren()?;
-        Ok(Expr::Print(values))
+        let left = self.parse_value()?;
+        let right = self.parse_value()?;
+        if self.next() != Some(Token::RightParen) {
+            return Err(ParseError::InvalidSyntax);
+        }
+
+        Ok(Predicate::GreaterThan(left, right))
     }
 
     fn parse_values_until_right_paren(&mut self) -> Result<Vec<Value>, ParseError> {
@@ -148,6 +179,9 @@ impl Parser {
                 }
                 if field == "NF" {
                     return Ok(Value::FieldCount);
+                }
+                if let Ok(number) = field.parse::<f64>() {
+                    return Ok(Value::Number(number));
                 }
 
                 let number = field
@@ -190,7 +224,22 @@ fn evaluate(value: &Value, record: &Record<'_>) -> String {
         Value::RecordNumber => record.number.to_string(),
         Value::FieldCount => record.line.split_whitespace().count().to_string(),
         Value::String(value) => value.clone(),
+        Value::Number(number) => number.to_string(),
         Value::Format(values) => values.iter().map(|value| evaluate(value, record)).collect(),
+    }
+}
+
+fn matches(predicate: &Predicate, record: &Record<'_>) -> bool {
+    match predicate {
+        Predicate::GreaterThan(left, right) => {
+            let Ok(left) = evaluate(left, record).parse::<f64>() else {
+                return false;
+            };
+            let Ok(right) = evaluate(right, record).parse::<f64>() else {
+                return false;
+            };
+            left > right
+        }
     }
 }
 
@@ -209,13 +258,18 @@ pub fn run<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::
             number: index + 1,
         };
         for expression in &program.expressions {
-            let Expr::Print(values) = expression;
-            let rendered = values
-                .iter()
-                .map(|value| evaluate(value, &record))
-                .collect::<Vec<_>>()
-                .join(" ");
-            writeln!(output, "{rendered}")?;
+            match expression {
+                Expr::Print(values) => {
+                    let rendered = values
+                        .iter()
+                        .map(|value| evaluate(value, &record))
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    writeln!(output, "{rendered}")?;
+                }
+                Expr::Filter(predicate) if !matches(predicate, &record) => break,
+                Expr::Filter(_) => {}
+            }
         }
     }
 
@@ -284,10 +338,26 @@ mod tests {
     }
 
     #[test]
+    fn parses_a_greater_than_filter() {
+        assert_eq!(
+            parse("(filter (> $2 20)) (print $0)"),
+            Ok(Program {
+                expressions: vec![
+                    Expr::Filter(Predicate::GreaterThan(Value::Field(2), Value::Number(20.0),)),
+                    Expr::Print(vec![Value::Field(0)]),
+                ]
+            })
+        );
+    }
+
+    #[test]
     fn rejects_invalid_programs() {
         assert_eq!(parse("(print $x)"), Err(ParseError::InvalidField));
         assert_eq!(parse("print $1"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(unknown $1)"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(filter $1)"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(filter (> $1))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(filter (> $1 2 3))"), Err(ParseError::InvalidSyntax));
         assert_eq!(
             parse("(print (unknown $1))"),
             Err(ParseError::InvalidSyntax)
@@ -369,6 +439,47 @@ mod tests {
         assert_eq!(
             output_for(r#"(print (fmt NR ":" NF))"#, "Alice 20\nBob\n"),
             "1:2\n2:1\n"
+        );
+    }
+
+    #[test]
+    fn filter_skips_the_rest_of_a_non_matching_record() {
+        assert_eq!(
+            output_for(
+                "(filter (> $2 20)) (print $1 $2)",
+                "Alice 18\nBob 30\nCarol 25\n"
+            ),
+            "Bob 30\nCarol 25\n"
+        );
+    }
+
+    #[test]
+    fn expressions_before_a_filter_are_still_run() {
+        assert_eq!(
+            output_for(
+                r#"(print "checking:" $1) (filter (> $2 20)) (print "passed:" $1)"#,
+                "Alice 18\nBob 30\n"
+            ),
+            "checking: Alice\nchecking: Bob\npassed: Bob\n"
+        );
+    }
+
+    #[test]
+    fn multiple_filters_work_as_an_and_condition() {
+        assert_eq!(
+            output_for(
+                "(filter (> $2 20)) (filter (> 40 $2)) (print $1)",
+                "Alice 18\nBob 30\nCarol 45\n"
+            ),
+            "Bob\n"
+        );
+    }
+
+    #[test]
+    fn a_non_numeric_value_does_not_match() {
+        assert_eq!(
+            output_for("(filter (> $2 20)) (print $1)", "Alice unknown\n"),
+            ""
         );
     }
 }
