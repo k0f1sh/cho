@@ -2,7 +2,7 @@
 name = "cho"
 version = "0.1.0"
 edition = "2024"
-description = "A small, Lisp-flavored text processing language inspired by awk"
+description = "A tiny command-line tool for filtering and formatting text with Lisp-like expressions"
 license = "MIT"
 repository = "https://github.com/k0f1sh/cho"
 
