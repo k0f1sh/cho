@@ -265,29 +265,45 @@ pub fn parse(program: &str) -> Result<Program, ParseError> {
     Parser::new(tokenize(program)?).parse_program()
 }
 
-struct Record<'a> {
-    line: &'a str,
+struct Record<'line, 'separator> {
+    line: &'line str,
     number: usize,
+    field_separator: Option<&'separator Regex>,
 }
 
-fn evaluate(value: &Value, record: &Record<'_>) -> String {
+impl Record<'_, '_> {
+    fn field(&self, number: usize) -> Option<&str> {
+        match self.field_separator {
+            Some(separator) => separator.split(self.line).nth(number - 1),
+            None => self.line.split_whitespace().nth(number - 1),
+        }
+    }
+
+    fn field_count(&self) -> usize {
+        if self.line.is_empty() {
+            return 0;
+        }
+
+        match self.field_separator {
+            Some(separator) => separator.split(self.line).count(),
+            None => self.line.split_whitespace().count(),
+        }
+    }
+}
+
+fn evaluate(value: &Value, record: &Record<'_, '_>) -> String {
     match value {
         Value::Field(0) => record.line.to_owned(),
-        Value::Field(number) => record
-            .line
-            .split_whitespace()
-            .nth(number - 1)
-            .unwrap_or("")
-            .to_owned(),
+        Value::Field(number) => record.field(*number).unwrap_or("").to_owned(),
         Value::RecordNumber => record.number.to_string(),
-        Value::FieldCount => record.line.split_whitespace().count().to_string(),
+        Value::FieldCount => record.field_count().to_string(),
         Value::String(value) => value.clone(),
         Value::Number(number) => number.to_string(),
         Value::Format(values) => values.iter().map(|value| evaluate(value, record)).collect(),
     }
 }
 
-fn matches(predicate: &Predicate, regex: Option<&Regex>, record: &Record<'_>) -> bool {
+fn matches(predicate: &Predicate, regex: Option<&Regex>, record: &Record<'_, '_>) -> bool {
     match predicate {
         Predicate::Compare {
             operator,
@@ -319,12 +335,30 @@ fn matches(predicate: &Predicate, regex: Option<&Regex>, record: &Record<'_>) ->
 }
 
 pub fn run<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::Result<()> {
-    let program = parse(program).map_err(|_| {
-        io::Error::new(
+    run_with_field_separator(program, None, input, &mut output)
+}
+
+pub fn run_with_field_separator<R: BufRead, W: Write>(
+    program: &str,
+    field_separator: Option<&str>,
+    input: R,
+    mut output: W,
+) -> io::Result<()> {
+    let program = parse(program)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid program"))?;
+    let field_separator = field_separator
+        .map(Regex::new)
+        .transpose()
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))?;
+    if field_separator
+        .as_ref()
+        .is_some_and(|separator| separator.is_match(""))
+    {
+        return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            "invalid program (expected a print expression)",
-        )
-    })?;
+            "field separator must not match an empty string",
+        ));
+    }
     let compiled_regexes = program
         .expressions
         .iter()
@@ -340,6 +374,7 @@ pub fn run<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::
         let record = Record {
             line: &line,
             number: index + 1,
+            field_separator: field_separator.as_ref(),
         };
         for (expression, regex) in program.expressions.iter().zip(&compiled_regexes) {
             match expression {
@@ -368,6 +403,13 @@ mod tests {
     fn output_for(program: &str, input: &str) -> String {
         let mut output = Vec::new();
         run(program, Cursor::new(input), &mut output).unwrap();
+        String::from_utf8(output).unwrap()
+    }
+
+    fn output_with_separator(program: &str, separator: &str, input: &str) -> String {
+        let mut output = Vec::new();
+        run_with_field_separator(program, Some(separator), Cursor::new(input), &mut output)
+            .unwrap();
         String::from_utf8(output).unwrap()
     }
 
@@ -674,6 +716,44 @@ mod tests {
             Vec::new(),
         )
         .unwrap_err();
+
+        assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+    }
+
+    #[test]
+    fn a_custom_field_separator_controls_fields_and_nf() {
+        assert_eq!(
+            output_with_separator("(print NF $1 $3)", ",", "Alice,20,Tokyo\nBob,30,Osaka\n"),
+            "3 Alice Tokyo\n3 Bob Osaka\n"
+        );
+    }
+
+    #[test]
+    fn a_field_separator_can_be_a_regular_expression() {
+        assert_eq!(
+            output_with_separator("(print $1 $3)", "[,;]", "Alice,20;Tokyo\n"),
+            "Alice Tokyo\n"
+        );
+    }
+
+    #[test]
+    fn a_custom_separator_preserves_empty_fields() {
+        assert_eq!(
+            output_with_separator("(print NF $1 $2 $3)", ",", ",Alice,\n"),
+            "3  Alice \n"
+        );
+    }
+
+    #[test]
+    fn an_empty_line_has_no_fields_with_a_custom_separator() {
+        assert_eq!(output_with_separator("(print NF)", ",", "\n"), "0\n");
+    }
+
+    #[test]
+    fn a_separator_that_matches_an_empty_string_is_rejected() {
+        let error =
+            run_with_field_separator("(print $1)", Some(".*"), Cursor::new("Alice\n"), Vec::new())
+                .unwrap_err();
 
         assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
     }

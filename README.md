@@ -101,6 +101,33 @@ $ printf 'Alice 20\nbob 30\n' | \
 Alice
 ```
 
+Choose a field separator with `-F`. The separator is a regular expression:
+
+```console
+$ printf 'Alice,20,Tokyo\nBob,30,Osaka\n' | \
+    cargo run --quiet -- -F, '(print $1 $3)'
+Alice Tokyo
+Bob Osaka
+```
+
+`NF` uses the selected separator, while `$0` remains the complete input line:
+
+```console
+$ printf 'Alice,20,Tokyo\nBob,30\n' | \
+    cargo run --quiet -- -F ',' '(print NF $1 $0)'
+3 Alice Alice,20,Tokyo
+2 Bob Bob,30
+```
+
+Regular expression separators are supported:
+
+```console
+$ printf 'Alice,20;Tokyo\nBob;30,Osaka\n' | \
+    cargo run --quiet -- -F '[,;]' '(print $1 $3)'
+Alice Tokyo
+Bob Osaka
+```
+
 Multiple filters work like an AND condition:
 
 ```lisp
