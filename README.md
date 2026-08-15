@@ -1,6 +1,6 @@
-# lispawk
+# cho
 
-Lisp風の構文で動く、超小型のAWK試作です。
+AWKに着想を得た、Lisp風のテキスト処理言語です。
 
 ```console
 $ printf 'Alice 20\nBob 30\n' | cargo run --quiet -- '(print $2)'
@@ -96,3 +96,11 @@ $ printf 'info: ready\nerror: failed\n' | \
 ```console
 $ cargo test
 ```
+
+<details>
+<summary>The name</summary>
+
+cho is a Lisp-flavored text processing language inspired by awk.
+awk sounds like 「億」 in Japanese, so cho comes next: 「兆」.
+
+</details>

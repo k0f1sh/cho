@@ -4,7 +4,7 @@ use std::process::ExitCode;
 
 fn main() -> ExitCode {
     let mut args = env::args();
-    let command = args.next().unwrap_or_else(|| "lispawk".to_owned());
+    let command = args.next().unwrap_or_else(|| "cho".to_owned());
 
     let Some(program) = args.next() else {
         eprintln!("usage: {command} '(print $N)'");
@@ -19,10 +19,10 @@ fn main() -> ExitCode {
     let stdin = io::stdin();
     let stdout = io::stdout();
 
-    match lispawk::run(&program, stdin.lock(), stdout.lock()) {
+    match cho::run(&program, stdin.lock(), stdout.lock()) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
-            eprintln!("lispawk: {error}");
+            eprintln!("cho: {error}");
             ExitCode::FAILURE
         }
     }

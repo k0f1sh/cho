@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lispawk"
+name = "cho"
 version = "0.1.0"
 dependencies = [
  "regex",
