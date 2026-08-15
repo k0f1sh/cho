@@ -148,5 +148,4 @@ $ cargo clippy --all-targets -- -D warnings
 
 ## The name
 
-cho is a Lisp-flavored text processing language inspired by awk.
 awk sounds like 「億」 in Japanese, so cho comes next: 「兆」.
