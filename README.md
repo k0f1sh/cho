@@ -1,6 +1,16 @@
 # cho
 
-AWKに着想を得た、Lisp風のテキスト処理言語です。
+cho is a small, Lisp-flavored text processing language inspired by awk.
+
+```console
+$ printf 'Alice 20\nBob 30\n' | cargo run --quiet -- '(print $1)'
+Alice
+Bob
+```
+
+## Examples
+
+Print a field:
 
 ```console
 $ printf 'Alice 20\nBob 30\n' | cargo run --quiet -- '(print $2)'
@@ -8,9 +18,7 @@ $ printf 'Alice 20\nBob 30\n' | cargo run --quiet -- '(print $2)'
 30
 ```
 
-`$0` は行全体をそのまま表示します。`$1` 以上では、空白（スペースやタブ）で
-各行をフィールドに分割してN番目を表示します。指定したフィールドが存在しない
-行では、空行を出力します。
+`$0` is the complete input line:
 
 ```console
 $ printf 'Alice 20\nBob 30\n' | cargo run --quiet -- '(print $0)'
@@ -18,8 +26,7 @@ Alice 20
 Bob 30
 ```
 
-`print` に複数の値を渡すと、スペースで区切って表示します。文字列も値として
-利用できます。
+Print several values separated by spaces:
 
 ```console
 $ printf 'Alice 20\nBob 30\n' | cargo run --quiet -- '(print $1 "score:" $2)'
@@ -27,8 +34,7 @@ Alice score: 20
 Bob score: 30
 ```
 
-`fmt` は値を区切りなしで結合します。`fmt` 自体は出力せず、結合した文字列を
-外側の式へ返します。
+Join values without separators using `fmt`:
 
 ```console
 $ printf 'Alice 20\nBob 30\n' | cargo run --quiet -- '(print (fmt $1 ":" $2))'
@@ -36,7 +42,7 @@ Alice:20
 Bob:30
 ```
 
-トップレベルには式を複数並べられます。各入力行について、式を記述順に実行します。
+Run multiple expressions for every input line:
 
 ```console
 $ printf 'Alice 20\nBob 30\n' | cargo run --quiet -- $'(print $1)\n(print $2)'
@@ -46,8 +52,7 @@ Bob
 30
 ```
 
-`NR` は現在の行番号（1始まり）、`NF` は現在行のフィールド数です。通常の値と
-同じように `print` や `fmt` の中で使えます。
+Use `NR` for the line number and `NF` for the number of fields:
 
 ```console
 $ printf 'Alice 20\nBob 30 Osaka\n' | cargo run --quiet -- '(print NR NF $1)'
@@ -55,9 +60,7 @@ $ printf 'Alice 20\nBob 30 Osaka\n' | cargo run --quiet -- '(print NR NF $1)'
 2 3 Bob
 ```
 
-`filter` の条件が偽なら、現在行に対する残りの式をスキップします。
-`>`、`>=`、`<`、`<=` は数値比較で、数値に変換できない値は一致しません。
-`=` と `!=` は両辺が数値なら数値として、それ以外なら文字列として比較します。
+Filter by a numeric comparison:
 
 ```console
 $ printf 'Alice 18\nBob 30\nCarol 25\n' | \
@@ -66,7 +69,15 @@ Bob 30
 Carol 25
 ```
 
-式は上から実行されるため、`filter` より前に置いた式はすべての行で実行されます。
+The comparison operators are `>`, `>=`, `<`, `<=`, `=`, and `!=`:
+
+```lisp
+(filter (>= $2 20))
+(filter (< $2 40))
+(print $1 $2)
+```
+
+`=` and `!=` also compare strings:
 
 ```console
 $ printf 'Alice 20\nBob 30\n' | \
@@ -74,8 +85,7 @@ $ printf 'Alice 20\nBob 30\n' | \
 Alice 20
 ```
 
-`reg` は正規表現への一致を判定します。引数がパターンだけなら `$0`（行全体）を
-対象にし、2引数なら最初の値を対象にします。
+Filter the complete line with a regular expression:
 
 ```console
 $ printf 'info: ready\nerror: failed\n' | \
@@ -83,24 +93,33 @@ $ printf 'info: ready\nerror: failed\n' | \
 2 error: failed
 ```
 
+Or match a specific value:
+
+```console
+$ printf 'Alice 20\nbob 30\n' | \
+    cargo run --quiet -- $'(filter (reg $1 "^[A-Z]"))\n(print $1)'
+Alice
+```
+
+Multiple filters work like an AND condition:
+
 ```lisp
-(filter (reg $1 "^[A-Z]"))
+(filter (> $2 20))
+(filter (< $2 40))
 (print $1)
 ```
 
-正規表現は処理開始時に一度だけコンパイルされ、不正なパターンは入力を処理する前に
-エラーになります。
+A failed filter skips the remaining expressions for that input line. Expressions before the
+filter have already run.
 
-## テスト
+## Development
 
 ```console
 $ cargo test
+$ cargo clippy --all-targets -- -D warnings
 ```
 
-<details>
-<summary>The name</summary>
+## The name
 
 cho is a Lisp-flavored text processing language inspired by awk.
 awk sounds like 「億」 in Japanese, so cho comes next: 「兆」.
-
-</details>
