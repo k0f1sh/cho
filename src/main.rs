@@ -3,20 +3,52 @@ use std::io;
 use std::process::ExitCode;
 
 const USAGE: &str = "Usage: cho [-F SEPARATOR] 'PROGRAM'";
-const HELP: &str = "cho — a tiny Lisp-flavored text processing tool
+const HELP: &str = r#"cho — filter and format text with Lisp-like expressions
 
 Usage: cho [-F SEPARATOR] 'PROGRAM'
 
 Options:
-  -F SEPARATOR       split fields using this regular expression
+  -F SEPARATOR       split input fields using this regular expression
   -FSEPARATOR        short form of -F SEPARATOR
   -h, --help         print help
   -V, --version      print version
 
+Input:
+  cho runs PROGRAM once for every input line. By default, whitespace splits fields.
+  $0 is the complete line; $1, $2, ... are fields; NR is the line number; NF is
+  the number of fields. A missing field is an empty string.
+
+Expressions:
+  (print VALUE ...)          print values separated by spaces
+  (filter PREDICATE)         continue only when PREDICATE is true
+
+Values:
+  $0, $1, ...                input line or field
+  NR, NF                     line number or field count
+  "text", 12, 3.5           string or number
+  (str VALUE ...)            join values without a separator
+  (count VALUE)              count Unicode characters in a value
+
+Predicates:
+  (> A B)  (>= A B)          numeric comparisons
+  (< A B)  (<= A B)
+  (= A B)  (!= A B)          compare as numbers when possible, otherwise strings
+  (reg "PATTERN")            match $0 against a regular expression
+  (reg VALUE "PATTERN")      match VALUE against a regular expression
+  (not PREDICATE)            invert a predicate
+  (and PREDICATE ...)        true when every predicate is true
+  (or PREDICATE ...)         true when any predicate is true
+
+Programs:
+  Put one or more expressions in PROGRAM. They run from left to right for each
+  input line. A failed filter skips the remaining expressions for that line;
+  multiple filters therefore act like AND.
+
 Examples:
-  cho '(print $1)'
+  cho '(print NR $1 (count $1))'
   cho -F, '(print $1 $3)'
-  cho '(filter (> $2 20)) (print $1)'";
+  cho '(filter (> $2 20)) (print $1)'
+  cho '(filter (or (= $1 "Alice") (reg $1 "^B"))) (print $0)'"#;
 
 #[derive(Debug, PartialEq)]
 struct Options {
