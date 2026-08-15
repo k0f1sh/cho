@@ -74,6 +74,23 @@ $ printf 'Alice 20\nBob 30\n' | \
 Alice 20
 ```
 
+`reg` は正規表現への一致を判定します。引数がパターンだけなら `$0`（行全体）を
+対象にし、2引数なら最初の値を対象にします。
+
+```console
+$ printf 'info: ready\nerror: failed\n' | \
+    cargo run --quiet -- $'(filter (reg "^error:"))\n(print NR $0)'
+2 error: failed
+```
+
+```lisp
+(filter (reg $1 "^[A-Z]"))
+(print $1)
+```
+
+正規表現は処理開始時に一度だけコンパイルされ、不正なパターンは入力を処理する前に
+エラーになります。
+
 ## テスト
 
 ```console
