@@ -1,5 +1,7 @@
 use std::io::{self, BufRead, Write};
 
+use regex::Regex;
+
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
     InvalidSyntax,
@@ -24,6 +26,10 @@ pub enum Predicate {
         operator: ComparisonOperator,
         left: Value,
         right: Value,
+    },
+    Regex {
+        target: Value,
+        pattern: String,
     },
 }
 
@@ -161,7 +167,12 @@ impl Parser {
             return Err(ParseError::InvalidSyntax);
         }
 
-        let operator = match self.next() {
+        let operator = self.next();
+        if operator == Some(Token::Atom("reg".to_owned())) {
+            return self.parse_regex_predicate();
+        }
+
+        let operator = match operator {
             Some(Token::Atom(operator)) if operator == ">" => ComparisonOperator::GreaterThan,
             Some(Token::Atom(operator)) if operator == ">=" => {
                 ComparisonOperator::GreaterThanOrEqual
@@ -184,6 +195,24 @@ impl Parser {
             left,
             right,
         })
+    }
+
+    fn parse_regex_predicate(&mut self) -> Result<Predicate, ParseError> {
+        let first = self.parse_value()?;
+        let (target, pattern) = if self.tokens.get(self.position) == Some(&Token::RightParen) {
+            (Value::Field(0), first)
+        } else {
+            (first, self.parse_value()?)
+        };
+
+        if self.next() != Some(Token::RightParen) {
+            return Err(ParseError::InvalidSyntax);
+        }
+        let Value::String(pattern) = pattern else {
+            return Err(ParseError::InvalidSyntax);
+        };
+
+        Ok(Predicate::Regex { target, pattern })
     }
 
     fn parse_values_until_right_paren(&mut self) -> Result<Vec<Value>, ParseError> {
@@ -258,7 +287,7 @@ fn evaluate(value: &Value, record: &Record<'_>) -> String {
     }
 }
 
-fn matches(predicate: &Predicate, record: &Record<'_>) -> bool {
+fn matches(predicate: &Predicate, regex: Option<&Regex>, record: &Record<'_>) -> bool {
     match predicate {
         Predicate::Compare {
             operator,
@@ -283,6 +312,9 @@ fn matches(predicate: &Predicate, record: &Record<'_>) -> bool {
                 }
             }
         }
+        Predicate::Regex { target, .. } => regex
+            .expect("a regex predicate must have a compiled regex")
+            .is_match(&evaluate(target, record)),
     }
 }
 
@@ -293,6 +325,15 @@ pub fn run<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::
             "invalid program (expected a print expression)",
         )
     })?;
+    let compiled_regexes = program
+        .expressions
+        .iter()
+        .map(|expression| match expression {
+            Expr::Filter(Predicate::Regex { pattern, .. }) => Regex::new(pattern).map(Some),
+            _ => Ok(None),
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))?;
 
     for (index, line) in input.lines().enumerate() {
         let line = line?;
@@ -300,7 +341,7 @@ pub fn run<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::
             line: &line,
             number: index + 1,
         };
-        for expression in &program.expressions {
+        for (expression, regex) in program.expressions.iter().zip(&compiled_regexes) {
             match expression {
                 Expr::Print(values) => {
                     let rendered = values
@@ -310,7 +351,7 @@ pub fn run<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::
                         .join(" ");
                     writeln!(output, "{rendered}")?;
                 }
-                Expr::Filter(predicate) if !matches(predicate, &record) => break,
+                Expr::Filter(predicate) if !matches(predicate, regex.as_ref(), &record) => break,
                 Expr::Filter(_) => {}
             }
         }
@@ -398,6 +439,28 @@ mod tests {
     }
 
     #[test]
+    fn parses_regex_filters_with_implicit_and_explicit_targets() {
+        assert_eq!(
+            parse(r#"(filter (reg "error"))"#),
+            Ok(Program {
+                expressions: vec![Expr::Filter(Predicate::Regex {
+                    target: Value::Field(0),
+                    pattern: "error".to_owned(),
+                })]
+            })
+        );
+        assert_eq!(
+            parse(r#"(filter (reg $1 "^[A-Z]"))"#),
+            Ok(Program {
+                expressions: vec![Expr::Filter(Predicate::Regex {
+                    target: Value::Field(1),
+                    pattern: "^[A-Z]".to_owned(),
+                })]
+            })
+        );
+    }
+
+    #[test]
     fn rejects_invalid_programs() {
         assert_eq!(parse("(print $x)"), Err(ParseError::InvalidField));
         assert_eq!(parse("print $1"), Err(ParseError::InvalidSyntax));
@@ -405,6 +468,12 @@ mod tests {
         assert_eq!(parse("(filter $1)"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(filter (> $1))"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(filter (> $1 2 3))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(filter (reg))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(filter (reg $1))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(
+            parse(r#"(filter (reg $1 "x" "y"))"#),
+            Err(ParseError::InvalidSyntax)
+        );
         assert_eq!(
             parse("(print (unknown $1))"),
             Err(ParseError::InvalidSyntax)
@@ -573,5 +642,39 @@ mod tests {
             output_for("(filter (= $1 20)) (print $0)", "020\n20.0\n21\n"),
             "020\n20.0\n"
         );
+    }
+
+    #[test]
+    fn regex_filter_matches_the_whole_line_by_default() {
+        assert_eq!(
+            output_for(
+                r#"(filter (reg "^error:")) (print NR $0)"#,
+                "info: ready\nerror: failed\nerror: stopped\n"
+            ),
+            "2 error: failed\n3 error: stopped\n"
+        );
+    }
+
+    #[test]
+    fn regex_filter_can_match_a_specific_value() {
+        assert_eq!(
+            output_for(
+                r#"(filter (reg $1 "^[A-Z][a-z]+$")) (print $1)"#,
+                "Alice 20\nbob 30\nCAROL 40\n"
+            ),
+            "Alice\n"
+        );
+    }
+
+    #[test]
+    fn an_invalid_regex_is_an_error() {
+        let error = run(
+            r#"(filter (reg "[")) (print $0)"#,
+            Cursor::new("input is not processed\n"),
+            Vec::new(),
+        )
+        .unwrap_err();
+
+        assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
     }
 }
