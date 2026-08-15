@@ -6,6 +6,7 @@ pub enum ParseError {
     InvalidSyntax,
     InvalidField,
     UnterminatedString,
+    UnterminatedRegex,
 }
 
 struct Parser {
@@ -59,7 +60,7 @@ impl Parser {
             return Err(ParseError::InvalidSyntax);
         }
         let operator = self.next();
-        if operator == Some(Token::Atom("reg".into())) {
+        if matches!(operator, Some(Token::Atom(ref value)) if value == "reg" || value == "~") {
             return self.parse_regex_predicate();
         }
         if operator == Some(Token::Atom("not".into())) {
@@ -97,18 +98,33 @@ impl Parser {
     }
 
     fn parse_regex_predicate(&mut self) -> Result<Predicate, ParseError> {
+        if let Some(Token::Regex(pattern)) = self.tokens.get(self.position).cloned() {
+            self.position += 1;
+            if self.next() != Some(Token::RightParen) {
+                return Err(ParseError::InvalidSyntax);
+            }
+            return Ok(Predicate::Regex {
+                target: Value::Field(0),
+                pattern,
+            });
+        }
+
         let first = self.parse_value()?;
         let (target, pattern) = if self.tokens.get(self.position) == Some(&Token::RightParen) {
-            (Value::Field(0), first)
+            let Value::String(pattern) = first else {
+                return Err(ParseError::InvalidSyntax);
+            };
+            (Value::Field(0), pattern)
         } else {
-            (first, self.parse_value()?)
+            let pattern = match self.next() {
+                Some(Token::String(pattern) | Token::Regex(pattern)) => pattern,
+                _ => return Err(ParseError::InvalidSyntax),
+            };
+            (first, pattern)
         };
         if self.next() != Some(Token::RightParen) {
             return Err(ParseError::InvalidSyntax);
         }
-        let Value::String(pattern) = pattern else {
-            return Err(ParseError::InvalidSyntax);
-        };
         Ok(Predicate::Regex { target, pattern })
     }
 
@@ -205,6 +221,8 @@ mod tests {
     fn parses_regex_filters() {
         assert!(parse(r#"(filter (reg "error"))"#).is_ok());
         assert!(parse(r#"(filter (reg $1 "^[A-Z]"))"#).is_ok());
+        assert!(parse(r#"(filter (reg /^error/))"#).is_ok());
+        assert!(parse(r#"(filter (~ $1 /^\d+$/))"#).is_ok());
     }
 
     #[test]
@@ -232,6 +250,10 @@ mod tests {
         assert_eq!(
             parse("(print \"unfinished)"),
             Err(ParseError::UnterminatedString)
+        );
+        assert_eq!(
+            parse("(filter (~ /unfinished))"),
+            Err(ParseError::UnterminatedRegex)
         );
     }
 }

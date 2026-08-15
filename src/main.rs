@@ -33,14 +33,19 @@ Predicates:
   (> A B)  (>= A B)          numeric comparisons
   (< A B)  (<= A B)
   (= A B)  (!= A B)          compare as numbers when possible, otherwise strings
-  (reg "PATTERN")            match $0 against a regular expression
-  (reg VALUE "PATTERN")      match VALUE against a regular expression
+  (reg /PATTERN/)            match $0 against a regular expression
+  (reg VALUE /PATTERN/)      match VALUE against a regular expression
+  (~ /PATTERN/)              short form of reg
+  (~ VALUE /PATTERN/)
   (not PREDICATE)            invert a predicate
   (and PREDICATE ...)        true when every predicate is true
   (or PREDICATE ...)         true when any predicate is true
 
 Regex escaping:
-  Patterns in (reg ...) are strings, so write each \ as \\:
+  Regex literals preserve backslashes; escape only a literal / as \/:
+    (~ $1 /^\d+$/)
+    (~ $1 /^foo\/bar$/)
+  Patterns may also be strings, where each \ must be written as \\:
     (reg $1 "^\\d+$")
   The -F pattern is passed directly; quote it only for your shell:
     cho -F '\s+' '(print $1)'
@@ -54,7 +59,7 @@ Examples:
   cho '(print NR $1 (count $1))'
   cho -F, '(print $1 $3)'
   cho '(filter (> $2 20)) (print $1)'
-  cho '(filter (or (= $1 "Alice") (reg $1 "^B"))) (print $0)'"#;
+  cho '(filter (or (= $1 "Alice") (~ $1 /^B/))) (print $0)'"#;
 
 #[derive(Debug, PartialEq)]
 struct Options {

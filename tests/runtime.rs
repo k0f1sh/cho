@@ -192,6 +192,21 @@ fn regex_filters_match_lines_or_specific_fields() {
 }
 
 #[test]
+fn regex_literals_preserve_escapes_and_reg_has_a_tilde_alias() {
+    assert_eq!(
+        output(r#"(filter (~ $1 /^\d+$/)) (print $1)"#, "123\n12a\n456\n"),
+        "123\n456\n"
+    );
+    assert_eq!(
+        output(
+            r#"(filter (reg /^foo\/bar$/)) (print $0)"#,
+            "foo/bar\nfoo\n"
+        ),
+        "foo/bar\n"
+    );
+}
+
+#[test]
 fn invalid_regexes_fail_before_processing() {
     let error = cho::run(
         r#"(filter (reg "[")) (print $0)"#,
