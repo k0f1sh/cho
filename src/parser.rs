@@ -1,0 +1,186 @@
+use crate::ast::{ComparisonOperator, Expr, Predicate, Program, Value};
+use crate::lexer::{Token, tokenize};
+
+#[derive(Debug, PartialEq)]
+pub enum ParseError {
+    InvalidSyntax,
+    InvalidField,
+    UnterminatedString,
+}
+
+struct Parser {
+    tokens: Vec<Token>,
+    position: usize,
+}
+
+impl Parser {
+    fn new(tokens: Vec<Token>) -> Self {
+        Self {
+            tokens,
+            position: 0,
+        }
+    }
+
+    fn next(&mut self) -> Option<Token> {
+        let token = self.tokens.get(self.position).cloned();
+        self.position += usize::from(token.is_some());
+        token
+    }
+
+    fn parse_program(&mut self) -> Result<Program, ParseError> {
+        let mut expressions = Vec::new();
+        while self.position < self.tokens.len() {
+            expressions.push(self.parse_expression()?);
+        }
+        Ok(Program { expressions })
+    }
+
+    fn parse_expression(&mut self) -> Result<Expr, ParseError> {
+        if self.next() != Some(Token::LeftParen) {
+            return Err(ParseError::InvalidSyntax);
+        }
+        match self.next() {
+            Some(Token::Atom(operator)) if operator == "print" => {
+                Ok(Expr::Print(self.parse_values_until_right_paren()?))
+            }
+            Some(Token::Atom(operator)) if operator == "filter" => {
+                let predicate = self.parse_predicate()?;
+                if self.next() != Some(Token::RightParen) {
+                    return Err(ParseError::InvalidSyntax);
+                }
+                Ok(Expr::Filter(predicate))
+            }
+            _ => Err(ParseError::InvalidSyntax),
+        }
+    }
+
+    fn parse_predicate(&mut self) -> Result<Predicate, ParseError> {
+        if self.next() != Some(Token::LeftParen) {
+            return Err(ParseError::InvalidSyntax);
+        }
+        let operator = self.next();
+        if operator == Some(Token::Atom("reg".into())) {
+            return self.parse_regex_predicate();
+        }
+        let operator = match operator {
+            Some(Token::Atom(value)) if value == ">" => ComparisonOperator::GreaterThan,
+            Some(Token::Atom(value)) if value == ">=" => ComparisonOperator::GreaterThanOrEqual,
+            Some(Token::Atom(value)) if value == "<" => ComparisonOperator::LessThan,
+            Some(Token::Atom(value)) if value == "<=" => ComparisonOperator::LessThanOrEqual,
+            Some(Token::Atom(value)) if value == "=" => ComparisonOperator::Equal,
+            Some(Token::Atom(value)) if value == "!=" => ComparisonOperator::NotEqual,
+            _ => return Err(ParseError::InvalidSyntax),
+        };
+        let left = self.parse_value()?;
+        let right = self.parse_value()?;
+        if self.next() != Some(Token::RightParen) {
+            return Err(ParseError::InvalidSyntax);
+        }
+        Ok(Predicate::Compare {
+            operator,
+            left,
+            right,
+        })
+    }
+
+    fn parse_regex_predicate(&mut self) -> Result<Predicate, ParseError> {
+        let first = self.parse_value()?;
+        let (target, pattern) = if self.tokens.get(self.position) == Some(&Token::RightParen) {
+            (Value::Field(0), first)
+        } else {
+            (first, self.parse_value()?)
+        };
+        if self.next() != Some(Token::RightParen) {
+            return Err(ParseError::InvalidSyntax);
+        }
+        let Value::String(pattern) = pattern else {
+            return Err(ParseError::InvalidSyntax);
+        };
+        Ok(Predicate::Regex { target, pattern })
+    }
+
+    fn parse_values_until_right_paren(&mut self) -> Result<Vec<Value>, ParseError> {
+        let mut values = Vec::new();
+        loop {
+            match self.tokens.get(self.position) {
+                Some(Token::RightParen) => {
+                    self.position += 1;
+                    return Ok(values);
+                }
+                Some(_) => values.push(self.parse_value()?),
+                None => return Err(ParseError::InvalidSyntax),
+            }
+        }
+    }
+
+    fn parse_value(&mut self) -> Result<Value, ParseError> {
+        match self.next() {
+            Some(Token::Atom(value)) if value == "NR" => Ok(Value::RecordNumber),
+            Some(Token::Atom(value)) if value == "NF" => Ok(Value::FieldCount),
+            Some(Token::Atom(value)) if value.parse::<f64>().is_ok() => {
+                Ok(Value::Number(value.parse().expect("number was validated")))
+            }
+            Some(Token::Atom(field)) => {
+                let number = field
+                    .strip_prefix('$')
+                    .ok_or(ParseError::InvalidSyntax)?
+                    .parse::<usize>()
+                    .map_err(|_| ParseError::InvalidField)?;
+                Ok(Value::Field(number))
+            }
+            Some(Token::String(value)) => Ok(Value::String(value)),
+            Some(Token::LeftParen) if self.next() == Some(Token::Atom("fmt".into())) => {
+                Ok(Value::Format(self.parse_values_until_right_paren()?))
+            }
+            _ => Err(ParseError::InvalidSyntax),
+        }
+    }
+}
+
+pub fn parse(program: &str) -> Result<Program, ParseError> {
+    Parser::new(tokenize(program)?).parse_program()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_a_complete_program() {
+        assert_eq!(
+            parse(r#"(filter (> $2 20)) (print (fmt NR ":" $1))"#),
+            Ok(Program {
+                expressions: vec![
+                    Expr::Filter(Predicate::Compare {
+                        operator: ComparisonOperator::GreaterThan,
+                        left: Value::Field(2),
+                        right: Value::Number(20.0),
+                    }),
+                    Expr::Print(vec![Value::Format(vec![
+                        Value::RecordNumber,
+                        Value::String(":".into()),
+                        Value::Field(1),
+                    ])]),
+                ]
+            })
+        );
+    }
+
+    #[test]
+    fn parses_regex_filters() {
+        assert!(parse(r#"(filter (reg "error"))"#).is_ok());
+        assert!(parse(r#"(filter (reg $1 "^[A-Z]"))"#).is_ok());
+    }
+
+    #[test]
+    fn rejects_invalid_programs() {
+        assert_eq!(parse("(print $x)"), Err(ParseError::InvalidField));
+        assert_eq!(parse("print $1"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(filter (> $1))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(filter (reg $1))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(
+            parse("(print \"unfinished)"),
+            Err(ParseError::UnterminatedString)
+        );
+    }
+}
