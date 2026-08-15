@@ -36,6 +36,16 @@ Alice:20
 Bob:30
 ```
 
+トップレベルには式を複数並べられます。各入力行について、式を記述順に実行します。
+
+```console
+$ printf 'Alice 20\nBob 30\n' | cargo run --quiet -- $'(print $1)\n(print $2)'
+Alice
+20
+Bob
+30
+```
+
 ## テスト
 
 ```console
