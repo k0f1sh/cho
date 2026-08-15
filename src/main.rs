@@ -39,6 +39,12 @@ Predicates:
   (and PREDICATE ...)        true when every predicate is true
   (or PREDICATE ...)         true when any predicate is true
 
+Regex escaping:
+  Patterns in (reg ...) are strings, so write each \ as \\:
+    (reg $1 "^\\d+$")
+  The -F pattern is passed directly; quote it only for your shell:
+    cho -F '\s+' '(print $1)'
+
 Programs:
   Put one or more expressions in PROGRAM. They run from left to right for each
   input line. A failed filter skips the remaining expressions for that line;
