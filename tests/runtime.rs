@@ -245,3 +245,40 @@ fn separators_that_match_empty_strings_are_rejected() {
             .unwrap_err();
     assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
 }
+
+#[test]
+fn csv_mode_decodes_quoted_fields() {
+    let mut result = Vec::new();
+    cho::run_csv(
+        "(print NF $1 $2 $3)",
+        Cursor::new("Alice,\"Bob, Jr.\",\"said \"\"hello\"\"\"\n"),
+        &mut result,
+    )
+    .unwrap();
+    assert_eq!(
+        String::from_utf8(result).unwrap(),
+        "3 Alice Bob, Jr. said \"hello\"\n"
+    );
+}
+
+#[test]
+fn csv_mode_streams_logical_records_with_embedded_newlines() {
+    let mut result = Vec::new();
+    cho::run_csv(
+        "(print NR $2 $0)",
+        Cursor::new("Alice,\"Tokyo\nJapan\"\r\nBob,Osaka\r\n"),
+        &mut result,
+    )
+    .unwrap();
+    assert_eq!(
+        String::from_utf8(result).unwrap(),
+        "1 Tokyo\nJapan Alice,\"Tokyo\nJapan\"\n2 Osaka Bob,Osaka\n"
+    );
+}
+
+#[test]
+fn csv_mode_preserves_a_final_record_without_a_newline() {
+    let mut result = Vec::new();
+    cho::run_csv("(print $0 $2)", Cursor::new("Alice,Tokyo"), &mut result).unwrap();
+    assert_eq!(String::from_utf8(result).unwrap(), "Alice,Tokyo Tokyo\n");
+}

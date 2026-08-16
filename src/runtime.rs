@@ -9,6 +9,7 @@ struct Record<'line, 'separator> {
     line: &'line str,
     number: usize,
     field_separator: Option<&'separator Regex>,
+    csv_fields: Option<&'line [String]>,
 }
 
 enum PreparedPredicate<'a> {
@@ -33,6 +34,9 @@ enum PreparedExpr<'a> {
 
 impl Record<'_, '_> {
     fn field(&self, number: usize) -> Option<&str> {
+        if let Some(fields) = self.csv_fields {
+            return fields.get(number - 1).map(String::as_str);
+        }
         match self.field_separator {
             Some(separator) => separator.split(self.line).nth(number - 1),
             None => self.line.split_whitespace().nth(number - 1),
@@ -40,6 +44,9 @@ impl Record<'_, '_> {
     }
 
     fn field_count(&self) -> usize {
+        if let Some(fields) = self.csv_fields {
+            return fields.len();
+        }
         if self.line.is_empty() {
             return 0;
         }
@@ -99,6 +106,30 @@ pub fn run<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::
     run_with_field_separator(program, None, input, &mut output)
 }
 
+pub fn run_csv<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::Result<()> {
+    let program = parse(program)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid program"))?;
+    let expressions = prepare_expressions(&program.expressions)?;
+    let mut input = input;
+    let mut raw = Vec::new();
+    let mut number = 0;
+
+    while read_csv_record(&mut input, &mut raw)? {
+        number += 1;
+        let line = std::str::from_utf8(&raw)
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+        let fields = parse_csv_fields(&raw)?;
+        let record = Record {
+            line,
+            number,
+            field_separator: None,
+            csv_fields: Some(&fields),
+        };
+        execute(&expressions, &record, &mut output)?;
+    }
+    Ok(())
+}
+
 pub fn run_with_field_separator<R: BufRead, W: Write>(
     program: &str,
     field_separator: Option<&str>,
@@ -116,25 +147,81 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
             line: &line,
             number: index + 1,
             field_separator: field_separator.as_ref(),
+            csv_fields: None,
         };
-        for expression in &expressions {
-            match expression {
-                PreparedExpr::Print(values) => {
-                    let rendered = values
-                        .iter()
-                        .map(|value| evaluate(value, &record))
-                        .collect::<Vec<_>>()
-                        .join(" ");
-                    writeln!(output, "{rendered}")?;
-                }
-                PreparedExpr::Filter(predicate) if !matches(predicate, &record) => {
-                    break;
-                }
-                PreparedExpr::Filter(_) => {}
+        execute(&expressions, &record, &mut output)?;
+    }
+    Ok(())
+}
+
+fn execute<W: Write>(
+    expressions: &[PreparedExpr<'_>],
+    record: &Record<'_, '_>,
+    output: &mut W,
+) -> io::Result<()> {
+    for expression in expressions {
+        match expression {
+            PreparedExpr::Print(values) => {
+                let rendered = values
+                    .iter()
+                    .map(|value| evaluate(value, record))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                writeln!(output, "{rendered}")?;
             }
+            PreparedExpr::Filter(predicate) if !matches(predicate, record) => break,
+            PreparedExpr::Filter(_) => {}
         }
     }
     Ok(())
+}
+
+fn read_csv_record<R: BufRead>(input: &mut R, record: &mut Vec<u8>) -> io::Result<bool> {
+    record.clear();
+    loop {
+        let bytes_read = input.read_until(b'\n', record)?;
+        if bytes_read == 0 {
+            return Ok(!record.is_empty());
+        }
+        if !csv_record_has_open_quote(record) {
+            if record.last() == Some(&b'\n') {
+                record.pop();
+                if record.last() == Some(&b'\r') {
+                    record.pop();
+                }
+            }
+            return Ok(true);
+        }
+    }
+}
+
+fn csv_record_has_open_quote(record: &[u8]) -> bool {
+    let mut quoted = false;
+    let mut index = 0;
+    while index < record.len() {
+        if record[index] == b'"' {
+            if quoted && record.get(index + 1) == Some(&b'"') {
+                index += 2;
+                continue;
+            }
+            quoted = !quoted;
+        }
+        index += 1;
+    }
+    quoted
+}
+
+fn parse_csv_fields(record: &[u8]) -> io::Result<Vec<String>> {
+    let mut reader = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .from_reader(record);
+    let fields = reader
+        .records()
+        .next()
+        .transpose()
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?
+        .unwrap_or_default();
+    Ok(fields.iter().map(str::to_owned).collect())
 }
 
 fn compile_field_separator(pattern: Option<&str>) -> io::Result<Option<Regex>> {
