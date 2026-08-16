@@ -206,6 +206,17 @@ Alice Tokyo
 Bob Osaka
 ```
 
+Use `--tsv` as a short form for a tab field separator:
+
+```console
+$ printf 'Alice\t20\tTokyo\nBob\t30\tOsaka\n' | cho --tsv '(print $1 $3)'
+Alice Tokyo
+Bob Osaka
+```
+
+`--tsv`, `--csv`, and `-F` cannot be used together. TSV mode only splits on tabs; it
+does not apply CSV-style quoting rules.
+
 ### Read CSV
 
 Parse CSV records with `--csv`. Quoted commas, escaped quotes, CRLF input, and newlines

@@ -2,15 +2,16 @@ use std::env;
 use std::io;
 use std::process::ExitCode;
 
-const USAGE: &str = "Usage: cho [-F SEPARATOR | --csv] 'PROGRAM'";
+const USAGE: &str = "Usage: cho [-F SEPARATOR | --csv | --tsv] 'PROGRAM'";
 const HELP: &str = r#"cho — filter and format text with Lisp-like expressions
 
-Usage: cho [-F SEPARATOR | --csv] 'PROGRAM'
+Usage: cho [-F SEPARATOR | --csv | --tsv] 'PROGRAM'
 
 Options:
   -F SEPARATOR       split input fields using this regular expression
   -FSEPARATOR        short form of -F SEPARATOR
   --csv              parse CSV records and fields, including quoted values
+  --tsv              split input fields on tabs
   -h, --help         print help
   -V, --version      print version
 
@@ -61,6 +62,7 @@ Examples:
   cho '(print NR $1 (count $1))'
   cho -F, '(print $1 $3)'
   cho --csv '(print NF (escape $9))'
+  cho --tsv '(print $1 $3)'
   cho '(filter (> $2 20)) (print $1)'
   cho '(filter (or (= $1 "Alice") (~ $1 /^B/))) (print $0)'"#;
 
@@ -68,6 +70,7 @@ Examples:
 struct Options {
     field_separator: Option<String>,
     csv: bool,
+    tsv: bool,
     program: String,
 }
 
@@ -75,11 +78,14 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
     let mut arguments = arguments.into_iter();
     let mut field_separator = None;
     let mut csv = false;
+    let mut tsv = false;
     let mut program = None;
 
     while let Some(argument) = arguments.next() {
         if argument == "--csv" {
             csv = true;
+        } else if argument == "--tsv" {
+            tsv = true;
         } else if argument == "-F" {
             field_separator = Some(arguments.next().ok_or(())?);
         } else if let Some(separator) = argument.strip_prefix("-F") {
@@ -92,12 +98,13 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
         }
     }
 
-    if csv && field_separator.is_some() {
+    if (csv && tsv) || ((csv || tsv) && field_separator.is_some()) {
         return Err(());
     }
     Ok(Options {
         field_separator,
         csv,
+        tsv,
         program: program.ok_or(())?,
     })
 }
@@ -132,9 +139,13 @@ fn main() -> ExitCode {
     let result = if options.csv {
         cho::run_csv(&options.program, stdin.lock(), stdout.lock())
     } else {
+        let field_separator = options
+            .field_separator
+            .as_deref()
+            .or(options.tsv.then_some("\\t"));
         cho::run_with_field_separator(
             &options.program,
-            options.field_separator.as_deref(),
+            field_separator,
             stdin.lock(),
             stdout.lock(),
         )
@@ -163,6 +174,7 @@ mod tests {
             Ok(Options {
                 field_separator: None,
                 csv: false,
+                tsv: false,
                 program: "(print $1)".into(),
             })
         );
@@ -190,10 +202,17 @@ mod tests {
         assert!(parse_args(args(&["-F"])).is_err());
         assert!(parse_args(args(&["(print $1)", "extra"])).is_err());
         assert!(parse_args(args(&["--csv", "-F,", "(print $1)"])).is_err());
+        assert!(parse_args(args(&["--tsv", "-F,", "(print $1)"])).is_err());
+        assert!(parse_args(args(&["--csv", "--tsv", "(print $1)"])).is_err());
     }
 
     #[test]
     fn parses_csv_mode() {
         assert!(parse_args(args(&["--csv", "(print $1)"])).unwrap().csv);
+    }
+
+    #[test]
+    fn parses_tsv_mode() {
+        assert!(parse_args(args(&["--tsv", "(print $1)"])).unwrap().tsv);
     }
 }
