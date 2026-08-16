@@ -44,4 +44,5 @@ pub enum Value {
     Number(f64),
     Concat(Vec<Value>),
     Count(Box<Value>),
+    Escape(Box<Value>),
 }

@@ -44,6 +44,14 @@ fn count_can_be_used_in_filters() {
 }
 
 #[test]
+fn escape_makes_tabs_and_backslashes_visible() {
+    assert_eq!(
+        output(r#"(print (escape $0))"#, "first\tsecond\\third\r\n"),
+        r#"first\tsecond\\third"#.to_owned() + "\n"
+    );
+}
+
+#[test]
 fn field_zero_preserves_the_line_and_missing_fields_are_empty() {
     assert_eq!(
         output("(print $0 $3)", "  Alice   20  \n"),
@@ -273,6 +281,21 @@ fn csv_mode_streams_logical_records_with_embedded_newlines() {
     assert_eq!(
         String::from_utf8(result).unwrap(),
         "1 Tokyo\nJapan Alice,\"Tokyo\nJapan\"\n2 Osaka Bob,Osaka\n"
+    );
+}
+
+#[test]
+fn escape_keeps_multiline_csv_fields_on_one_output_line() {
+    let mut result = Vec::new();
+    cho::run_csv(
+        "(print NF (escape $2))",
+        Cursor::new("Tokyo,\"rain\r\nthen\tsun\\later\"\n"),
+        &mut result,
+    )
+    .unwrap();
+    assert_eq!(
+        String::from_utf8(result).unwrap(),
+        "2 rain\\r\\nthen\\tsun\\\\later\n"
     );
 }
 

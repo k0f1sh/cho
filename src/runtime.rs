@@ -67,7 +67,16 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> String {
         Value::Number(number) => number.to_string(),
         Value::Concat(values) => values.iter().map(|value| evaluate(value, record)).collect(),
         Value::Count(value) => evaluate(value, record).chars().count().to_string(),
+        Value::Escape(value) => escape(&evaluate(value, record)),
     }
+}
+
+fn escape(value: &str) -> String {
+    value
+        .replace('\\', "\\\\")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+        .replace('\t', "\\t")
 }
 
 fn matches(predicate: &PreparedPredicate<'_>, record: &Record<'_, '_>) -> bool {

@@ -62,6 +62,15 @@ Alice 5
 東京 2
 ```
 
+Escape backslashes and control characters with `escape`. Newlines, carriage returns, and
+tabs become the visible sequences `\\n`, `\\r`, and `\\t`, which keeps each value on one
+output line without losing where those characters occurred:
+
+```console
+$ printf 'first\tsecond\n' | cho '(print (escape $0))'
+first\\tsecond
+```
+
 `count` can also be used in a filter:
 
 ```lisp
@@ -180,6 +189,14 @@ Bob Osaka
 In CSV mode, `$1`, `$2`, ... are decoded fields, `NF` is the number of CSV fields, and
 `NR` counts logical CSV records. `$0` preserves the original logical record without its
 terminating newline. `--csv` and `-F` cannot be used together.
+
+CSV fields may contain newlines. Use `escape` when downstream commands or terminal output
+need one physical line per CSV record:
+
+```console
+$ cho --csv '(print NF (escape $9))' < weather.csv
+9 雷を伴う雨\\n沿岸部では強風にも注意
+```
 
 Multiple filters work like an AND condition:
 
