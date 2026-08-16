@@ -29,6 +29,7 @@ Values:
   "text", 12, 3.5           string or number
   (str VALUE ...)            join values without a separator
   (count VALUE)              count Unicode characters in a value
+  (escape VALUE)             escape \, newline, CR, and tab for one-line output
 
 Predicates:
   (> A B)  (>= A B)          numeric comparisons
@@ -59,6 +60,7 @@ Programs:
 Examples:
   cho '(print NR $1 (count $1))'
   cho -F, '(print $1 $3)'
+  cho --csv '(print NF (escape $9))'
   cho '(filter (> $2 20)) (print $1)'
   cho '(filter (or (= $1 "Alice") (~ $1 /^B/))) (print $0)'"#;
 

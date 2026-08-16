@@ -181,6 +181,13 @@ impl Parser {
                     }
                     Ok(Value::Count(Box::new(value)))
                 }
+                Some(Token::Atom(operator)) if operator == "escape" => {
+                    let value = self.parse_value()?;
+                    if self.next() != Some(Token::RightParen) {
+                        return Err(ParseError::InvalidSyntax);
+                    }
+                    Ok(Value::Escape(Box::new(value)))
+                }
                 _ => Err(ParseError::InvalidSyntax),
             },
             _ => Err(ParseError::InvalidSyntax),
@@ -245,6 +252,11 @@ mod tests {
         assert_eq!(parse("(print (count))"), Err(ParseError::InvalidSyntax));
         assert_eq!(
             parse("(print (count $1 $2))"),
+            Err(ParseError::InvalidSyntax)
+        );
+        assert_eq!(parse("(print (escape))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(
+            parse("(print (escape $1 $2))"),
             Err(ParseError::InvalidSyntax)
         );
         assert_eq!(
