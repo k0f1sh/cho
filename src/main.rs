@@ -10,7 +10,7 @@ Usage: cho [-F SEPARATOR | --csv] 'PROGRAM'
 Options:
   -F SEPARATOR       split input fields using this regular expression
   -FSEPARATOR        short form of -F SEPARATOR
-  --csv              parse RFC 4180 CSV records and fields
+  --csv              parse CSV records and fields, including quoted values
   -h, --help         print help
   -V, --version      print version
 

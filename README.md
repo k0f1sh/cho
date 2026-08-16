@@ -14,15 +14,21 @@ $ cd cho
 $ cargo install --path .
 ```
 
+## Quick start
+
+cho reads text from standard input. For each line, `$1`, `$2`, ... refer to
+whitespace-separated fields, and `$0` refers to the whole line.
+
 ```console
-$ printf 'Alice 20\nBob 30\n' | cho '(print $1)'
+$ echo 'Alice 20' | cho '(print $1)'
 Alice
-Bob
 ```
 
 ## Examples
 
-Print a field:
+### Select and format fields
+
+Print the second field from each line:
 
 ```console
 $ printf 'Alice 20\nBob 30\n' | cho '(print $2)'
@@ -54,6 +60,8 @@ Alice:20
 Bob:30
 ```
 
+### Work with strings
+
 Count Unicode characters:
 
 ```console
@@ -78,6 +86,8 @@ first\\tsecond
 (print $1)
 ```
 
+### Run multiple expressions
+
 Run multiple expressions for every input line:
 
 ```console
@@ -96,11 +106,12 @@ $ printf 'Alice 20\nBob 30 Osaka\n' | cho '(print NR NF $1)'
 2 3 Bob
 ```
 
+### Filter lines
+
 Filter by a numeric comparison:
 
 ```console
-$ printf 'Alice 18\nBob 30\nCarol 25\n' | \
-    cho $'(filter (> $2 20))\n(print $1 $2)'
+$ printf 'Alice 18\nBob 30\nCarol 25\n' | cho '(filter (> $2 20)) (print $1 $2)'
 Bob 30
 Carol 25
 ```
@@ -116,24 +127,41 @@ The comparison operators are `>`, `>=`, `<`, `<=`, `=`, and `!=`:
 `=` and `!=` also compare strings:
 
 ```console
-$ printf 'Alice 20\nBob 30\n' | \
-    cho $'(filter (= $1 "Alice"))\n(print $0)'
+$ printf 'Alice 20\nBob 30\n' | cho '(filter (= $1 "Alice")) (print $0)'
 Alice 20
 ```
+
+Multiple filters work like an AND condition:
+
+```lisp
+(filter (> $2 20))
+(filter (< $2 40))
+(print $1)
+```
+
+Combine filters with `not`, `and`, and `or`:
+
+```lisp
+(filter (and (> $2 20) (< $2 40)))
+(print $1 $2)
+```
+
+A failed filter skips the remaining expressions for that input line. Expressions before the
+filter have already run.
+
+### Match regular expressions
 
 Filter the complete line with a regular expression:
 
 ```console
-$ printf 'info: ready\nerror: failed\n' | \
-    cho $'(filter (reg /^error:/))\n(print NR $0)'
+$ printf 'info: ready\nerror: failed\n' | cho '(filter (reg /^error:/)) (print NR $0)'
 2 error: failed
 ```
 
 Or match a specific value:
 
 ```console
-$ printf 'Alice 20\nbob 30\n' | \
-    cho $'(filter (reg $1 /^[A-Z]/))\n(print $1)'
+$ printf 'Alice 20\nbob 30\n' | cho '(filter (reg $1 /^[A-Z]/)) (print $1)'
 Alice
 ```
 
@@ -148,6 +176,8 @@ $ printf '123\n12a\n456\n' | cho '(filter (~ $1 /^\d+$/)) (print $1)'
 
 Escape a literal `/` as `\/`. String patterns remain supported, but their backslashes
 must be escaped: `(reg $1 "^\\d+$")`.
+
+### Change the field separator
 
 Choose a field separator with `-F`. The separator is a regular expression:
 
@@ -176,8 +206,10 @@ Alice Tokyo
 Bob Osaka
 ```
 
-Parse RFC 4180 CSV records with `--csv`. Quoted commas, escaped quotes, CRLF input, and
-newlines inside quoted fields are supported:
+### Read CSV
+
+Parse CSV records with `--csv`. Quoted commas, escaped quotes, CRLF input, and newlines
+inside quoted fields are supported:
 
 ```console
 $ printf 'Alice,"Tokyo, Japan"\nBob,Osaka\n' | \
@@ -197,42 +229,6 @@ need one physical line per CSV record:
 $ cho --csv '(print NF (escape $9))' < weather.csv
 9 雷を伴う雨\\n沿岸部では強風にも注意
 ```
-
-Multiple filters work like an AND condition:
-
-```lisp
-(filter (> $2 20))
-(filter (< $2 40))
-(print $1)
-```
-
-Combine filters with `not`, `and`, and `or`:
-
-```lisp
-(filter
-  (not
-    (reg /debug/)))
-(print $0)
-```
-
-```lisp
-(filter
-  (or
-    (= $1 "Alice")
-    (= $1 "Bob")))
-(print $0)
-```
-
-```lisp
-(filter
-  (and
-    (> $2 20)
-    (< $2 40)))
-(print $1 $2)
-```
-
-A failed filter skips the remaining expressions for that input line. Expressions before the
-filter have already run.
 
 ## Development
 
