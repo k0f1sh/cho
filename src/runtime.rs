@@ -26,6 +26,11 @@ enum PreparedPredicate<'a> {
     Or(Vec<PreparedPredicate<'a>>),
 }
 
+enum PreparedExpr<'a> {
+    Print(&'a [Value]),
+    Filter(PreparedPredicate<'a>),
+}
+
 impl Record<'_, '_> {
     fn field(&self, number: usize) -> Option<&str> {
         match self.field_separator {
@@ -103,7 +108,7 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
     let program = parse(program)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid program"))?;
     let field_separator = compile_field_separator(field_separator)?;
-    let predicates = prepare_predicates(&program.expressions)?;
+    let expressions = prepare_expressions(&program.expressions)?;
 
     for (index, line) in input.lines().enumerate() {
         let line = line?;
@@ -112,9 +117,9 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
             number: index + 1,
             field_separator: field_separator.as_ref(),
         };
-        for (expression, predicate) in program.expressions.iter().zip(&predicates) {
+        for expression in &expressions {
             match expression {
-                Expr::Print(values) => {
+                PreparedExpr::Print(values) => {
                     let rendered = values
                         .iter()
                         .map(|value| evaluate(value, &record))
@@ -122,17 +127,10 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
                         .join(" ");
                     writeln!(output, "{rendered}")?;
                 }
-                Expr::Filter(_)
-                    if !matches(
-                        predicate
-                            .as_ref()
-                            .expect("a filter must have a prepared predicate"),
-                        &record,
-                    ) =>
-                {
+                PreparedExpr::Filter(predicate) if !matches(predicate, &record) => {
                     break;
                 }
-                Expr::Filter(_) => {}
+                PreparedExpr::Filter(_) => {}
             }
         }
     }
@@ -156,12 +154,12 @@ fn compile_field_separator(pattern: Option<&str>) -> io::Result<Option<Regex>> {
     Ok(separator)
 }
 
-fn prepare_predicates(expressions: &[Expr]) -> io::Result<Vec<Option<PreparedPredicate<'_>>>> {
+fn prepare_expressions(expressions: &[Expr]) -> io::Result<Vec<PreparedExpr<'_>>> {
     expressions
         .iter()
         .map(|expression| match expression {
-            Expr::Filter(predicate) => prepare_predicate(predicate).map(Some),
-            _ => Ok(None),
+            Expr::Print(values) => Ok(PreparedExpr::Print(values)),
+            Expr::Filter(predicate) => prepare_predicate(predicate).map(PreparedExpr::Filter),
         })
         .collect()
 }
