@@ -167,6 +167,20 @@ Alice Tokyo
 Bob Osaka
 ```
 
+Parse RFC 4180 CSV records with `--csv`. Quoted commas, escaped quotes, CRLF input, and
+newlines inside quoted fields are supported:
+
+```console
+$ printf 'Alice,"Tokyo, Japan"\nBob,Osaka\n' | \
+    cho --csv '(print $1 $2)'
+Alice Tokyo, Japan
+Bob Osaka
+```
+
+In CSV mode, `$1`, `$2`, ... are decoded fields, `NF` is the number of CSV fields, and
+`NR` counts logical CSV records. `$0` preserves the original logical record without its
+terminating newline. `--csv` and `-F` cannot be used together.
+
 Multiple filters work like an AND condition:
 
 ```lisp
