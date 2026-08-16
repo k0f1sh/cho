@@ -60,6 +60,14 @@ Alice:20
 Bob:30
 ```
 
+Join values with a separator using `join`:
+
+```console
+$ printf 'Alice 20 Tokyo\nBob 30 Osaka\n' | cho '(print (join "," $1 $2 $3))'
+Alice,20,Tokyo
+Bob,30,Osaka
+```
+
 ### Work with strings
 
 Count Unicode characters:

@@ -25,6 +25,18 @@ fn prints_fields_strings_and_concatenated_values() {
 }
 
 #[test]
+fn joins_values_with_a_separator() {
+    assert_eq!(
+        output(
+            r#"(print (join "," $1 $2 $3)) (print (join "\t" $1 $3))"#,
+            "Alice 20 Tokyo\n"
+        ),
+        "Alice,20,Tokyo\nAlice\tTokyo\n"
+    );
+    assert_eq!(output(r#"(print (join ","))"#, "Alice\n"), "\n");
+}
+
+#[test]
 fn count_counts_unicode_characters() {
     assert_eq!(
         output("(print (count $1))", "Alice\n東京\n🦀\n"),

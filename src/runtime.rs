@@ -66,6 +66,11 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> String {
         Value::String(value) => value.clone(),
         Value::Number(number) => number.to_string(),
         Value::Concat(values) => values.iter().map(|value| evaluate(value, record)).collect(),
+        Value::Join { separator, values } => values
+            .iter()
+            .map(|value| evaluate(value, record))
+            .collect::<Vec<_>>()
+            .join(&evaluate(separator, record)),
         Value::Count(value) => evaluate(value, record).chars().count().to_string(),
         Value::Escape(value) => escape(&evaluate(value, record)),
     }

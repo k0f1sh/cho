@@ -174,6 +174,13 @@ impl Parser {
                 Some(Token::Atom(operator)) if operator == "str" => {
                     Ok(Value::Concat(self.parse_values_until_right_paren()?))
                 }
+                Some(Token::Atom(operator)) if operator == "join" => {
+                    let separator = self.parse_value()?;
+                    Ok(Value::Join {
+                        separator: Box::new(separator),
+                        values: self.parse_values_until_right_paren()?,
+                    })
+                }
                 Some(Token::Atom(operator)) if operator == "count" => {
                     let value = self.parse_value()?;
                     if self.next() != Some(Token::RightParen) {
@@ -240,6 +247,19 @@ mod tests {
     }
 
     #[test]
+    fn parses_join_values() {
+        assert_eq!(
+            parse(r#"(print (join "," $1 $2))"#),
+            Ok(Program {
+                expressions: vec![Expr::Print(vec![Value::Join {
+                    separator: Box::new(Value::String(",".into())),
+                    values: vec![Value::Field(1), Value::Field(2)],
+                }])],
+            })
+        );
+    }
+
+    #[test]
     fn rejects_invalid_programs() {
         assert_eq!(parse("(print $x)"), Err(ParseError::InvalidField));
         assert_eq!(parse("print $1"), Err(ParseError::InvalidSyntax));
@@ -249,6 +269,7 @@ mod tests {
         assert_eq!(parse("(filter (and))"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(filter (or))"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(print (fmt $1))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(print (join))"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(print (count))"), Err(ParseError::InvalidSyntax));
         assert_eq!(
             parse("(print (count $1 $2))"),
