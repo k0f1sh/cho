@@ -29,6 +29,7 @@ Values:
   NR, NF                     line number or field count
   "text", 12, 3.5            string or number
   (str VALUE ...)            join values without a separator
+  (join SEP VALUE ...)       join values with SEP
   (count VALUE)              count Unicode characters in a value
   (escape VALUE)             escape \, newline, CR, and tab for one-line output
 

@@ -43,6 +43,10 @@ pub enum Value {
     String(String),
     Number(f64),
     Concat(Vec<Value>),
+    Join {
+        separator: Box<Value>,
+        values: Vec<Value>,
+    },
     Count(Box<Value>),
     Escape(Box<Value>),
 }
