@@ -73,6 +73,47 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> String {
             .join(&evaluate(separator, record)),
         Value::Count(value) => evaluate(value, record).chars().count().to_string(),
         Value::Escape(value) => escape(&evaluate(value, record)),
+        Value::If {
+            predicate,
+            then_value,
+            else_value,
+        } => {
+            if matches_unprepared(predicate, record) {
+                evaluate(then_value, record)
+            } else {
+                evaluate(else_value, record)
+            }
+        }
+        Value::Lower(value) => evaluate(value, record).to_lowercase(),
+        Value::Upper(value) => evaluate(value, record).to_uppercase(),
+        Value::Default { value, fallback } => {
+            let value = evaluate(value, record);
+            if value.is_empty() {
+                evaluate(fallback, record)
+            } else {
+                value
+            }
+        }
+    }
+}
+
+fn matches_unprepared(predicate: &Predicate, record: &Record<'_, '_>) -> bool {
+    match predicate {
+        Predicate::Compare {
+            operator,
+            left,
+            right,
+        } => compare(operator, &evaluate(left, record), &evaluate(right, record)),
+        Predicate::Regex { target, pattern } => Regex::new(pattern)
+            .expect("regular expressions are prepared before execution")
+            .is_match(&evaluate(target, record)),
+        Predicate::Not(predicate) => !matches_unprepared(predicate, record),
+        Predicate::And(predicates) => predicates
+            .iter()
+            .all(|predicate| matches_unprepared(predicate, record)),
+        Predicate::Or(predicates) => predicates
+            .iter()
+            .any(|predicate| matches_unprepared(predicate, record)),
     }
 }
 
@@ -259,13 +300,69 @@ fn prepare_expressions(expressions: &[Expr]) -> io::Result<Vec<PreparedExpr<'_>>
     expressions
         .iter()
         .map(|expression| match expression {
-            Expr::Print(values) => Ok(PreparedExpr::Print(values)),
+            Expr::Print(values) => {
+                for value in values {
+                    validate_value(value)?;
+                }
+                Ok(PreparedExpr::Print(values))
+            }
             Expr::Filter(predicate) => prepare_predicate(predicate).map(PreparedExpr::Filter),
         })
         .collect()
 }
 
+fn validate_value(value: &Value) -> io::Result<()> {
+    match value {
+        Value::Concat(values) => values.iter().try_for_each(validate_value),
+        Value::Join { separator, values } => {
+            validate_value(separator)?;
+            values.iter().try_for_each(validate_value)
+        }
+        Value::Count(value) | Value::Escape(value) | Value::Lower(value) | Value::Upper(value) => {
+            validate_value(value)
+        }
+        Value::If {
+            predicate,
+            then_value,
+            else_value,
+        } => {
+            validate_predicate(predicate)?;
+            validate_value(then_value)?;
+            validate_value(else_value)
+        }
+        Value::Default { value, fallback } => {
+            validate_value(value)?;
+            validate_value(fallback)
+        }
+        Value::Field(_)
+        | Value::RecordNumber
+        | Value::FieldCount
+        | Value::String(_)
+        | Value::Number(_) => Ok(()),
+    }
+}
+
+fn validate_predicate(predicate: &Predicate) -> io::Result<()> {
+    match predicate {
+        Predicate::Compare { left, right, .. } => {
+            validate_value(left)?;
+            validate_value(right)
+        }
+        Predicate::Regex { target, pattern } => {
+            validate_value(target)?;
+            Regex::new(pattern)
+                .map(|_| ())
+                .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))
+        }
+        Predicate::Not(predicate) => validate_predicate(predicate),
+        Predicate::And(predicates) | Predicate::Or(predicates) => {
+            predicates.iter().try_for_each(validate_predicate)
+        }
+    }
+}
+
 fn prepare_predicate(predicate: &Predicate) -> io::Result<PreparedPredicate<'_>> {
+    validate_predicate(predicate)?;
     match predicate {
         Predicate::Compare {
             operator,

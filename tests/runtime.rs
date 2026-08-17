@@ -64,6 +64,40 @@ fn escape_makes_tabs_and_backslashes_visible() {
 }
 
 #[test]
+fn if_selects_a_value_and_nests_with_other_values() {
+    assert_eq!(
+        output(
+            r#"(print (str $1 ":" (if (>= $2 20) (upper "adult") (lower "MINOR"))))"#,
+            "Alice 18\nBob 30\n"
+        ),
+        "Alice:minor\nBob:ADULT\n"
+    );
+}
+
+#[test]
+fn lower_and_upper_apply_unicode_case_conversion() {
+    assert_eq!(
+        output(r#"(print (lower $1) (upper $2))"#, "ÄLICE 東京abc\n"),
+        "älice 東京ABC\n"
+    );
+}
+
+#[test]
+fn default_replaces_only_empty_values_and_can_be_nested() {
+    assert_eq!(
+        output(
+            r#"(print (default $2 (upper "unknown")))"#,
+            "Alice Tokyo\nBob\nCarol \n"
+        ),
+        "Tokyo\nUNKNOWN\nUNKNOWN\n"
+    );
+    assert_eq!(
+        output(r#"(print (default "" "fallback"))"#, "x\n"),
+        "fallback\n"
+    );
+}
+
+#[test]
 fn field_zero_preserves_the_line_and_missing_fields_are_empty() {
     assert_eq!(
         output("(print $0 $3)", "  Alice   20  \n"),
@@ -230,6 +264,17 @@ fn regex_literals_preserve_escapes_and_reg_has_a_tilde_alias() {
 fn invalid_regexes_fail_before_processing() {
     let error = cho::run(
         r#"(filter (reg "[")) (print $0)"#,
+        Cursor::new("input\n"),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+}
+
+#[test]
+fn invalid_regexes_in_if_fail_before_processing() {
+    let error = cho::run(
+        r#"(print (if (reg "[") "yes" "no"))"#,
         Cursor::new("input\n"),
         Vec::new(),
     )

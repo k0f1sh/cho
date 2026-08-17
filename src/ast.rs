@@ -49,4 +49,15 @@ pub enum Value {
     },
     Count(Box<Value>),
     Escape(Box<Value>),
+    If {
+        predicate: Box<Predicate>,
+        then_value: Box<Value>,
+        else_value: Box<Value>,
+    },
+    Lower(Box<Value>),
+    Upper(Box<Value>),
+    Default {
+        value: Box<Value>,
+        fallback: Box<Value>,
+    },
 }

@@ -94,6 +94,36 @@ first\\tsecond
 (print $1)
 ```
 
+Select a value with `if`:
+
+```console
+$ printf 'Alice 18\nBob 30\n' | cho '(print $1 (if (>= $2 20) "adult" "minor"))'
+Alice minor
+Bob adult
+```
+
+Convert Unicode text to lowercase or uppercase:
+
+```console
+$ printf 'Alice tokyo\nBob osaka\n' | cho '(print (lower $1) (upper $2))'
+alice TOKYO
+bob OSAKA
+```
+
+Use `default` when a value is empty. This also covers fields that do not exist:
+
+```console
+$ printf 'Alice Tokyo\nBob\n' | cho '(print $1 (default $2 "unknown"))'
+Alice Tokyo
+Bob unknown
+```
+
+These are values, so they can be nested with other value expressions:
+
+```lisp
+(print (str (upper $1) ":" (default $3 "unknown")))
+```
+
 ### Run multiple expressions
 
 Run multiple expressions for every input line:
