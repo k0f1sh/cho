@@ -32,6 +32,10 @@ Values:
   (join SEP VALUE ...)       join values with SEP
   (count VALUE)              count Unicode characters in a value
   (escape VALUE)             escape \, newline, CR, and tab for one-line output
+  (if PREDICATE THEN ELSE)   select a value using a predicate
+  (lower VALUE)              convert a value to lowercase
+  (upper VALUE)              convert a value to uppercase
+  (default VALUE FALLBACK)   use FALLBACK when VALUE is empty
 
 Predicates:
   (> A B)  (>= A B)          numeric comparisons
@@ -61,6 +65,8 @@ Programs:
 
 Examples:
   cho '(print NR $1 (count $1))'
+  cho '(print $1 (if (>= $2 20) "adult" "minor"))'
+  cho '(print (default (upper $3) "UNKNOWN"))'
   cho -F, '(print $1 $3)'
   cho --csv '(print NF (escape $9))'
   cho --tsv '(print $1 $3)'

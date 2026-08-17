@@ -195,6 +195,44 @@ impl Parser {
                     }
                     Ok(Value::Escape(Box::new(value)))
                 }
+                Some(Token::Atom(operator)) if operator == "if" => {
+                    let predicate = self.parse_predicate()?;
+                    let then_value = self.parse_value()?;
+                    let else_value = self.parse_value()?;
+                    if self.next() != Some(Token::RightParen) {
+                        return Err(ParseError::InvalidSyntax);
+                    }
+                    Ok(Value::If {
+                        predicate: Box::new(predicate),
+                        then_value: Box::new(then_value),
+                        else_value: Box::new(else_value),
+                    })
+                }
+                Some(Token::Atom(operator)) if operator == "lower" => {
+                    let value = self.parse_value()?;
+                    if self.next() != Some(Token::RightParen) {
+                        return Err(ParseError::InvalidSyntax);
+                    }
+                    Ok(Value::Lower(Box::new(value)))
+                }
+                Some(Token::Atom(operator)) if operator == "upper" => {
+                    let value = self.parse_value()?;
+                    if self.next() != Some(Token::RightParen) {
+                        return Err(ParseError::InvalidSyntax);
+                    }
+                    Ok(Value::Upper(Box::new(value)))
+                }
+                Some(Token::Atom(operator)) if operator == "default" => {
+                    let value = self.parse_value()?;
+                    let fallback = self.parse_value()?;
+                    if self.next() != Some(Token::RightParen) {
+                        return Err(ParseError::InvalidSyntax);
+                    }
+                    Ok(Value::Default {
+                        value: Box::new(value),
+                        fallback: Box::new(fallback),
+                    })
+                }
                 _ => Err(ParseError::InvalidSyntax),
             },
             _ => Err(ParseError::InvalidSyntax),
@@ -260,6 +298,14 @@ mod tests {
     }
 
     #[test]
+    fn parses_conditional_and_string_values() {
+        assert!(
+            parse(r#"(print (if (= (lower $1) "alice") (upper $2) (default $3 "unknown")))"#)
+                .is_ok()
+        );
+    }
+
+    #[test]
     fn rejects_invalid_programs() {
         assert_eq!(parse("(print $x)"), Err(ParseError::InvalidField));
         assert_eq!(parse("print $1"), Err(ParseError::InvalidSyntax));
@@ -280,6 +326,20 @@ mod tests {
             parse("(print (escape $1 $2))"),
             Err(ParseError::InvalidSyntax)
         );
+        for program in [
+            "(print (if))",
+            "(print (if (= $1 $2) $1))",
+            "(print (if (= $1 $2) $1 $2 $3))",
+            "(print (lower))",
+            "(print (lower $1 $2))",
+            "(print (upper))",
+            "(print (upper $1 $2))",
+            "(print (default))",
+            "(print (default $1))",
+            "(print (default $1 $2 $3))",
+        ] {
+            assert_eq!(parse(program), Err(ParseError::InvalidSyntax), "{program}");
+        }
         assert_eq!(
             parse("(print \"unfinished)"),
             Err(ParseError::UnterminatedString)
