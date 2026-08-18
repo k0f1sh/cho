@@ -3,13 +3,21 @@
 Small tool, expressive one-liners.\
 Built for the AWKward bits of shell scripting.
 
-`people.txt`:
+## Quick start
+
+cho reads records from standard input and transforms them with small,
+composable expressions.
+
+For example, suppose `people.txt` contains whitespace-separated fields:
 
 ```text
 Alice 18 tokyo
 Bob 30
 Carol 25 osaka
 ```
+
+The following command keeps people older than 20 and prints their names and
+ages as comma-separated values:
 
 ```console
 $ cat people.txt | cho '(f (> $2 20)) (p (s/join "," $1 $2))'
@@ -22,6 +30,8 @@ Carol,25
 Fields are `$1`, `$2`, ...; `$0` is the whole record. Expressions compose, so
 filtering, formatting, defaults, case conversion, regex matching, and more can be
 nested wherever a value is accepted.
+
+## Context-aware values
 
 cho can also treat text as a meaningful value when an expression asks for it:
 
@@ -46,6 +56,8 @@ $ cat people.txt | cho '(filter (= NR 1)) (print (du/h 1))'
 3600
 ```
 
+## Composing expressions
+
 ```console
 # Pick fields
 $ cat people.txt | cho '(print $1 $2)'
@@ -69,7 +81,9 @@ $ printf '192.168.10.20:39652 SRC=10.0.0.25\n' |
 192.168.10.20 10.0.0.25
 ```
 
-`places.csv`:
+## Input formats
+
+For example, suppose `places.csv` contains a quoted comma:
 
 ```csv
 name,place
