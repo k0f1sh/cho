@@ -14,7 +14,7 @@ Build the smallest composable cho program that satisfies the task. Treat the ins
    type signatures. If `cho` is unavailable, report that before proposing an untested command.
 2. Inspect the input read-only. Check its delimiter, header, first few records, empty fields,
    quoting, and the intended meaning of each referenced column.
-3. Select `--csv`, `--tsv`, `-F`, or the default whitespace splitting based on the actual file.
+3. Select `--csv`, `--tsv`, `-F`, or the default whitespace splitting based on the actual file. Add `--skip-header` for CSV or TSV input with a header record.
 4. Compose a small program from values and predicates shown in help. Let typed expressions
    provide context; do not invent constructors such as `dt`, `num`, `ip`, or `cidr`.
 5. Run the command against a small representative input before processing the full stream.
@@ -34,7 +34,7 @@ tested patterns. Do not copy all of them into the answer.
   means the overall transformation did not complete even if stdout is nonempty.
 - Use `default` only around the smallest value expression whose failure is intentionally
   recoverable. Do not use it to hide errors across an entire record.
-- Skip a CSV header explicitly before applying a numeric, datetime, IP, or CIDR predicate to it.
+- Use `--skip-header` before applying a numeric, datetime, IP, or CIDR predicate to a CSV or TSV file with a header.
 - Keep sorting external. Render a sortable key with cho, then pipe to `sort` when ordering is
   required.
 

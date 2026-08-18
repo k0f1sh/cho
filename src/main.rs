@@ -2,16 +2,17 @@ use std::env;
 use std::io;
 use std::process::ExitCode;
 
-const USAGE: &str = "Usage: cho [-F SEPARATOR | --csv | --tsv] 'PROGRAM'";
+const USAGE: &str = "Usage: cho [-F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'";
 const HELP: &str = r#"cho — filter and format text with Lisp-like expressions
 
-Usage: cho [-F SEPARATOR | --csv | --tsv] 'PROGRAM'
+Usage: cho [-F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'
 
 Options:
   -F SEPARATOR       split input fields using this regular expression
   -FSEPARATOR        short form of -F SEPARATOR
   --csv              parse CSV records and fields, including quoted values
   --tsv              split input fields on tabs
+  --skip-header      skip the first CSV or TSV record
   -h, --help         print help
   -V, --version      print version
 
@@ -19,6 +20,8 @@ Input:
   cho runs PROGRAM once for every input line. By default, whitespace splits fields.
   $0 is the complete line; $1, $2, ... are fields; NR is the line number; NF is
   the number of fields. A missing field is an empty string.
+  In CSV or TSV mode, --skip-header skips the first logical record. NR keeps its
+  input position, so the first data record is NR 2.
 
 Types:
   String      input fields and quoted literals
@@ -130,8 +133,8 @@ Examples:
   cho '(print (default (dt/fmt "%Y/%m/%d" $1) "invalid"))'
   cho '(print (dt/floor-m (dt/now)))'
   cho -F, '(print $1 $3)'
-  cho --csv '(print NF (s/escape $9))'
-  cho --tsv '(print $1 $3)'
+  cho --csv --skip-header '(print NF (s/escape $9))'
+  cho --tsv --skip-header '(print $1 $3)'
   cho '(filter (> $2 20)) (print $1)'
   cho '(filter (or (s/= $1 "Alice") (~ $1 /^B/))) (print $0)'
   cho '(filter (dt/>= $1 "2026-08-01T00:00:00Z")) (print $0)'
@@ -142,6 +145,7 @@ struct Options {
     field_separator: Option<String>,
     csv: bool,
     tsv: bool,
+    skip_header: bool,
     program: String,
 }
 
@@ -150,6 +154,7 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
     let mut field_separator = None;
     let mut csv = false;
     let mut tsv = false;
+    let mut skip_header = false;
     let mut program = None;
 
     while let Some(argument) = arguments.next() {
@@ -157,6 +162,8 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
             csv = true;
         } else if argument == "--tsv" {
             tsv = true;
+        } else if argument == "--skip-header" {
+            skip_header = true;
         } else if argument == "-F" {
             field_separator = Some(arguments.next().ok_or(())?);
         } else if let Some(separator) = argument.strip_prefix("-F") {
@@ -169,13 +176,15 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
         }
     }
 
-    if (csv && tsv) || ((csv || tsv) && field_separator.is_some()) {
+    if (csv && tsv) || ((csv || tsv) && field_separator.is_some()) || (skip_header && !(csv || tsv))
+    {
         return Err(());
     }
     Ok(Options {
         field_separator,
         csv,
         tsv,
+        skip_header,
         program: program.ok_or(())?,
     })
 }
@@ -205,21 +214,21 @@ fn main() -> ExitCode {
         return ExitCode::from(2);
     };
 
+    let program = if options.skip_header {
+        format!("(f (!= NR 1)) {}", options.program)
+    } else {
+        options.program
+    };
     let stdin = io::stdin();
     let stdout = io::stdout();
     let result = if options.csv {
-        cho::run_csv(&options.program, stdin.lock(), stdout.lock())
+        cho::run_csv(&program, stdin.lock(), stdout.lock())
     } else {
         let field_separator = options
             .field_separator
             .as_deref()
             .or(options.tsv.then_some("\\t"));
-        cho::run_with_field_separator(
-            &options.program,
-            field_separator,
-            stdin.lock(),
-            stdout.lock(),
-        )
+        cho::run_with_field_separator(&program, field_separator, stdin.lock(), stdout.lock())
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -246,6 +255,7 @@ mod tests {
                 field_separator: None,
                 csv: false,
                 tsv: false,
+                skip_header: false,
                 program: "(print $1)".into(),
             })
         );
@@ -275,15 +285,27 @@ mod tests {
         assert!(parse_args(args(&["--csv", "-F,", "(print $1)"])).is_err());
         assert!(parse_args(args(&["--tsv", "-F,", "(print $1)"])).is_err());
         assert!(parse_args(args(&["--csv", "--tsv", "(print $1)"])).is_err());
+        assert!(parse_args(args(&["--skip-header", "(print $1)"])).is_err());
+        assert!(parse_args(args(&["-F,", "--skip-header", "(print $1)"])).is_err());
     }
 
     #[test]
     fn parses_csv_mode() {
         assert!(parse_args(args(&["--csv", "(print $1)"])).unwrap().csv);
+        assert!(
+            parse_args(args(&["--csv", "--skip-header", "(print $1)"]))
+                .unwrap()
+                .skip_header
+        );
     }
 
     #[test]
     fn parses_tsv_mode() {
         assert!(parse_args(args(&["--tsv", "(print $1)"])).unwrap().tsv);
+        assert!(
+            parse_args(args(&["--tsv", "--skip-header", "(print $1)"]))
+                .unwrap()
+                .skip_header
+        );
     }
 }
