@@ -74,6 +74,24 @@ Durationはそのまま出力すれば秒数になる。人向けの表示が本
 
 順序比較は当面追加しない。
 
+### URL componentのエンコード
+
+任意の文字列をURL componentとしてpercent-encode、percent-decodeする値式を検討する。
+URL全体を表す型の操作とは分け、戻り値はStringとして他の値式と合成できるようにする。
+
+```lisp
+(url/encode $1)
+(url/decode $1)
+(str "https://example.com/search?q=" (url/encode $1))
+```
+
+最初はRFC 3986に沿って空白を`%20`へ変換し、decodeでは`%XX`だけを復号して`+`を
+そのまま残す案を優先する。次を決めてから実装する。
+
+- path segmentとquery componentで異なる予約文字をどう扱うか
+- 不正または不完全な`%XX`を実行時エラーにするか
+- HTMLフォーム形式の空白と`+`の変換を別の式として追加するか
+
 ### その他の型付き値
 
 ログや運用データによく現れ、文字列のままでは正しく扱いにくい値を候補とする。
