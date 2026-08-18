@@ -117,28 +117,22 @@ Programs:
 Threading values:
   (-> VALUE (FORM ...)) inserts VALUE as each form's first argument.
   (->> VALUE (FORM ...)) inserts VALUE as each form's last argument.
+
     (-> $1 (dt/add (du/s 10)))
       is (dt/add $1 (du/s 10))
+
     (->> $1 (dt/fmt "%Y/%m/%d") (str "date: "))
       is (str "date: " (dt/fmt "%Y/%m/%d" $1))
 
 Examples:
-  cho '(f (> $2 20)) (p $1)'
-  cho '(print NR $1 (s/count $1))'
-  cho '(print (s/part ":" 1 $1))'
-  cho '(print (s/part "=" 2 $1))'
-  cho '(print (s/part "]:" 1 (s/part "[" 2 $1)))'
-  cho '(print $1 (if (>= $2 20) "adult" "minor"))'
-  cho '(print (default (s/upper $3) "UNKNOWN"))'
-  cho '(print (default (dt/fmt "%Y/%m/%d" $1) "invalid"))'
-  cho '(print (dt/floor-m (dt/now)))'
-  cho -F, '(print $1 $3)'
-  cho --csv --skip-header '(print NF (s/escape $9))'
-  cho --tsv --skip-header '(print $1 $3)'
-  cho '(filter (> $2 20)) (print $1)'
-  cho '(filter (or (s/= $1 "Alice") (~ $1 /^B/))) (print $0)'
-  cho '(filter (dt/>= $1 "2026-08-01T00:00:00Z")) (print $0)'
-  cho '(filter (cidr/contains? "10.0.0.0/8" $1)) (print $0)'"#;
+  Print the first field of rows whose second field is greater than 20:
+    cho '(filter (> $2 20)) (print $1)'
+
+  Join transformed fields, using a fallback when the third field is missing:
+    cho '(print (s/join ":" (s/upper $1) (default $3 "UNKNOWN")))'
+
+  Read CSV with a header and print its first and third fields:
+    cho --csv --skip-header '(print $1 $3)'"#;
 
 #[derive(Debug, PartialEq)]
 struct Options {
