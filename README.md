@@ -12,7 +12,7 @@ Carol 25 osaka
 ```
 
 ```console
-$ cat people.txt | cho '(filter (> $2 20)) (print (join "," $1 $2))'
+$ cat people.txt | cho '(filter (> $2 20)) (print (s/join "," $1 $2))'
 Bob,30
 Carol,25
 ```
@@ -20,6 +20,22 @@ Carol,25
 Fields are `$1`, `$2`, ...; `$0` is the whole record. Expressions compose, so
 filtering, formatting, defaults, case conversion, regex matching, and more can be
 nested wherever a value is accepted.
+
+cho can also treat text as a meaningful value when an expression asks for it:
+
+```console
+$ cat access.log | cho '(filter (dt/>= $1 "2026-08-01T00:00:00Z")) (filter (cidr/contains? "10.0.0.0/8" $2)) (print $0)'
+```
+
+There are no date or IP constructors to wrap around every field. `dt/>=` expects
+dates and `cidr/contains?` expects a CIDR and an IP address, so cho converts their
+string arguments in context. Invalid input is an error instead of a silent false;
+use `default` only where recovery is intentional.
+
+```console
+$ cho '(print (dt/floor-m (dt/now)))'
+2026-08-18T12:34:00Z
+```
 
 ```console
 # Pick fields
@@ -30,7 +46,7 @@ Carol 25
 
 # Compose value expressions
 $ cat people.txt |
-    cho '(print (str (upper $1) ":" (default $3 "unknown")))'
+    cho '(print (str (s/upper $1) ":" (default $3 "unknown")))'
 ALICE:tokyo
 BOB:unknown
 CAROL:osaka
@@ -45,7 +61,7 @@ Bob,Osaka
 
 ```console
 # Read real CSV, including quoted commas
-$ cat places.csv | cho --csv '(print (join " -> " $1 $2))'
+$ cat places.csv | cho --csv '(print (s/join " -> " $1 $2))'
 Alice -> Tokyo, Japan
 Bob -> Osaka
 ```

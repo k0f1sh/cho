@@ -1,4 +1,6 @@
-use crate::ast::{ComparisonOperator, Expr, Predicate, Program, Value};
+use crate::ast::{
+    ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, Predicate, Program, Value,
+};
 use crate::lexer::{Token, tokenize};
 
 #[derive(Debug, PartialEq)]
@@ -76,13 +78,21 @@ impl Parser {
         if operator == Some(Token::Atom("or".into())) {
             return Ok(Predicate::Or(self.parse_predicates_until_right_paren()?));
         }
-        let operator = match operator {
-            Some(Token::Atom(value)) if value == ">" => ComparisonOperator::GreaterThan,
-            Some(Token::Atom(value)) if value == ">=" => ComparisonOperator::GreaterThanOrEqual,
-            Some(Token::Atom(value)) if value == "<" => ComparisonOperator::LessThan,
-            Some(Token::Atom(value)) if value == "<=" => ComparisonOperator::LessThanOrEqual,
-            Some(Token::Atom(value)) if value == "=" => ComparisonOperator::Equal,
-            Some(Token::Atom(value)) if value == "!=" => ComparisonOperator::NotEqual,
+        if operator == Some(Token::Atom("ip/private?".into())) {
+            let value = self.parse_value()?;
+            self.expect_right_paren()?;
+            return Ok(Predicate::IpPrivate(value));
+        }
+        if operator == Some(Token::Atom("cidr/contains?".into())) {
+            let cidr = self.parse_value()?;
+            let ip = self.parse_value()?;
+            self.expect_right_paren()?;
+            return Ok(Predicate::CidrContains { cidr, ip });
+        }
+        let (kind, operator) = match operator {
+            Some(Token::Atom(value)) => {
+                parse_comparison_operator(&value).ok_or(ParseError::InvalidSyntax)?
+            }
             _ => return Err(ParseError::InvalidSyntax),
         };
         let left = self.parse_value()?;
@@ -91,10 +101,19 @@ impl Parser {
             return Err(ParseError::InvalidSyntax);
         }
         Ok(Predicate::Compare {
+            kind,
             operator,
             left,
             right,
         })
+    }
+
+    fn expect_right_paren(&mut self) -> Result<(), ParseError> {
+        if self.next() == Some(Token::RightParen) {
+            Ok(())
+        } else {
+            Err(ParseError::InvalidSyntax)
+        }
     }
 
     fn parse_regex_predicate(&mut self) -> Result<Predicate, ParseError> {
@@ -171,24 +190,26 @@ impl Parser {
             }
             Some(Token::String(value)) => Ok(Value::String(value)),
             Some(Token::LeftParen) => match self.next() {
+                Some(Token::Atom(operator)) if operator == "->" => self.parse_threading(true),
+                Some(Token::Atom(operator)) if operator == "->>" => self.parse_threading(false),
                 Some(Token::Atom(operator)) if operator == "str" => {
                     Ok(Value::Concat(self.parse_values_until_right_paren()?))
                 }
-                Some(Token::Atom(operator)) if operator == "join" => {
+                Some(Token::Atom(operator)) if operator == "s/join" => {
                     let separator = self.parse_value()?;
                     Ok(Value::Join {
                         separator: Box::new(separator),
                         values: self.parse_values_until_right_paren()?,
                     })
                 }
-                Some(Token::Atom(operator)) if operator == "count" => {
+                Some(Token::Atom(operator)) if operator == "s/count" => {
                     let value = self.parse_value()?;
                     if self.next() != Some(Token::RightParen) {
                         return Err(ParseError::InvalidSyntax);
                     }
                     Ok(Value::Count(Box::new(value)))
                 }
-                Some(Token::Atom(operator)) if operator == "escape" => {
+                Some(Token::Atom(operator)) if operator == "s/escape" => {
                     let value = self.parse_value()?;
                     if self.next() != Some(Token::RightParen) {
                         return Err(ParseError::InvalidSyntax);
@@ -208,14 +229,14 @@ impl Parser {
                         else_value: Box::new(else_value),
                     })
                 }
-                Some(Token::Atom(operator)) if operator == "lower" => {
+                Some(Token::Atom(operator)) if operator == "s/lower" => {
                     let value = self.parse_value()?;
                     if self.next() != Some(Token::RightParen) {
                         return Err(ParseError::InvalidSyntax);
                     }
                     Ok(Value::Lower(Box::new(value)))
                 }
-                Some(Token::Atom(operator)) if operator == "upper" => {
+                Some(Token::Atom(operator)) if operator == "s/upper" => {
                     let value = self.parse_value()?;
                     if self.next() != Some(Token::RightParen) {
                         return Err(ParseError::InvalidSyntax);
@@ -233,11 +254,232 @@ impl Parser {
                         fallback: Box::new(fallback),
                     })
                 }
+                Some(Token::Atom(operator)) if operator == "dt/unix" => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::DateTimeFromUnix(Box::new(value)))
+                }
+                Some(Token::Atom(operator)) if operator == "dt/fmt" => {
+                    let format = self.parse_value()?;
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::FormatDateTime {
+                        format: Box::new(format),
+                        value: Box::new(value),
+                    })
+                }
+                Some(Token::Atom(operator)) if operator == "dur/s" => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::DurationSeconds(Box::new(value)))
+                }
+                Some(Token::Atom(operator)) if operator == "dur/m" => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::DurationMinutes(Box::new(value)))
+                }
+                Some(Token::Atom(operator)) if operator == "dur/h" => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::DurationHours(Box::new(value)))
+                }
+                Some(Token::Atom(operator)) if operator == "dt/now" => {
+                    self.expect_right_paren()?;
+                    Ok(Value::DateTimeNow)
+                }
+                Some(Token::Atom(operator)) if operator == "dt/floor-s" => {
+                    self.parse_datetime_floor(DateTimeFloorUnit::Second)
+                }
+                Some(Token::Atom(operator)) if operator == "dt/floor-m" => {
+                    self.parse_datetime_floor(DateTimeFloorUnit::Minute)
+                }
+                Some(Token::Atom(operator)) if operator == "dt/floor-h" => {
+                    self.parse_datetime_floor(DateTimeFloorUnit::Hour)
+                }
+                Some(Token::Atom(operator)) if operator == "dt/floor-d" => {
+                    self.parse_datetime_floor(DateTimeFloorUnit::Day)
+                }
+                Some(Token::Atom(operator)) if operator == "dt/add" => {
+                    let datetime = self.parse_value()?;
+                    let duration = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::AddDateTime {
+                        datetime: Box::new(datetime),
+                        duration: Box::new(duration),
+                    })
+                }
+                Some(Token::Atom(operator)) if operator == "dt/sub" => {
+                    let datetime = self.parse_value()?;
+                    let duration = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::SubtractDateTime {
+                        datetime: Box::new(datetime),
+                        duration: Box::new(duration),
+                    })
+                }
+                Some(Token::Atom(operator)) if operator == "dt/diff" => {
+                    let left = self.parse_value()?;
+                    let right = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::DifferenceDateTime {
+                        left: Box::new(left),
+                        right: Box::new(right),
+                    })
+                }
                 _ => Err(ParseError::InvalidSyntax),
             },
             _ => Err(ParseError::InvalidSyntax),
         }
     }
+
+    fn parse_threading(&mut self, first: bool) -> Result<Value, ParseError> {
+        let mut value = self.parse_value()?;
+        while self.tokens.get(self.position) != Some(&Token::RightParen) {
+            if self.next() != Some(Token::LeftParen) {
+                return Err(ParseError::InvalidSyntax);
+            }
+            let Some(Token::Atom(operator)) = self.next() else {
+                return Err(ParseError::InvalidSyntax);
+            };
+            let mut arguments = self.parse_values_until_right_paren()?;
+            if first {
+                arguments.insert(0, value);
+            } else {
+                arguments.push(value);
+            }
+            value = build_value_application(&operator, arguments)?;
+        }
+        self.expect_right_paren()?;
+        Ok(value)
+    }
+
+    fn parse_datetime_floor(&mut self, unit: DateTimeFloorUnit) -> Result<Value, ParseError> {
+        let value = self.parse_value()?;
+        self.expect_right_paren()?;
+        Ok(Value::FloorDateTime {
+            unit,
+            value: Box::new(value),
+        })
+    }
+}
+
+fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<Value, ParseError> {
+    let one = |mut arguments: Vec<Value>| {
+        if arguments.len() == 1 {
+            Ok(arguments.remove(0))
+        } else {
+            Err(ParseError::InvalidSyntax)
+        }
+    };
+    let two = |mut arguments: Vec<Value>| {
+        if arguments.len() == 2 {
+            let right = arguments.pop().expect("length checked");
+            let left = arguments.pop().expect("length checked");
+            Ok((left, right))
+        } else {
+            Err(ParseError::InvalidSyntax)
+        }
+    };
+    match operator {
+        "str" => Ok(Value::Concat(arguments)),
+        "s/join" if !arguments.is_empty() => {
+            let separator = arguments.remove(0);
+            Ok(Value::Join {
+                separator: Box::new(separator),
+                values: arguments,
+            })
+        }
+        "s/count" => Ok(Value::Count(Box::new(one(arguments)?))),
+        "s/escape" => Ok(Value::Escape(Box::new(one(arguments)?))),
+        "s/lower" => Ok(Value::Lower(Box::new(one(arguments)?))),
+        "s/upper" => Ok(Value::Upper(Box::new(one(arguments)?))),
+        "default" => {
+            let (value, fallback) = two(arguments)?;
+            Ok(Value::Default {
+                value: Box::new(value),
+                fallback: Box::new(fallback),
+            })
+        }
+        "dt/unix" => Ok(Value::DateTimeFromUnix(Box::new(one(arguments)?))),
+        "dt/floor-s" => Ok(Value::FloorDateTime {
+            unit: DateTimeFloorUnit::Second,
+            value: Box::new(one(arguments)?),
+        }),
+        "dt/floor-m" => Ok(Value::FloorDateTime {
+            unit: DateTimeFloorUnit::Minute,
+            value: Box::new(one(arguments)?),
+        }),
+        "dt/floor-h" => Ok(Value::FloorDateTime {
+            unit: DateTimeFloorUnit::Hour,
+            value: Box::new(one(arguments)?),
+        }),
+        "dt/floor-d" => Ok(Value::FloorDateTime {
+            unit: DateTimeFloorUnit::Day,
+            value: Box::new(one(arguments)?),
+        }),
+        "dt/fmt" => {
+            let (format, value) = two(arguments)?;
+            Ok(Value::FormatDateTime {
+                format: Box::new(format),
+                value: Box::new(value),
+            })
+        }
+        "dur/s" => Ok(Value::DurationSeconds(Box::new(one(arguments)?))),
+        "dur/m" => Ok(Value::DurationMinutes(Box::new(one(arguments)?))),
+        "dur/h" => Ok(Value::DurationHours(Box::new(one(arguments)?))),
+        "dt/add" => {
+            let (datetime, duration) = two(arguments)?;
+            Ok(Value::AddDateTime {
+                datetime: Box::new(datetime),
+                duration: Box::new(duration),
+            })
+        }
+        "dt/sub" => {
+            let (datetime, duration) = two(arguments)?;
+            Ok(Value::SubtractDateTime {
+                datetime: Box::new(datetime),
+                duration: Box::new(duration),
+            })
+        }
+        "dt/diff" => {
+            let (left, right) = two(arguments)?;
+            Ok(Value::DifferenceDateTime {
+                left: Box::new(left),
+                right: Box::new(right),
+            })
+        }
+        _ => Err(ParseError::InvalidSyntax),
+    }
+}
+
+fn parse_comparison_operator(value: &str) -> Option<(ComparisonType, ComparisonOperator)> {
+    let (kind, operator) = if let Some(operator) = value.strip_prefix("s/") {
+        (ComparisonType::String, operator)
+    } else if let Some(operator) = value.strip_prefix("dt/") {
+        (ComparisonType::DateTime, operator)
+    } else if let Some(operator) = value.strip_prefix("ip/") {
+        (ComparisonType::IpAddr, operator)
+    } else {
+        (ComparisonType::Number, value)
+    };
+    let operator = match operator {
+        ">" => ComparisonOperator::GreaterThan,
+        ">=" => ComparisonOperator::GreaterThanOrEqual,
+        "<" => ComparisonOperator::LessThan,
+        "<=" => ComparisonOperator::LessThanOrEqual,
+        "=" => ComparisonOperator::Equal,
+        "!=" => ComparisonOperator::NotEqual,
+        _ => return None,
+    };
+    if kind == ComparisonType::IpAddr
+        && !matches!(
+            operator,
+            ComparisonOperator::Equal | ComparisonOperator::NotEqual
+        )
+    {
+        return None;
+    }
+    Some((kind, operator))
 }
 
 pub fn parse(program: &str) -> Result<Program, ParseError> {
@@ -251,10 +493,11 @@ mod tests {
     #[test]
     fn parses_a_complete_program() {
         assert_eq!(
-            parse(r#"(filter (> (count $1) 3)) (print (str NR ":" $1))"#),
+            parse(r#"(filter (> (s/count $1) 3)) (print (str NR ":" $1))"#),
             Ok(Program {
                 expressions: vec![
                     Expr::Filter(Predicate::Compare {
+                        kind: ComparisonType::Number,
                         operator: ComparisonOperator::GreaterThan,
                         left: Value::Count(Box::new(Value::Field(1))),
                         right: Value::Number(3.0),
@@ -280,14 +523,15 @@ mod tests {
     #[test]
     fn parses_boolean_predicates() {
         assert!(
-            parse(r#"(filter (and (not (reg "debug")) (or (= $1 "info") (= $1 "warn"))))"#).is_ok()
+            parse(r#"(filter (and (not (reg "debug")) (or (s/= $1 "info") (s/= $1 "warn"))))"#)
+                .is_ok()
         );
     }
 
     #[test]
     fn parses_join_values() {
         assert_eq!(
-            parse(r#"(print (join "," $1 $2))"#),
+            parse(r#"(print (s/join "," $1 $2))"#),
             Ok(Program {
                 expressions: vec![Expr::Print(vec![Value::Join {
                     separator: Box::new(Value::String(",".into())),
@@ -300,8 +544,36 @@ mod tests {
     #[test]
     fn parses_conditional_and_string_values() {
         assert!(
-            parse(r#"(print (if (= (lower $1) "alice") (upper $2) (default $3 "unknown")))"#)
+            parse(r#"(print (if (s/= (s/lower $1) "alice") (s/upper $2) (default $3 "unknown")))"#)
                 .is_ok()
+        );
+    }
+
+    #[test]
+    fn parses_typed_values_and_predicates() {
+        assert!(parse(r#"(filter (dt/>= $1 "2026-08-01T00:00:00Z"))"#).is_ok());
+        assert!(parse(r#"(filter (s/= $1 "Alice"))"#).is_ok());
+        assert!(parse(r#"(filter (ip/private? $1))"#).is_ok());
+        assert!(parse(r#"(filter (cidr/contains? "10.0.0.0/8" $1))"#).is_ok());
+        assert!(parse(r#"(print (dt/add (dt/unix $1) (dur/m 2)))"#).is_ok());
+        assert!(parse(r#"(print (dt/fmt "%Y-%m-%d" $1))"#).is_ok());
+        assert!(parse(r#"(print (dt/floor-m (dt/now)))"#).is_ok());
+    }
+
+    #[test]
+    fn threading_expands_to_existing_value_ast() {
+        assert_eq!(
+            parse(r#"(print (-> $1 (dt/add (dur/s 10))))"#),
+            parse(r#"(print (dt/add $1 (dur/s 10)))"#)
+        );
+        assert_eq!(
+            parse(r#"(print (->> $1 (dt/fmt "%Y/%m/%d") (str "date: ")))"#),
+            parse(r#"(print (str "date: " (dt/fmt "%Y/%m/%d" $1)))"#)
+        );
+        assert!(parse("(print (-> $1 (s/lower) (s/count)))").is_ok());
+        assert_eq!(
+            parse(r#"(print (-> $1 (dt/floor-h)))"#),
+            parse(r#"(print (dt/floor-h $1))"#)
         );
     }
 
@@ -315,28 +587,42 @@ mod tests {
         assert_eq!(parse("(filter (and))"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(filter (or))"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(print (fmt $1))"), Err(ParseError::InvalidSyntax));
-        assert_eq!(parse("(print (join))"), Err(ParseError::InvalidSyntax));
-        assert_eq!(parse("(print (count))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(print (s/join))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(print (s/count))"), Err(ParseError::InvalidSyntax));
         assert_eq!(
-            parse("(print (count $1 $2))"),
+            parse("(print (s/count $1 $2))"),
             Err(ParseError::InvalidSyntax)
         );
-        assert_eq!(parse("(print (escape))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(print (s/escape))"), Err(ParseError::InvalidSyntax));
         assert_eq!(
-            parse("(print (escape $1 $2))"),
+            parse("(print (s/escape $1 $2))"),
             Err(ParseError::InvalidSyntax)
         );
         for program in [
             "(print (if))",
             "(print (if (= $1 $2) $1))",
             "(print (if (= $1 $2) $1 $2 $3))",
-            "(print (lower))",
-            "(print (lower $1 $2))",
-            "(print (upper))",
-            "(print (upper $1 $2))",
+            "(print (s/lower))",
+            "(print (s/lower $1 $2))",
+            "(print (s/upper))",
+            "(print (s/upper $1 $2))",
             "(print (default))",
             "(print (default $1))",
             "(print (default $1 $2 $3))",
+            "(print (dt/unix))",
+            "(print (dt/unix $1 $2))",
+            "(print (dt/fmt $1))",
+            "(print (dur/s))",
+            "(print (dt/now $1))",
+            "(print (dt/floor-s))",
+            "(print (dt/floor-m $1 $2))",
+            r#"(print (join "," $1))"#,
+            "(print (count $1))",
+            "(print (escape $1))",
+            "(print (lower $1))",
+            "(print (upper $1))",
+            "(print (dt/add $1))",
+            "(print (-> $1 (unknown)))",
         ] {
             assert_eq!(parse(program), Err(ParseError::InvalidSyntax), "{program}");
         }

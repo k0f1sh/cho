@@ -28,18 +28,18 @@ fn prints_fields_strings_and_concatenated_values() {
 fn joins_values_with_a_separator() {
     assert_eq!(
         output(
-            r#"(print (join "," $1 $2 $3)) (print (join "\t" $1 $3))"#,
+            r#"(print (s/join "," $1 $2 $3)) (print (s/join "\t" $1 $3))"#,
             "Alice 20 Tokyo\n"
         ),
         "Alice,20,Tokyo\nAlice\tTokyo\n"
     );
-    assert_eq!(output(r#"(print (join ","))"#, "Alice\n"), "\n");
+    assert_eq!(output(r#"(print (s/join ","))"#, "Alice\n"), "\n");
 }
 
 #[test]
 fn count_counts_unicode_characters() {
     assert_eq!(
-        output("(print (count $1))", "Alice\n東京\n🦀\n"),
+        output("(print (s/count $1))", "Alice\n東京\n🦀\n"),
         "5\n2\n1\n"
     );
 }
@@ -48,7 +48,7 @@ fn count_counts_unicode_characters() {
 fn count_can_be_used_in_filters() {
     assert_eq!(
         output(
-            "(filter (> (count $1) 3)) (print $1)",
+            "(filter (> (s/count $1) 3)) (print $1)",
             "Al\nAlice\n東京\nCarol\n"
         ),
         "Alice\nCarol\n"
@@ -58,7 +58,7 @@ fn count_can_be_used_in_filters() {
 #[test]
 fn escape_makes_tabs_and_backslashes_visible() {
     assert_eq!(
-        output(r#"(print (escape $0))"#, "first\tsecond\\third\r\n"),
+        output(r#"(print (s/escape $0))"#, "first\tsecond\\third\r\n"),
         r#"first\tsecond\\third"#.to_owned() + "\n"
     );
 }
@@ -67,7 +67,7 @@ fn escape_makes_tabs_and_backslashes_visible() {
 fn if_selects_a_value_and_nests_with_other_values() {
     assert_eq!(
         output(
-            r#"(print (str $1 ":" (if (>= $2 20) (upper "adult") (lower "MINOR"))))"#,
+            r#"(print (str $1 ":" (if (>= $2 20) (s/upper "adult") (s/lower "MINOR"))))"#,
             "Alice 18\nBob 30\n"
         ),
         "Alice:minor\nBob:ADULT\n"
@@ -77,7 +77,7 @@ fn if_selects_a_value_and_nests_with_other_values() {
 #[test]
 fn lower_and_upper_apply_unicode_case_conversion() {
     assert_eq!(
-        output(r#"(print (lower $1) (upper $2))"#, "ÄLICE 東京abc\n"),
+        output(r#"(print (s/lower $1) (s/upper $2))"#, "ÄLICE 東京abc\n"),
         "älice 東京ABC\n"
     );
 }
@@ -86,7 +86,7 @@ fn lower_and_upper_apply_unicode_case_conversion() {
 fn default_replaces_only_empty_values_and_can_be_nested() {
     assert_eq!(
         output(
-            r#"(print (default $2 (upper "unknown")))"#,
+            r#"(print (default $2 (s/upper "unknown")))"#,
             "Alice Tokyo\nBob\nCarol \n"
         ),
         "Tokyo\nUNKNOWN\nUNKNOWN\n"
@@ -166,7 +166,7 @@ fn and_requires_every_predicate_to_match() {
 fn or_requires_any_predicate_to_match() {
     assert_eq!(
         output(
-            r#"(filter (or (= $1 "Alice") (= $1 "Bob"))) (print $1)"#,
+            r#"(filter (or (s/= $1 "Alice") (s/= $1 "Bob"))) (print $1)"#,
             "Alice 20\nBob 30\nCarol 40\n"
         ),
         "Alice\nBob\n"
@@ -205,14 +205,14 @@ fn supports_all_comparison_operators() {
 }
 
 #[test]
-fn equality_compares_numbers_or_falls_back_to_strings() {
+fn numeric_and_string_equality_are_explicit() {
     assert_eq!(
         output("(filter (= $1 20)) (print $0)", "020\n20.0\n21\n"),
         "020\n20.0\n"
     );
     assert_eq!(
         output(
-            r#"(filter (= $1 "Alice")) (print $2)"#,
+            r#"(filter (s/= $1 "Alice")) (print $2)"#,
             "Alice 20\nBob 30\n"
         ),
         "20\n"
@@ -220,10 +220,41 @@ fn equality_compares_numbers_or_falls_back_to_strings() {
 }
 
 #[test]
-fn non_numeric_values_do_not_match_ordered_comparisons() {
+fn supports_all_string_comparison_operators() {
     assert_eq!(
-        output("(filter (> $2 20)) (print $1)", "Alice unknown\n"),
-        ""
+        output(r#"(print (if (s/< "10" "2") "yes" "no"))"#, "x\n"),
+        "yes\n"
+    );
+    assert_eq!(
+        output(r#"(print (if (s/<= "a" "a") "yes" "no"))"#, "x\n"),
+        "yes\n"
+    );
+    assert_eq!(
+        output(r#"(print (if (s/> "b" "a") "yes" "no"))"#, "x\n"),
+        "yes\n"
+    );
+    assert_eq!(
+        output(r#"(print (if (s/>= "b" "b") "yes" "no"))"#, "x\n"),
+        "yes\n"
+    );
+    assert_eq!(
+        output(r#"(print (if (s/!= "a" "b") "yes" "no"))"#, "x\n"),
+        "yes\n"
+    );
+}
+
+#[test]
+fn non_numeric_values_are_runtime_errors() {
+    let error = cho::run(
+        "(filter (> $2 20)) (print $1)",
+        Cursor::new("Alice unknown\n"),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert_eq!(
+        error.to_string(),
+        r#"record 1: >: argument 1 expects Number, but "unknown" cannot be parsed as a number"#
     );
 }
 
@@ -345,7 +376,7 @@ fn csv_mode_streams_logical_records_with_embedded_newlines() {
 fn escape_keeps_multiline_csv_fields_on_one_output_line() {
     let mut result = Vec::new();
     cho::run_csv(
-        "(print NF (escape $2))",
+        "(print NF (s/escape $2))",
         Cursor::new("Tokyo,\"rain\r\nthen\tsun\\later\"\n"),
         &mut result,
     )
@@ -361,4 +392,212 @@ fn csv_mode_preserves_a_final_record_without_a_newline() {
     let mut result = Vec::new();
     cho::run_csv("(print $0 $2)", Cursor::new("Alice,Tokyo"), &mut result).unwrap();
     assert_eq!(String::from_utf8(result).unwrap(), "Alice,Tokyo Tokyo\n");
+}
+
+#[test]
+fn default_recovers_from_runtime_errors_and_is_lazy() {
+    assert_eq!(
+        output(
+            r#"(print (default (if (> $1 0) "positive" "zero") "invalid"))"#,
+            "2\nunknown\n"
+        ),
+        "positive\ninvalid\n"
+    );
+    assert_eq!(
+        output(r#"(print (default "ok" (dt/fmt "%Q" "invalid")))"#, "x\n"),
+        "ok\n"
+    );
+}
+
+#[test]
+fn output_before_a_runtime_error_is_preserved() {
+    let mut result = Vec::new();
+    let error = cho::run(
+        "(filter (> $2 20)) (print $1)",
+        Cursor::new("Alice 30\nBob unknown\n"),
+        &mut result,
+    )
+    .unwrap_err();
+    assert_eq!(String::from_utf8(result).unwrap(), "Alice\n");
+    assert!(error.to_string().starts_with("record 2: >: argument 1"));
+}
+
+#[test]
+fn datetime_values_normalize_format_and_compare() {
+    assert_eq!(
+        output(
+            r#"(print (dt/fmt "%Y/%m/%d %H:%M:%S" $1) (dt/unix -1))"#,
+            "2026-08-18T12:34:56.120+09:00\n"
+        ),
+        "2026/08/18 03:34:56 1969-12-31T23:59:59Z\n"
+    );
+    assert_eq!(
+        output(
+            r#"(filter (dt/= $1 "2026-08-18T03:00:00Z")) (print $1)"#,
+            "2026-08-18T12:00:00+09:00\n2026-08-18T04:00:00Z\n"
+        ),
+        "2026-08-18T12:00:00+09:00\n"
+    );
+}
+
+#[test]
+fn typed_values_render_inside_string_operations() {
+    assert_eq!(
+        output(
+            r#"(print (str "at=" (dt/unix 0)) (s/join "," (dt/unix 0) (dur/s 1.5)) (s/count (dt/unix 0)))"#,
+            "x\n"
+        ),
+        "at=1970-01-01T00:00:00Z 1970-01-01T00:00:00Z,1.5 20\n"
+    );
+}
+
+#[test]
+fn supports_all_datetime_comparison_operators() {
+    let early = "2026-08-18T00:00:00Z";
+    let late = "2026-08-18T00:00:01Z";
+    for predicate in [
+        format!(r#"(dt/< "{early}" "{late}")"#),
+        format!(r#"(dt/<= "{early}" "{early}")"#),
+        format!(r#"(dt/> "{late}" "{early}")"#),
+        format!(r#"(dt/>= "{late}" "{late}")"#),
+        format!(r#"(dt/!= "{early}" "{late}")"#),
+    ] {
+        assert_eq!(
+            output(&format!(r#"(print (if {predicate} "yes" "no"))"#), "x\n"),
+            "yes\n"
+        );
+    }
+}
+
+#[test]
+fn datetime_values_floor_to_utc_boundaries() {
+    assert_eq!(
+        output(
+            r#"(print (dt/floor-s $1) (dt/floor-m $1) (dt/floor-h $1) (dt/floor-d $1))"#,
+            "2026-08-18T12:34:56.789+09:00\n"
+        ),
+        concat!(
+            "2026-08-18T03:34:56Z ",
+            "2026-08-18T03:34:00Z ",
+            "2026-08-18T03:00:00Z ",
+            "2026-08-18T00:00:00Z\n"
+        )
+    );
+    let now = output(r#"(print (-> (dt/now) (dt/floor-s)))"#, "x\n");
+    assert!(now.ends_with("Z\n"));
+    assert!(!now.contains('.'));
+}
+
+#[test]
+fn datetime_floor_reports_its_own_argument_error() {
+    let error = cho::run(
+        "(print (dt/floor-m $1))",
+        Cursor::new("invalid\n"),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .starts_with("record 1: dt/floor-m: argument 1")
+    );
+}
+
+#[test]
+fn datetime_errors_identify_the_argument() {
+    let error = cho::run(
+        r#"(print (dt/fmt "%Y" $1))"#,
+        Cursor::new("2026-08-18\n"),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        r#"record 1: dt/fmt: argument 2 expects DateTime, but "2026-08-18" is not valid RFC 3339"#
+    );
+    assert!(cho::run("(print (dt/unix 1.5))", Cursor::new("x\n"), Vec::new()).is_err());
+    assert!(
+        cho::run(
+            r#"(print (dt/diff "9999-12-31T23:59:59Z" "0000-01-01T00:00:00Z"))"#,
+            Cursor::new("x\n"),
+            Vec::new()
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn duration_values_support_fractional_arithmetic_and_differences() {
+    assert_eq!(
+        output("(print (dur/h 1) (dur/s 0.25))", "x\n"),
+        "3600 0.25\n"
+    );
+    assert_eq!(
+        output(
+            r#"(print (dt/add $1 (dur/s 10.5)) (dt/sub $1 $2))"#,
+            "2026-08-18T00:00:00Z 60\n"
+        ),
+        "2026-08-18T00:00:10.500Z 2026-08-17T23:59:00Z\n"
+    );
+    assert_eq!(
+        output(
+            r#"(print (dt/diff $1 $2))"#,
+            "2026-08-18T00:00:00.500Z 2026-08-18T00:00:01Z\n"
+        ),
+        "-0.5\n"
+    );
+    assert_eq!(
+        output(
+            "(print (if (dt/= (dt/now) (dt/now)) \"same\" \"different\"))",
+            "x\n"
+        ),
+        "same\n"
+    );
+}
+
+#[test]
+fn ip_and_cidr_predicates_are_typed() {
+    assert_eq!(
+        output(
+            "(filter (ip/private? $1)) (print $1)",
+            "10.1.2.3\n8.8.8.8\nfc00::1\n"
+        ),
+        "10.1.2.3\n"
+    );
+    assert_eq!(
+        output(
+            r#"(filter (cidr/contains? "10.0.0.0/8" $1)) (print $1)"#,
+            "10.2.3.4\n11.0.0.1\n2001:db8::1\n"
+        ),
+        "10.2.3.4\n"
+    );
+    assert_eq!(
+        output(
+            r#"(filter (ip/= $1 "2001:db8::1")) (print $1)"#,
+            "2001:0db8:0:0:0:0:0:1\n2001:db8::2\n"
+        ),
+        "2001:0db8:0:0:0:0:0:1\n"
+    );
+}
+
+#[test]
+fn default_can_recover_from_an_invalid_ip() {
+    assert_eq!(
+        output(
+            r#"(print (default (if (ip/private? $1) "private" "public") "invalid"))"#,
+            "10.0.0.1\nnot-an-ip\n2001:db8::1\n"
+        ),
+        "private\ninvalid\npublic\n"
+    );
+}
+
+#[test]
+fn threading_runs_as_the_expanded_value_expression() {
+    assert_eq!(
+        output(
+            r#"(print (->> $1 (dt/fmt "%Y/%m/%d") (str "date: ")))"#,
+            "2026-08-18T00:00:00Z\n"
+        ),
+        "date: 2026/08/18\n"
+    );
 }

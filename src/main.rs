@@ -20,6 +20,18 @@ Input:
   $0 is the complete line; $1, $2, ... are fields; NR is the line number; NF is
   the number of fields. A missing field is an empty string.
 
+Types:
+  String      input fields and quoted literals
+  Number      numeric literals, NR, NF, and s/count results
+  DateTime    RFC 3339 timestamps, normalized to UTC when rendered
+  Duration    signed seconds with nanosecond precision
+  IpAddr      IPv4 or IPv6 addresses
+  Cidr        IPv4 or IPv6 networks
+
+  A String is converted when an expression requires another type. A failed
+  conversion stops processing with the record, expression, and argument number.
+  Wrap a value expression in default to recover from an expected runtime error.
+
 Expressions:
   (print VALUE ...)          print values separated by spaces
   (filter PREDICATE)         continue only when PREDICATE is true
@@ -28,19 +40,48 @@ Values:
   $0, $1, ...                input line or field
   NR, NF                     line number or field count
   "text", 12, 3.5            string or number
-  (str VALUE ...)            join values without a separator
-  (join SEP VALUE ...)       join values with SEP
-  (count VALUE)              count Unicode characters in a value
-  (escape VALUE)             escape \, newline, CR, and tab for one-line output
-  (if PREDICATE THEN ELSE)   select a value using a predicate
-  (lower VALUE)              convert a value to lowercase
-  (upper VALUE)              convert a value to uppercase
-  (default VALUE FALLBACK)   use FALLBACK when VALUE is empty
+  (str VALUE ...)                  -> String
+  (s/join VALUE VALUE ...)         -> String
+  (s/count VALUE)                  -> Number
+  (s/escape VALUE)                 -> String
+  (if PREDICATE VALUE VALUE)       -> Value
+  (s/lower VALUE)                  -> String
+  (s/upper VALUE)                  -> String
+  (default VALUE VALUE)            -> Value
+    default uses its fallback when VALUE is empty or raises a runtime error.
+
+Date and duration values:
+  (dt/unix NUMBER)                 -> DateTime
+  (dt/fmt STRING DATETIME)         -> String
+  (dt/now)                         -> DateTime
+  (dt/floor-s DATETIME)            -> DateTime
+  (dt/floor-m DATETIME)            -> DateTime
+  (dt/floor-h DATETIME)            -> DateTime
+  (dt/floor-d DATETIME)            -> DateTime
+  (dt/add DATETIME DURATION)       -> DateTime
+  (dt/sub DATETIME DURATION)       -> DateTime
+  (dt/diff DATETIME DATETIME)      -> Duration (left minus right)
+  (dur/s NUMBER)                   -> Duration
+  (dur/m NUMBER)                   -> Duration
+  (dur/h NUMBER)                   -> Duration
+
+  DateTime input must be RFC 3339 and include an offset or Z. dt/unix accepts
+  whole seconds, including negative values. dt/floor-* floors to a UTC second,
+  minute, hour, or day boundary. Duration renders as seconds.
 
 Predicates:
-  (> A B)  (>= A B)          numeric comparisons
-  (< A B)  (<= A B)
-  (= A B)  (!= A B)          compare as numbers when possible, otherwise strings
+  (> NUMBER NUMBER)  (>= NUMBER NUMBER)    numeric comparisons
+  (< NUMBER NUMBER)  (<= NUMBER NUMBER)
+  (= NUMBER NUMBER)  (!= NUMBER NUMBER)
+  (s/> STRING STRING)  (s/>= STRING STRING) string comparisons
+  (s/< STRING STRING)  (s/<= STRING STRING)
+  (s/= STRING STRING)  (s/!= STRING STRING)
+  (dt/> DATETIME DATETIME)  (dt/>= DATETIME DATETIME)
+  (dt/< DATETIME DATETIME)  (dt/<= DATETIME DATETIME)
+  (dt/= DATETIME DATETIME)  (dt/!= DATETIME DATETIME)
+  (ip/= IPADDR IPADDR)  (ip/!= IPADDR IPADDR)
+  (ip/private? IPADDR)       true only for private IPv4 addresses
+  (cidr/contains? CIDR IPADDR)
   (reg /PATTERN/)            match $0 against a regular expression
   (reg VALUE /PATTERN/)      match VALUE against a regular expression
   (~ /PATTERN/)              short form of reg
@@ -63,15 +104,27 @@ Programs:
   input line. A failed filter skips the remaining expressions for that line;
   multiple filters therefore act like AND.
 
+Threading values:
+  (-> VALUE (FORM ...)) inserts VALUE as each form's first argument.
+  (->> VALUE (FORM ...)) inserts VALUE as each form's last argument.
+    (-> $1 (dt/add (dur/s 10)))
+      is (dt/add $1 (dur/s 10))
+    (->> $1 (dt/fmt "%Y/%m/%d") (str "date: "))
+      is (str "date: " (dt/fmt "%Y/%m/%d" $1))
+
 Examples:
-  cho '(print NR $1 (count $1))'
+  cho '(print NR $1 (s/count $1))'
   cho '(print $1 (if (>= $2 20) "adult" "minor"))'
-  cho '(print (default (upper $3) "UNKNOWN"))'
+  cho '(print (default (s/upper $3) "UNKNOWN"))'
+  cho '(print (default (dt/fmt "%Y/%m/%d" $1) "invalid"))'
+  cho '(print (dt/floor-m (dt/now)))'
   cho -F, '(print $1 $3)'
-  cho --csv '(print NF (escape $9))'
+  cho --csv '(print NF (s/escape $9))'
   cho --tsv '(print $1 $3)'
   cho '(filter (> $2 20)) (print $1)'
-  cho '(filter (or (= $1 "Alice") (~ $1 /^B/))) (print $0)'"#;
+  cho '(filter (or (s/= $1 "Alice") (~ $1 /^B/))) (print $0)'
+  cho '(filter (dt/>= $1 "2026-08-01T00:00:00Z")) (print $0)'
+  cho '(filter (cidr/contains? "10.0.0.0/8" $1)) (print $0)'"#;
 
 #[derive(Debug, PartialEq)]
 struct Options {
