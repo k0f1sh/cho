@@ -16,6 +16,29 @@ IPアドレス、CIDR、URLなど、文字列として扱うと面倒なデー�
 ようにする。テキスト処理の手軽さを保ったまま、文字列の向こう側にある意味を扱える
 ことを長期的な方向性とする。
 
+choの位置づけは「Lisp風のsemantic awk」とする。
+
+```text
+A Lisp-flavored semantic awk.
+A semantic awk powered by S-expressions.
+Typed S-expressions for Unix text streams.
+```
+
+READMEなどで使う短い説明の第一候補は、次の文とする。
+
+```text
+cho is a tiny semantic awk with Lisp-like expressions.
+```
+
+- `awk`は、標準入力をレコードごとに処理し、Unixパイプへ気軽に挟めることを表す。
+- `semantic`は、日時、IP、CIDR、URLなどを単なる文字列ではなく、意味のある型付きの
+  値として扱うことを表す。
+- `Lisp-like expressions`とS式は、小さな直交した値式や述語をネストして合成する文法を
+  表す。
+
+この位置づけは機能を増やすための口実ではなく、テキスト処理の手軽さ、型の意味、式の
+合成可能性を同時に保つための設計判断の基準として使う。
+
 最初の段階では実行時の値を型付きにし、明示的な数値変換と日時値を追加する。異なる型
 を暗黙に比較せず、入力ミスを黙って通さない。日時のパースと表示はchoが担当し、
 並べ替えは既存の`sort`へ委ねる。
