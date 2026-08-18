@@ -444,7 +444,7 @@ fn datetime_values_normalize_format_and_compare() {
 fn typed_values_render_inside_string_operations() {
     assert_eq!(
         output(
-            r#"(print (str "at=" (dt/unix 0)) (s/join "," (dt/unix 0) (dur/s 1.5)) (s/count (dt/unix 0)))"#,
+            r#"(print (str "at=" (dt/unix 0)) (s/join "," (dt/unix 0) (du/s 1.5)) (s/count (dt/unix 0)))"#,
             "x\n"
         ),
         "at=1970-01-01T00:00:00Z 1970-01-01T00:00:00Z,1.5 20\n"
@@ -528,13 +528,10 @@ fn datetime_errors_identify_the_argument() {
 
 #[test]
 fn duration_values_support_fractional_arithmetic_and_differences() {
-    assert_eq!(
-        output("(print (dur/h 1) (dur/s 0.25))", "x\n"),
-        "3600 0.25\n"
-    );
+    assert_eq!(output("(print (du/h 1) (du/s 0.25))", "x\n"), "3600 0.25\n");
     assert_eq!(
         output(
-            r#"(print (dt/add $1 (dur/s 10.5)) (dt/sub $1 $2))"#,
+            r#"(print (dt/add $1 (du/s 10.5)) (dt/sub $1 $2))"#,
             "2026-08-18T00:00:00Z 60\n"
         ),
         "2026-08-18T00:00:10.500Z 2026-08-17T23:59:00Z\n"

@@ -37,6 +37,13 @@ $ cho '(print (dt/floor-m (dt/now)))'
 2026-08-18T12:34:00Z
 ```
 
+Duration units stay explicit and compose with datetime arithmetic:
+
+```console
+$ cat people.txt | cho '(filter (= NR 1)) (print (du/h 1))'
+3600
+```
+
 ```console
 # Pick fields
 $ cat people.txt | cho '(print $1 $2)'

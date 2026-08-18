@@ -188,9 +188,9 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> EvalResult<RuntimeValue> 
             let datetime = expect_datetime(evaluate(value, record)?, "dt/fmt", 2)?;
             Ok(RuntimeValue::String(datetime.format(&format).to_string()))
         }
-        Value::DurationSeconds(value) => duration_from_value(value, 1.0, "dur/s", record),
-        Value::DurationMinutes(value) => duration_from_value(value, 60.0, "dur/m", record),
-        Value::DurationHours(value) => duration_from_value(value, 3600.0, "dur/h", record),
+        Value::DurationSeconds(value) => duration_from_value(value, 1.0, "du/s", record),
+        Value::DurationMinutes(value) => duration_from_value(value, 60.0, "du/m", record),
+        Value::DurationHours(value) => duration_from_value(value, 3600.0, "du/h", record),
         Value::DateTimeNow => Ok(RuntimeValue::DateTime(record.now)),
         Value::FloorDateTime { unit, value } => {
             let function = floor_name(unit);
