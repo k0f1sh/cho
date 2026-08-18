@@ -63,7 +63,7 @@ Values:
 Date and duration values:
   (dt/unix NUMBER)                 -> DateTime
   (dt/fmt STRING DATETIME)         -> String
-  (dt/now)                         -> DateTime
+  (dt/now)                         -> DateTime (current UTC time, second precision)
   (dt/floor-s DATETIME)            -> DateTime
   (dt/floor-m DATETIME)            -> DateTime
   (dt/floor-h DATETIME)            -> DateTime

@@ -586,7 +586,7 @@ fn datetime_values_floor_to_utc_boundaries() {
             "2026-08-18T00:00:00Z\n"
         )
     );
-    let now = output(r#"(print (-> (dt/now) (dt/floor-s)))"#, "x\n");
+    let now = output(r#"(print (dt/now))"#, "x\n");
     assert!(now.ends_with("Z\n"));
     assert!(!now.contains('.'));
 }
