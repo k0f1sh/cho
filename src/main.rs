@@ -34,7 +34,9 @@ Types:
 
 Expressions:
   (print VALUE ...)          print values separated by spaces
+  (p VALUE ...)              short form of print
   (filter PREDICATE)         continue only when PREDICATE is true
+  (f PREDICATE)              short form of filter
 
 Values:
   $0, $1, ...                input line or field
@@ -113,6 +115,7 @@ Threading values:
       is (str "date: " (dt/fmt "%Y/%m/%d" $1))
 
 Examples:
+  cho '(f (> $2 20)) (p $1)'
   cho '(print NR $1 (s/count $1))'
   cho '(print $1 (if (>= $2 20) "adult" "minor"))'
   cho '(print (default (s/upper $3) "UNKNOWN"))'

@@ -43,10 +43,10 @@ impl Parser {
             return Err(ParseError::InvalidSyntax);
         }
         match self.next() {
-            Some(Token::Atom(operator)) if operator == "print" => {
+            Some(Token::Atom(operator)) if operator == "print" || operator == "p" => {
                 Ok(Expr::Print(self.parse_values_until_right_paren()?))
             }
-            Some(Token::Atom(operator)) if operator == "filter" => {
+            Some(Token::Atom(operator)) if operator == "filter" || operator == "f" => {
                 let predicate = self.parse_predicate()?;
                 if self.next() != Some(Token::RightParen) {
                     return Err(ParseError::InvalidSyntax);
@@ -513,6 +513,15 @@ mod tests {
     }
 
     #[test]
+    fn parses_short_top_level_aliases() {
+        assert_eq!(
+            parse("(f (> $2 20)) (p $1)"),
+            parse("(filter (> $2 20)) (print $1)")
+        );
+        assert_eq!(parse("(p)"), parse("(print)"));
+    }
+
+    #[test]
     fn parses_regex_filters() {
         assert!(parse(r#"(filter (reg "error"))"#).is_ok());
         assert!(parse(r#"(filter (reg $1 "^[A-Z]"))"#).is_ok());
@@ -582,6 +591,8 @@ mod tests {
         assert_eq!(parse("(print $x)"), Err(ParseError::InvalidField));
         assert_eq!(parse("print $1"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(filter (> $1))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(f)"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(f (> $1 0) $2)"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(filter (reg $1))"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(filter (not))"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(filter (and))"), Err(ParseError::InvalidSyntax));
