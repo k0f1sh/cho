@@ -72,19 +72,21 @@ $ printf '192.168.10.20:39652 SRC=10.0.0.25\n' |
 `places.csv`:
 
 ```csv
+name,place
 Alice,"Tokyo, Japan"
 Bob,Osaka
 ```
 
 ```console
 # Read real CSV, including quoted commas
-$ cat places.csv | cho --csv '(print (s/join " -> " $1 $2))'
+$ cat places.csv | cho --csv --skip-header '(print (s/join " -> " $1 $2))'
 Alice -> Tokyo, Japan
 Bob -> Osaka
 ```
 
 Whitespace-separated input is the default. CSV, TSV, and regular-expression field
-separators are also supported.
+separators are also supported. Use `--skip-header` with CSV or TSV input to skip
+its first logical record.
 
 Run `cho --help` for the complete syntax and more examples.
 

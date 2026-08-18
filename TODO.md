@@ -16,6 +16,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - `s/join`、`s/count`、`s/escape`、`s/lower`、`s/upper`による文字列操作
 - `s/part`による、配列を作らないリテラル区切りの文字列抽出
 - `print`と`filter`の短縮形`p`と`f`
+- CSVとTSVの先頭レコードを除く`--skip-header`
 - 接頭辞なしのstrictな数値比較
 - `s/`による文字列比較
 - `default`による、局所的な実行時エラーの回復
