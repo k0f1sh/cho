@@ -12,10 +12,12 @@ Carol 25 osaka
 ```
 
 ```console
-$ cat people.txt | cho '(filter (> $2 20)) (print (s/join "," $1 $2))'
+$ cat people.txt | cho '(f (> $2 20)) (p (s/join "," $1 $2))'
 Bob,30
 Carol,25
 ```
+
+`p` and `f` are short forms of `print` and `filter`.
 
 Fields are `$1`, `$2`, ...; `$0` is the whole record. Expressions compose, so
 filtering, formatting, defaults, case conversion, regex matching, and more can be

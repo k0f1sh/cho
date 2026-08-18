@@ -25,6 +25,15 @@ fn prints_fields_strings_and_concatenated_values() {
 }
 
 #[test]
+fn short_top_level_aliases_filter_and_print() {
+    assert_eq!(
+        output("(f (> $2 20)) (p $1)", "Alice 18\nBob 30\n"),
+        "Bob\n"
+    );
+    assert_eq!(output("(p)", "Alice\nBob\n"), "\n\n");
+}
+
+#[test]
 fn joins_values_with_a_separator() {
     assert_eq!(
         output(

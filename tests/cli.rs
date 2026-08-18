@@ -49,6 +49,8 @@ fn help_lists_types_and_signatures() {
     assert!(output.status.success());
     let stdout = String::from_utf8(output.stdout).unwrap();
     assert!(stdout.contains("Types:"));
+    assert!(stdout.contains("(p VALUE ...)"));
+    assert!(stdout.contains("(f PREDICATE)"));
     assert!(stdout.contains("(dt/fmt STRING DATETIME)"));
     assert!(stdout.contains("(dt/floor-m DATETIME)"));
     assert!(stdout.contains("(du/m NUMBER)"));
