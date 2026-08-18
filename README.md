@@ -61,6 +61,14 @@ BOB:unknown
 CAROL:osaka
 ```
 
+Extract one literal-delimited part without introducing an array:
+
+```console
+$ printf '192.168.10.20:39652 SRC=10.0.0.25\n' |
+    cho '(print (s/part ":" 1 $1) (s/part "=" 2 $2))'
+192.168.10.20 10.0.0.25
+```
+
 `places.csv`:
 
 ```csv

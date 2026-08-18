@@ -94,6 +94,11 @@ pub enum Value {
         separator: Box<Value>,
         values: Vec<Value>,
     },
+    Part {
+        delimiter: Box<Value>,
+        position: Box<Value>,
+        value: Box<Value>,
+    },
     Count(Box<Value>),
     Escape(Box<Value>),
     If {

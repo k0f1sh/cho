@@ -51,6 +51,7 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("Types:"));
     assert!(stdout.contains("(p VALUE ...)"));
     assert!(stdout.contains("(f PREDICATE)"));
+    assert!(stdout.contains("(s/part DELIMITER POSITION VALUE)"));
     assert!(stdout.contains("(dt/fmt STRING DATETIME)"));
     assert!(stdout.contains("(dt/floor-m DATETIME)"));
     assert!(stdout.contains("(du/m NUMBER)"));

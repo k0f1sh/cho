@@ -46,6 +46,100 @@ fn joins_values_with_a_separator() {
 }
 
 #[test]
+fn part_extracts_one_literal_delimited_part() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (s/part ":" 1 $1) "#,
+                r#"(s/part "=" 2 $2) "#,
+                r#"(s/part "]:" 1 (s/part "[" 2 $3)))"#,
+            ),
+            "192.168.10.20:39652 SRC=10.0.0.25 [fd00::1]:443\n",
+        ),
+        "192.168.10.20 10.0.0.25 fd00::1\n"
+    );
+}
+
+#[test]
+fn part_preserves_empty_parts_and_returns_the_whole_unsplit_value() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (s/join "|" "#,
+                r#"(s/part ":" 1 ":a::") "#,
+                r#"(s/part ":" 2 ":a::") "#,
+                r#"(s/part ":" 3 ":a::") "#,
+                r#"(s/part ":" 4 ":a::"))) "#,
+                r#"(print (s/part ":" 1 "whole")) "#,
+                r#"(print (s/part "区切" 2 "左区切右") "#,
+                r#"(default (s/part ":" 1 "") "empty"))"#,
+            ),
+            "x\n",
+        ),
+        "|a||\nwhole\n右 empty\n"
+    );
+}
+
+#[test]
+fn part_composes_with_values_threading_and_typed_predicates() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(filter (ip/private? (->> $1 (s/part ":" 1)))) "#,
+                r#"(print (str "ip=" (s/upper (s/part (str ":") (s/count "x") $1))))"#,
+            ),
+            "10.1.2.3:443\n8.8.8.8:53\n",
+        ),
+        "ip=10.1.2.3\n"
+    );
+}
+
+#[test]
+fn part_errors_are_strict_and_default_can_recover() {
+    assert_eq!(
+        output(
+            r#"(print (default (s/part ":" 3 $1) "missing") (default (s/part ":" 2 $2) "empty"))"#,
+            "a:b x:\n",
+        ),
+        "missing empty\n"
+    );
+
+    for (program, expected) in [
+        (
+            r#"(print (s/part "" 1 $1))"#,
+            "record 1: s/part: argument 1 expects a non-empty delimiter",
+        ),
+        (
+            r#"(print (s/part ":" 0 $1))"#,
+            "record 1: s/part: argument 2 expects Number (positive whole part position)",
+        ),
+        (
+            r#"(print (s/part ":" -1 $1))"#,
+            "record 1: s/part: argument 2 expects Number (positive whole part position)",
+        ),
+        (
+            r#"(print (s/part ":" 1.5 $1))"#,
+            "record 1: s/part: argument 2 expects Number (positive whole part position)",
+        ),
+        (
+            r#"(print (s/part ":" NaN $1))"#,
+            "record 1: s/part: argument 2 expects finite Number",
+        ),
+        (
+            r#"(print (s/part ":" 1e40 $1))"#,
+            "record 1: s/part: argument 2 expects Number (representable part position)",
+        ),
+        (
+            r#"(print (s/part ":" 3 $1))"#,
+            "record 1: s/part: argument 2 expects an existing part position",
+        ),
+    ] {
+        let error = cho::run(program, Cursor::new("a:b\n"), Vec::new()).unwrap_err();
+        assert!(error.to_string().starts_with(expected), "{error}");
+    }
+}
+
+#[test]
 fn count_counts_unicode_characters() {
     assert_eq!(
         output("(print (s/count $1))", "Alice\n東京\n🦀\n"),
