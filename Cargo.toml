@@ -1,6 +1,6 @@
 [package]
 name = "cho"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "A tiny command-line tool for filtering and formatting text with Lisp-like expressions"
 license = "MIT"
