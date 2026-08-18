@@ -258,6 +258,57 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> EvalResult<RuntimeValue> 
                 .collect::<EvalResult<Vec<_>>>()?;
             Ok(RuntimeValue::String(values.join(&separator)))
         }
+        Value::Part {
+            delimiter,
+            position,
+            value,
+        } => {
+            let delimiter = evaluate(delimiter, record)?.render();
+            if delimiter.is_empty() {
+                return Err(EvalError::conversion(
+                    "s/part",
+                    1,
+                    "a non-empty delimiter",
+                    delimiter,
+                    "is empty",
+                ));
+            }
+            let position = expect_number(evaluate(position, record)?, "s/part", 2)?;
+            if position.fract() != 0.0 || position < 1.0 {
+                return Err(EvalError::conversion(
+                    "s/part",
+                    2,
+                    "Number (positive whole part position)",
+                    position.to_string(),
+                    "is not a positive whole number",
+                ));
+            }
+            let position_input = position.to_string();
+            let position = position as u128;
+            if position > usize::MAX as u128 {
+                return Err(EvalError::conversion(
+                    "s/part",
+                    2,
+                    "Number (representable part position)",
+                    position_input,
+                    "is outside the supported position range",
+                ));
+            }
+            let value = evaluate(value, record)?.render();
+            value
+                .split(&delimiter)
+                .nth(position as usize - 1)
+                .map(|part| RuntimeValue::String(part.to_owned()))
+                .ok_or_else(|| {
+                    EvalError::conversion(
+                        "s/part",
+                        2,
+                        "an existing part position",
+                        position.to_string(),
+                        "is out of range after splitting argument 3",
+                    )
+                })
+        }
         Value::Count(value) => Ok(RuntimeValue::Number(
             evaluate(value, record)?.render().chars().count() as f64,
         )),
@@ -865,6 +916,15 @@ fn validate_value(value: &Value) -> io::Result<()> {
         Value::Join { separator, values } => {
             validate_value(separator)?;
             values.iter().try_for_each(validate_value)
+        }
+        Value::Part {
+            delimiter,
+            position,
+            value,
+        } => {
+            validate_value(delimiter)?;
+            validate_value(position)?;
+            validate_value(value)
         }
         Value::Count(value)
         | Value::Escape(value)

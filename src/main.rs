@@ -44,6 +44,7 @@ Values:
   "text", 12, 3.5            string or number
   (str VALUE ...)                  -> String
   (s/join VALUE VALUE ...)         -> String
+  (s/part DELIMITER POSITION VALUE) -> String
   (s/count VALUE)                  -> Number
   (s/escape VALUE)                 -> String
   (if PREDICATE VALUE VALUE)       -> Value
@@ -51,6 +52,10 @@ Values:
   (s/upper VALUE)                  -> String
   (default VALUE VALUE)            -> Value
     default uses its fallback when VALUE is empty or raises a runtime error.
+    s/part splits its last value by its first value as a literal delimiter and
+    returns the 1-based part. The delimiter must not be empty, and requesting a
+    part that does not exist is a runtime error. Empty parts are preserved; if
+    the delimiter is absent, position 1 returns the complete value.
 
 Date and duration values:
   (dt/unix NUMBER)                 -> DateTime
@@ -117,6 +122,9 @@ Threading values:
 Examples:
   cho '(f (> $2 20)) (p $1)'
   cho '(print NR $1 (s/count $1))'
+  cho '(print (s/part ":" 1 $1))'
+  cho '(print (s/part "=" 2 $1))'
+  cho '(print (s/part "]:" 1 (s/part "[" 2 $1)))'
   cho '(print $1 (if (>= $2 20) "adult" "minor"))'
   cho '(print (default (s/upper $3) "UNKNOWN"))'
   cho '(print (default (dt/fmt "%Y/%m/%d" $1) "invalid"))'

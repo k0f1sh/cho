@@ -202,6 +202,17 @@ impl Parser {
                         values: self.parse_values_until_right_paren()?,
                     })
                 }
+                Some(Token::Atom(operator)) if operator == "s/part" => {
+                    let delimiter = self.parse_value()?;
+                    let position = self.parse_value()?;
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::Part {
+                        delimiter: Box::new(delimiter),
+                        position: Box::new(position),
+                        value: Box::new(value),
+                    })
+                }
                 Some(Token::Atom(operator)) if operator == "s/count" => {
                     let value = self.parse_value()?;
                     if self.next() != Some(Token::RightParen) {
@@ -380,6 +391,16 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
             Err(ParseError::InvalidSyntax)
         }
     };
+    let three = |mut arguments: Vec<Value>| {
+        if arguments.len() == 3 {
+            let third = arguments.pop().expect("length checked");
+            let second = arguments.pop().expect("length checked");
+            let first = arguments.pop().expect("length checked");
+            Ok((first, second, third))
+        } else {
+            Err(ParseError::InvalidSyntax)
+        }
+    };
     match operator {
         "str" => Ok(Value::Concat(arguments)),
         "s/join" if !arguments.is_empty() => {
@@ -387,6 +408,14 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
             Ok(Value::Join {
                 separator: Box::new(separator),
                 values: arguments,
+            })
+        }
+        "s/part" => {
+            let (delimiter, position, value) = three(arguments)?;
+            Ok(Value::Part {
+                delimiter: Box::new(delimiter),
+                position: Box::new(position),
+                value: Box::new(value),
             })
         }
         "s/count" => Ok(Value::Count(Box::new(one(arguments)?))),
@@ -551,6 +580,27 @@ mod tests {
     }
 
     #[test]
+    fn parses_part_values() {
+        assert_eq!(
+            parse(r#"(print (s/part (str "]" ":") (s/count "x") $1))"#),
+            Ok(Program {
+                expressions: vec![Expr::Print(vec![Value::Part {
+                    delimiter: Box::new(Value::Concat(vec![
+                        Value::String("]".into()),
+                        Value::String(":".into()),
+                    ])),
+                    position: Box::new(Value::Count(Box::new(Value::String("x".into())))),
+                    value: Box::new(Value::Field(1)),
+                }])],
+            })
+        );
+        assert_eq!(
+            parse(r#"(print (->> $1 (s/part "=" 2)))"#),
+            parse(r#"(print (s/part "=" 2 $1))"#)
+        );
+    }
+
+    #[test]
     fn parses_conditional_and_string_values() {
         assert!(
             parse(r#"(print (if (s/= (s/lower $1) "alice") (s/upper $2) (default $3 "unknown")))"#)
@@ -599,6 +649,14 @@ mod tests {
         assert_eq!(parse("(filter (or))"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(print (fmt $1))"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(print (s/join))"), Err(ParseError::InvalidSyntax));
+        for program in [
+            "(print (s/part))",
+            r#"(print (s/part ":"))"#,
+            r#"(print (s/part ":" 1))"#,
+            r#"(print (s/part ":" 1 $1 $2))"#,
+        ] {
+            assert_eq!(parse(program), Err(ParseError::InvalidSyntax), "{program}");
+        }
         assert_eq!(parse("(print (s/count))"), Err(ParseError::InvalidSyntax));
         assert_eq!(
             parse("(print (s/count $1 $2))"),
