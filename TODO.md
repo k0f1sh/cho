@@ -18,7 +18,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - `s/`による文字列比較
 - `default`による、局所的な実行時エラーの回復
 - DateTimeと`dt/unix`、`dt/fmt`、日時比較
-- Durationと`dur/s`、`dur/m`、`dur/h`
+- Durationと`du/s`、`du/m`、`du/h`
 - `dt/now`、`dt/add`、`dt/sub`、`dt/diff`
 - `dt/floor-s`、`dt/floor-m`、`dt/floor-h`、`dt/floor-d`によるUTC境界への切り下げ
 - `ip/private?`、`ip/=`、`ip/!=`、`cidr/contains?`
@@ -45,10 +45,10 @@ cho is a tiny semantic awk with Lisp-like expressions.
 ### Durationの任意表示
 
 Durationはそのまま出力すれば秒数になる。人向けの表示が本当に必要な実例を集めてから、
-`dur/fmt`の書式を決める。
+`du/fmt`の書式を決める。
 
 ```lisp
-(dur/fmt FORMAT (dt/diff $1 $2))
+(du/fmt FORMAT (dt/diff $1 $2))
 ```
 
 決める必要がある事項：

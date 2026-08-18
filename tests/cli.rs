@@ -51,5 +51,7 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("Types:"));
     assert!(stdout.contains("(dt/fmt STRING DATETIME)"));
     assert!(stdout.contains("(dt/floor-m DATETIME)"));
+    assert!(stdout.contains("(du/m NUMBER)"));
+    assert!(!stdout.contains("(dur/m NUMBER)"));
     assert!(stdout.contains("(cidr/contains? CIDR IPADDR)"));
 }

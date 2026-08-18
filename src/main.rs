@@ -61,9 +61,9 @@ Date and duration values:
   (dt/add DATETIME DURATION)       -> DateTime
   (dt/sub DATETIME DURATION)       -> DateTime
   (dt/diff DATETIME DATETIME)      -> Duration (left minus right)
-  (dur/s NUMBER)                   -> Duration
-  (dur/m NUMBER)                   -> Duration
-  (dur/h NUMBER)                   -> Duration
+  (du/s NUMBER)                   -> Duration
+  (du/m NUMBER)                   -> Duration
+  (du/h NUMBER)                   -> Duration
 
   DateTime input must be RFC 3339 and include an offset or Z. dt/unix accepts
   whole seconds, including negative values. dt/floor-* floors to a UTC second,
@@ -107,8 +107,8 @@ Programs:
 Threading values:
   (-> VALUE (FORM ...)) inserts VALUE as each form's first argument.
   (->> VALUE (FORM ...)) inserts VALUE as each form's last argument.
-    (-> $1 (dt/add (dur/s 10)))
-      is (dt/add $1 (dur/s 10))
+    (-> $1 (dt/add (du/s 10)))
+      is (dt/add $1 (du/s 10))
     (->> $1 (dt/fmt "%Y/%m/%d") (str "date: "))
       is (str "date: " (dt/fmt "%Y/%m/%d" $1))
 
