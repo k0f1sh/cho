@@ -43,6 +43,60 @@ cho is a tiny semantic awk with Lisp-like expressions.
 
 ## 次に検討するもの
 
+### 型付き値へ渡す直前の文字列抽出
+
+実際のsystemd journalをchoで処理したところ、`short-iso-precise`の先頭フィールドは
+タイムゾーン付きRFC 3339なので、日時処理は前処理なしでそのまま使えた。
+
+```sh
+journalctl --no-pager -n 200 -o short-iso-precise |
+  cho '
+    (f (dt/>= $1 (dt/sub (dt/now) (du/m 10))))
+    (f (~ $3 /^tailscaled/))
+    (p (dt/fmt "%H:%M:%S" $1) $3)
+  '
+```
+
+一方、同じログ内のIPアドレスは`192.168.10.20:39652`、`SRC=10.0.0.25`、
+`[fd00::1]:443`のように、ポート、接頭辞、区切り文字を伴うことが多い。
+`ip/private?`へ`IP:port`をそのまま渡すと、strictな変換規則により意図どおり停止した。
+
+```text
+cho: record 155: ip/private?: argument 1 expects IpAddr,
+but "192.168.10.20:39652" is not a valid IPv4 or IPv6 address
+```
+
+現在は外部コマンドで日時、送信元IP、宛先IPをTSVへ取り出せば、その後の意味的な処理を
+choへ任せられる。
+
+```sh
+journalctl -u tailscaled --no-pager -n 200 -o short-iso-precise |
+  sed -nE 's/^([^ ]+) .*open-conn-track: timeout opening \(TCP ([0-9.]+):[0-9]+ => ([0-9.]+):[0-9]+\).*/\1\t\2\t\3/p' |
+  cho --tsv '
+    (f (dt/>= $1 (dt/sub (dt/now) (du/m 10))))
+    (f (cidr/contains? "192.168.0.0/16" $2))
+    (f (ip/private? $3))
+    (p (dt/fmt "%H:%M:%S" $1) (s/join " -> " $2 $3))
+  '
+```
+
+この前処理をcho内で小さく書けるよう、文字列から一部分を取り出す直交した値式を検討
+する。候補は、区切り文字と位置を指定する分割式、正規表現の一致部分またはキャプチャを
+返す式など。単に`s/split`を追加すると配列型やIPv6のコロンをどう扱うかまで設計が広がる
+ため、最初は「1つのStringを返す」最小の抽出操作を優先する。
+
+決める必要がある事項：
+
+- 区切り文字による抽出と正規表現キャプチャのどちらを最初に提供するか
+- 一致しない場合を空文字にするか、strictな実行時エラーにするか
+- キャプチャ番号が存在しない場合の診断
+- 正規表現リテラルと動的なパターンの扱い
+- IPv4の`IP:port`、IPv6の`[IP]:port`、`SRC=IP`を小さな式で扱えるか
+- `default`、`str`、`s/join`、`ip/`、`cidr/`の内外へ自然にネストできるか
+
+実装する場合は、外部の`sed`を使った上記コマンドと、choだけで完結するコマンドを
+examplesへ並べ、strictな失敗と`default`による明示的な回復も確認する。
+
 ### Durationの任意表示
 
 Durationはそのまま出力すれば秒数になる。人向けの表示が本当に必要な実例を集めてから、
