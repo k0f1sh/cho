@@ -1,0 +1,4 @@
+interface:
+  display_name: "Process Text with cho"
+  short_description: "Process CSV and logs safely with cho"
+  default_prompt: "Use $cho-process-text to inspect this text file and build a safe cho one-liner."
