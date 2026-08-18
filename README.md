@@ -1,6 +1,7 @@
 # cho
 
-Tiny awk-like text processing with Lisp-like expressions.
+Small tool, expressive one-liners.\
+Built for the AWKward bits of shell scripting.
 
 `people.txt`:
 
