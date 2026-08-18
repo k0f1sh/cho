@@ -748,7 +748,7 @@ pub fn run_csv<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> 
     let mut input = input;
     let mut raw = Vec::new();
     let mut number = 0;
-    let now = DateTime::<Utc>::from(SystemTime::now());
+    let now = current_datetime();
 
     while read_csv_record(&mut input, &mut raw)? {
         number += 1;
@@ -777,7 +777,7 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid program"))?;
     let field_separator = compile_field_separator(field_separator)?;
     let expressions = prepare_expressions(&program.expressions)?;
-    let now = DateTime::<Utc>::from(SystemTime::now());
+    let now = current_datetime();
 
     for (index, line) in input.lines().enumerate() {
         let line = line?;
@@ -791,6 +791,12 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
         execute(&expressions, &record, &mut output)?;
     }
     Ok(())
+}
+
+fn current_datetime() -> DateTime<Utc> {
+    DateTime::<Utc>::from(SystemTime::now())
+        .with_nanosecond(0)
+        .expect("zero nanoseconds is always valid")
 }
 
 fn execute<W: Write>(
