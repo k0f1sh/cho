@@ -49,6 +49,7 @@ Values:
   (- NUMBER NUMBER)                -> Number
   (* NUMBER NUMBER)                -> Number
   (/ NUMBER NUMBER)                -> Number
+  (n/fixed NUMBER NUMBER)          -> String
   (str VALUE ...)                  -> String
   (s/join VALUE VALUE ...)         -> String
   (s/part DELIMITER POSITION VALUE) -> String
@@ -61,6 +62,7 @@ Values:
     default uses its fallback when VALUE is empty or raises a runtime error.
     Arithmetic is numeric and binary. Division by zero and non-finite results
     are runtime errors.
+    n/fixed renders its value with 0 to 100 digits after the decimal point.
     s/part splits its last value by its first value as a literal delimiter and
     returns the 1-based part. The delimiter must not be empty. A part that does
     not exist returns an empty string. Empty parts are preserved; if the
