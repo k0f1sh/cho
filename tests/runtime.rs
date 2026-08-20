@@ -945,6 +945,65 @@ fn ip_classification_predicates_report_their_own_conversion_errors() {
 }
 
 #[test]
+fn semver_comparisons_follow_precedence_including_prereleases() {
+    assert_eq!(
+        output(
+            r#"(filter (semver/> $1 $2)) (print $1 $2)"#,
+            concat!(
+                "1.10.0 1.9.0\n",
+                "1.0.0 1.0.0-rc.1\n",
+                "1.0.0-alpha.10 1.0.0-alpha.2\n",
+                "1.0.0-alpha 1.0.0\n",
+            ),
+        ),
+        "1.10.0 1.9.0\n1.0.0 1.0.0-rc.1\n1.0.0-alpha.10 1.0.0-alpha.2\n"
+    );
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (if (semver/= "1.0.0+linux" "1.0.0+darwin") "same" "different") "#,
+                r#"(if (s/= "1.0.0+linux" "1.0.0+darwin") "same" "different"))"#,
+            ),
+            "x\n",
+        ),
+        "same different\n"
+    );
+}
+
+#[test]
+fn semver_supports_all_comparison_operators() {
+    for (operator, left, right, expected) in [
+        ("<", "1.0.0-alpha", "1.0.0", "yes\n"),
+        ("<=", "1.0.0", "1.0.0", "yes\n"),
+        (">", "2.0.0", "1.9.9", "yes\n"),
+        (">=", "2.0.0", "2.0.0", "yes\n"),
+        ("=", "1.0.0+one", "1.0.0+two", "yes\n"),
+        ("!=", "1.0.1", "1.0.0", "yes\n"),
+    ] {
+        let program = format!(r#"(print (if (semver/{operator} "{left}" "{right}") "yes" "no"))"#);
+        assert_eq!(output(&program, "x\n"), expected);
+    }
+}
+
+#[test]
+fn semver_comparisons_reject_non_strict_or_invalid_versions() {
+    for value in ["1.2", "v1.2.3", "1.2.3.4", "1.0.0-01", ""] {
+        let error = cho::run(
+            r#"(filter (semver/>= $1 "1.0.0"))"#,
+            Cursor::new(format!("{value}\n")),
+            Vec::new(),
+        )
+        .unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .starts_with("record 1: semver/>=: argument 1 expects SemVer"),
+            "{error}"
+        );
+    }
+}
+
+#[test]
 fn default_can_recover_from_an_invalid_ip() {
     assert_eq!(
         output(

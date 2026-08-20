@@ -88,6 +88,18 @@ $ cat people.txt | cho '(filter (= NR 1)) (print (du/h 1))'
 3600
 ```
 
+Semantic versions compare by SemVer precedence rather than as strings:
+
+```console
+$ printf '1.9.0\n1.10.0\n2.0.0-alpha\n' |
+    cho '(filter (semver/>= $1 "1.10.0")) (print $1)'
+1.10.0
+2.0.0-alpha
+```
+
+`semver/` comparisons require `MAJOR.MINOR.PATCH`. Build metadata is ignored for
+precedence equality; use `s/=` when the complete text must match.
+
 Numeric arithmetic converts string fields in context and uses binary operators:
 
 ```console

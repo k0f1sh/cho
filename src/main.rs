@@ -31,6 +31,7 @@ Types:
   IpAddr      IPv4 or IPv6 addresses
   Cidr        IPv4 or IPv6 networks
   Url         absolute URLs
+  SemVer      MAJOR.MINOR.PATCH semantic versions
 
   A String is converted when an expression requires another type. A failed
   conversion stops processing with the record, expression, and argument number.
@@ -116,6 +117,9 @@ Predicates:
   (ip/link-local? IPADDR)    true for IPv4 or IPv6 link-local addresses
   (ip/multicast? IPADDR)     true for IPv4 or IPv6 multicast addresses
   (cidr/contains? CIDR IPADDR)
+  (semver/> SEMVER SEMVER)  (semver/>= SEMVER SEMVER)
+  (semver/< SEMVER SEMVER)  (semver/<= SEMVER SEMVER)
+  (semver/= SEMVER SEMVER)  (semver/!= SEMVER SEMVER)
   (reg /PATTERN/)            match $0 against a regular expression
   (reg VALUE /PATTERN/)      match VALUE against a regular expression
   (~ /PATTERN/)              short form of reg

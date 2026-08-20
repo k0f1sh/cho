@@ -592,6 +592,8 @@ fn parse_comparison_operator(value: &str) -> Option<(ComparisonType, ComparisonO
         (ComparisonType::DateTime, operator)
     } else if let Some(operator) = value.strip_prefix("ip/") {
         (ComparisonType::IpAddr, operator)
+    } else if let Some(operator) = value.strip_prefix("semver/") {
+        (ComparisonType::SemVer, operator)
     } else {
         (ComparisonType::Number, value)
     };
@@ -745,6 +747,7 @@ mod tests {
         assert!(parse(r#"(filter (ip/loopback? $1))"#).is_ok());
         assert!(parse(r#"(filter (ip/link-local? $1))"#).is_ok());
         assert!(parse(r#"(filter (ip/multicast? $1))"#).is_ok());
+        assert!(parse(r#"(filter (semver/>= $1 "2.4.0"))"#).is_ok());
         assert!(parse(r#"(filter (cidr/contains? "10.0.0.0/8" $1))"#).is_ok());
         assert!(parse(r#"(print (dt/add (dt/unix $1) (du/m 2)))"#).is_ok());
         assert!(parse(r#"(print (dt/fmt "%Y-%m-%d" $1))"#).is_ok());
@@ -842,6 +845,8 @@ mod tests {
             "(filter (ip/loopback?))",
             "(filter (ip/link-local? $1 $2))",
             "(filter (ip/multicast?))",
+            "(filter (semver/> $1))",
+            "(filter (semver/= $1 $2 $3))",
         ] {
             assert_eq!(parse(program), Err(ParseError::InvalidSyntax), "{program}");
         }
