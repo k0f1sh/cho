@@ -526,6 +526,61 @@ fn url_component_extraction_rejects_invalid_urls_and_non_strings() {
 }
 
 #[test]
+fn url_component_encoding_handles_ascii_unicode_and_composition() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (url/encode "hello world") (url/decode "hello%20world") "#,
+                r#"(str "https://example.com/search?q=" (url/encode $1)) "#,
+                r#"(url/encode $2) (-> $2 (url/encode) (url/decode)))"#,
+            ),
+            "東京 a/b?q=1+2\n",
+        ),
+        concat!(
+            "hello%20world hello world ",
+            "https://example.com/search?q=%E6%9D%B1%E4%BA%AC ",
+            "a%2Fb%3Fq%3D1%2B2 a/b?q=1+2\n",
+        )
+    );
+    assert_eq!(
+        output(
+            r#"(print (s/join "|" (url/encode "") (url/decode "") (url/decode "%2b+%2F")))"#,
+            "x\n",
+        ),
+        "||++/\n"
+    );
+}
+
+#[test]
+fn url_component_decoding_rejects_invalid_escapes_utf8_and_non_strings() {
+    for (program, expected) in [
+        (
+            r#"(print (url/decode "%"))"#,
+            "record 1: url/decode: argument 1 expects String (URL component)",
+        ),
+        (
+            r#"(print (url/decode "%2"))"#,
+            "record 1: url/decode: argument 1 expects String (URL component)",
+        ),
+        (
+            r#"(print (url/decode "%GG"))"#,
+            "record 1: url/decode: argument 1 expects String (URL component)",
+        ),
+        (
+            r#"(print (url/decode "%FF"))"#,
+            "record 1: url/decode: argument 1 expects String (URL component)",
+        ),
+        (
+            "(print (url/encode 10))",
+            "record 1: url/encode: argument 1 expects String",
+        ),
+    ] {
+        let error = cho::run(program, Cursor::new("x\n"), Vec::new()).unwrap_err();
+        assert!(error.to_string().starts_with(expected), "{error}");
+    }
+}
+
+#[test]
 fn regex_filters_match_lines_or_specific_fields() {
     assert_eq!(
         output(

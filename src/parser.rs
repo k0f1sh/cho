@@ -1,6 +1,6 @@
 use crate::ast::{
     ArithmeticOperator, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, IpClass,
-    Predicate, Program, UrlPart, Value,
+    Predicate, Program, UrlEncoding, UrlPart, Value,
 };
 use crate::lexer::{Token, tokenize};
 
@@ -225,6 +225,14 @@ impl Parser {
                     self.expect_right_paren()?;
                     Ok(Value::UrlPart {
                         part: url_part(&operator).expect("operator was matched"),
+                        value: Box::new(value),
+                    })
+                }
+                Some(Token::Atom(operator)) if url_encoding(&operator).is_some() => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::UrlEncoding {
+                        operation: url_encoding(&operator).expect("operator was matched"),
                         value: Box::new(value),
                     })
                 }
@@ -455,6 +463,10 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
             part: url_part(operator).expect("operator was matched"),
             value: Box::new(one(arguments)?),
         }),
+        operator if url_encoding(operator).is_some() => Ok(Value::UrlEncoding {
+            operation: url_encoding(operator).expect("operator was matched"),
+            value: Box::new(one(arguments)?),
+        }),
         "s/join" if !arguments.is_empty() => {
             let separator = arguments.remove(0);
             Ok(Value::Join {
@@ -561,6 +573,14 @@ fn url_part(value: &str) -> Option<UrlPart> {
         "url/path" => Some(UrlPart::Path),
         "url/query" => Some(UrlPart::Query),
         "url/fragment" => Some(UrlPart::Fragment),
+        _ => None,
+    }
+}
+
+fn url_encoding(value: &str) -> Option<UrlEncoding> {
+    match value {
+        "url/encode" => Some(UrlEncoding::Encode),
+        "url/decode" => Some(UrlEncoding::Decode),
         _ => None,
     }
 }
@@ -712,6 +732,12 @@ mod tests {
     }
 
     #[test]
+    fn parses_url_component_encoding() {
+        assert!(parse("(print (url/encode $1) (url/decode $2))").is_ok());
+        assert!(parse("(print (-> $1 (url/encode) (url/decode)))").is_ok());
+    }
+
+    #[test]
     fn parses_typed_values_and_predicates() {
         assert!(parse(r#"(filter (dt/>= $1 "2026-08-01T00:00:00Z"))"#).is_ok());
         assert!(parse(r#"(filter (s/= $1 "Alice"))"#).is_ok());
@@ -768,6 +794,8 @@ mod tests {
             "(print (url/host))",
             "(print (url/path $1 $2))",
             "(print (url/domain $1))",
+            "(print (url/encode))",
+            "(print (url/decode $1 $2))",
             "(print (s/part))",
             r#"(print (s/part ":"))"#,
             r#"(print (s/part ":" 1))"#,

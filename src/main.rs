@@ -66,6 +66,8 @@ Values:
   (url/path URL)                   -> String
   (url/query URL)                  -> String
   (url/fragment URL)               -> String
+  (url/encode STRING)              -> String
+  (url/decode STRING)              -> String
     default uses its fallback when VALUE is empty or raises a runtime error.
     Arithmetic is numeric and binary. Division by zero and non-finite results
     are runtime errors.
@@ -76,6 +78,8 @@ Values:
     delimiter is absent, position 1 returns the complete value.
     URL extraction preserves percent encoding. A missing optional component is
     an empty string; an invalid URL is a runtime error.
+    url/encode uses RFC 3986 unreserved characters and uppercase percent escapes.
+    url/decode decodes only %XX; + stays +. Invalid escapes or UTF-8 are errors.
 
 Date and duration values:
   (dt/unix NUMBER)                 -> DateTime

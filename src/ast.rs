@@ -87,6 +87,12 @@ pub enum UrlPart {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum UrlEncoding {
+    Encode,
+    Decode,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Value {
     Field(usize),
     RecordNumber,
@@ -104,6 +110,10 @@ pub enum Value {
     },
     UrlPart {
         part: UrlPart,
+        value: Box<Value>,
+    },
+    UrlEncoding {
+        operation: UrlEncoding,
         value: Box<Value>,
     },
     DateTimeFromUnix(Box<Value>),
