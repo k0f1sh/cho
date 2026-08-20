@@ -9,8 +9,8 @@ use ipnet::IpNet;
 use regex::Regex;
 
 use crate::ast::{
-    ArithmeticOperator, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, Predicate,
-    Value,
+    ArithmeticOperator, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, IpClass,
+    Predicate, Value,
 };
 use crate::parser::parse;
 
@@ -104,7 +104,10 @@ enum PreparedPredicate<'a> {
         target: &'a Value,
         regex: Regex,
     },
-    IpPrivate(&'a Value),
+    IpClass {
+        kind: &'a IpClass,
+        value: &'a Value,
+    },
     CidrContains {
         cidr: &'a Value,
         ip: &'a Value,
@@ -593,9 +596,9 @@ fn matches_unprepared(predicate: &Predicate, record: &Record<'_, '_>) -> EvalRes
         Predicate::Regex { target, pattern } => Ok(Regex::new(pattern)
             .expect("regular expressions are prepared before execution")
             .is_match(&evaluate(target, record)?.render())),
-        Predicate::IpPrivate(value) => {
-            let ip = expect_ip(evaluate(value, record)?, "ip/private?", 1)?;
-            Ok(matches!(ip, IpAddr::V4(ip) if is_private_ipv4(ip)))
+        Predicate::IpClass { kind, value } => {
+            let ip = expect_ip(evaluate(value, record)?, ip_class_name(kind), 1)?;
+            Ok(matches_ip_class(ip, kind))
         }
         Predicate::CidrContains { cidr, ip } => {
             let cidr = expect_cidr(evaluate(cidr, record)?, "cidr/contains?", 1)?;
@@ -709,6 +712,33 @@ fn is_private_ipv4(ip: std::net::Ipv4Addr) -> bool {
     first == 10 || (first == 172 && (16..=31).contains(&second)) || (first == 192 && second == 168)
 }
 
+fn matches_ip_class(ip: IpAddr, kind: &IpClass) -> bool {
+    match kind {
+        IpClass::Private => matches!(ip, IpAddr::V4(ip) if is_private_ipv4(ip)),
+        IpClass::Loopback => match ip {
+            IpAddr::V4(ip) => ip.octets()[0] == 127,
+            IpAddr::V6(ip) => ip == std::net::Ipv6Addr::LOCALHOST,
+        },
+        IpClass::LinkLocal => match ip {
+            IpAddr::V4(ip) => matches!(ip.octets(), [169, 254, _, _]),
+            IpAddr::V6(ip) => ip.segments()[0] & 0xffc0 == 0xfe80,
+        },
+        IpClass::Multicast => match ip {
+            IpAddr::V4(ip) => (224..=239).contains(&ip.octets()[0]),
+            IpAddr::V6(ip) => ip.octets()[0] == 0xff,
+        },
+    }
+}
+
+fn ip_class_name(kind: &IpClass) -> &'static str {
+    match kind {
+        IpClass::Private => "ip/private?",
+        IpClass::Loopback => "ip/loopback?",
+        IpClass::LinkLocal => "ip/link-local?",
+        IpClass::Multicast => "ip/multicast?",
+    }
+}
+
 fn render_duration(value: &TimeDelta) -> String {
     let nanoseconds = value
         .num_nanoseconds()
@@ -768,9 +798,9 @@ fn matches(predicate: &PreparedPredicate<'_>, record: &Record<'_, '_>) -> EvalRe
         PreparedPredicate::Regex { target, regex } => {
             Ok(regex.is_match(&evaluate(target, record)?.render()))
         }
-        PreparedPredicate::IpPrivate(value) => {
-            let ip = expect_ip(evaluate(value, record)?, "ip/private?", 1)?;
-            Ok(matches!(ip, IpAddr::V4(ip) if is_private_ipv4(ip)))
+        PreparedPredicate::IpClass { kind, value } => {
+            let ip = expect_ip(evaluate(value, record)?, ip_class_name(kind), 1)?;
+            Ok(matches_ip_class(ip, kind))
         }
         PreparedPredicate::CidrContains { cidr, ip } => {
             let cidr = expect_cidr(evaluate(cidr, record)?, "cidr/contains?", 1)?;
@@ -1056,7 +1086,7 @@ fn validate_predicate(predicate: &Predicate) -> io::Result<()> {
                 .map(|_| ())
                 .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))
         }
-        Predicate::IpPrivate(value) => validate_value(value),
+        Predicate::IpClass { value, .. } => validate_value(value),
         Predicate::CidrContains { cidr, ip } => {
             validate_value(cidr)?;
             validate_value(ip)
@@ -1087,7 +1117,7 @@ fn prepare_predicate(predicate: &Predicate) -> io::Result<PreparedPredicate<'_>>
             regex: Regex::new(pattern)
                 .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))?,
         }),
-        Predicate::IpPrivate(value) => Ok(PreparedPredicate::IpPrivate(value)),
+        Predicate::IpClass { kind, value } => Ok(PreparedPredicate::IpClass { kind, value }),
         Predicate::CidrContains { cidr, ip } => Ok(PreparedPredicate::CidrContains { cidr, ip }),
         Predicate::Not(predicate) => Ok(PreparedPredicate::Not(Box::new(prepare_predicate(
             predicate,

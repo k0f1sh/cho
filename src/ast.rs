@@ -21,7 +21,10 @@ pub enum Predicate {
         target: Value,
         pattern: String,
     },
-    IpPrivate(Value),
+    IpClass {
+        kind: IpClass,
+        value: Value,
+    },
     CidrContains {
         cidr: Value,
         ip: Value,
@@ -29,6 +32,14 @@ pub enum Predicate {
     Not(Box<Predicate>),
     And(Vec<Predicate>),
     Or(Vec<Predicate>),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum IpClass {
+    Private,
+    Loopback,
+    LinkLocal,
+    Multicast,
 }
 
 #[derive(Debug, PartialEq)]
