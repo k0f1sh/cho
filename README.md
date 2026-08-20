@@ -56,6 +56,16 @@ $ cat people.txt | cho '(filter (= NR 1)) (print (du/h 1))'
 3600
 ```
 
+Numeric arithmetic converts string fields in context and uses binary operators:
+
+```console
+$ printf '10 2.5\n' | cho '(print (+ $1 $2) (* $1 2))'
+12.5 20
+```
+
+`+`, `-`, `*`, and `/` accept exactly two numbers. Invalid numbers, division by
+zero, and non-finite results are errors.
+
 ## Composing expressions
 
 ```console

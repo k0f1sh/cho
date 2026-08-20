@@ -58,12 +58,25 @@ pub enum DateTimeFloorUnit {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum ArithmeticOperator {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Value {
     Field(usize),
     RecordNumber,
     FieldCount,
     String(String),
     Number(f64),
+    Arithmetic {
+        operator: ArithmeticOperator,
+        left: Box<Value>,
+        right: Box<Value>,
+    },
     DateTimeFromUnix(Box<Value>),
     FormatDateTime {
         format: Box<Value>,

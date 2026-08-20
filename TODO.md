@@ -18,6 +18,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - `print`と`filter`の短縮形`p`と`f`
 - CSVとTSVの先頭レコードを除く`--skip-header`
 - 接頭辞なしのstrictな数値比較
+- `+`、`-`、`*`、`/`による二項の数値演算
 - `s/`による文字列比較
 - `default`による、局所的な実行時エラーの回復
 - DateTimeと`dt/unix`、`dt/fmt`、日時比較

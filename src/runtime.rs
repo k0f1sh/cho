@@ -8,7 +8,10 @@ use chrono::{DateTime, SecondsFormat, TimeDelta, Timelike, Utc};
 use ipnet::IpNet;
 use regex::Regex;
 
-use crate::ast::{ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, Predicate, Value};
+use crate::ast::{
+    ArithmeticOperator, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, Predicate,
+    Value,
+};
 use crate::parser::parse;
 
 struct Record<'line, 'separator> {
@@ -151,6 +154,11 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> EvalResult<RuntimeValue> 
         Value::FieldCount => Ok(RuntimeValue::Number(record.field_count() as f64)),
         Value::String(value) => Ok(RuntimeValue::String(value.clone())),
         Value::Number(number) => Ok(RuntimeValue::Number(*number)),
+        Value::Arithmetic {
+            operator,
+            left,
+            right,
+        } => evaluate_arithmetic(operator, left, right, record),
         Value::DateTimeFromUnix(value) => {
             let seconds = expect_number(evaluate(value, record)?, "dt/unix", 1)?;
             if seconds.fract() != 0.0 || seconds < i64::MIN as f64 || seconds > i64::MAX as f64 {
@@ -331,6 +339,47 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> EvalResult<RuntimeValue> 
             Ok(_) | Err(_) => evaluate(fallback, record),
         },
     }
+}
+
+fn evaluate_arithmetic(
+    operator: &ArithmeticOperator,
+    left: &Value,
+    right: &Value,
+    record: &Record<'_, '_>,
+) -> EvalResult<RuntimeValue> {
+    let function = match operator {
+        ArithmeticOperator::Add => "+",
+        ArithmeticOperator::Subtract => "-",
+        ArithmeticOperator::Multiply => "*",
+        ArithmeticOperator::Divide => "/",
+    };
+    let left = expect_number(evaluate(left, record)?, function, 1)?;
+    let right = expect_number(evaluate(right, record)?, function, 2)?;
+    if matches!(operator, ArithmeticOperator::Divide) && right == 0.0 {
+        return Err(EvalError::conversion(
+            function,
+            2,
+            "a non-zero Number",
+            right.to_string(),
+            "is zero",
+        ));
+    }
+    let result = match operator {
+        ArithmeticOperator::Add => left + right,
+        ArithmeticOperator::Subtract => left - right,
+        ArithmeticOperator::Multiply => left * right,
+        ArithmeticOperator::Divide => left / right,
+    };
+    if !result.is_finite() {
+        return Err(EvalError::conversion(
+            function,
+            2,
+            "Number producing a finite result with argument 1",
+            right.to_string(),
+            "produces a non-finite result",
+        ));
+    }
+    Ok(RuntimeValue::Number(result))
 }
 
 fn duration_from_value(
@@ -945,6 +994,10 @@ fn validate_value(value: &Value) -> io::Result<()> {
             validate_value(duration)
         }
         Value::DifferenceDateTime { left, right } => {
+            validate_value(left)?;
+            validate_value(right)
+        }
+        Value::Arithmetic { left, right, .. } => {
             validate_value(left)?;
             validate_value(right)
         }
