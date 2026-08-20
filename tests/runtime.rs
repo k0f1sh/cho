@@ -792,6 +792,51 @@ fn ip_and_cidr_predicates_are_typed() {
 }
 
 #[test]
+fn ip_classification_predicates_cover_ipv4_and_ipv6_boundaries() {
+    assert_eq!(
+        output(
+            "(filter (ip/loopback? $1)) (print $1)",
+            "127.0.0.1\n127.255.255.255\n126.255.255.255\n::1\n::2\n",
+        ),
+        "127.0.0.1\n127.255.255.255\n::1\n"
+    );
+    assert_eq!(
+        output(
+            "(filter (ip/link-local? $1)) (print $1)",
+            concat!(
+                "169.254.0.1\n169.254.255.255\n169.253.255.255\n",
+                "fe80::1\nfebf::1\nfec0::1\n",
+            ),
+        ),
+        "169.254.0.1\n169.254.255.255\nfe80::1\nfebf::1\n"
+    );
+    assert_eq!(
+        output(
+            "(filter (ip/multicast? $1)) (print $1)",
+            concat!(
+                "224.0.0.1\n239.255.255.255\n223.255.255.255\n240.0.0.1\n",
+                "ff02::1\nfeff::1\n",
+            ),
+        ),
+        "224.0.0.1\n239.255.255.255\nff02::1\n"
+    );
+}
+
+#[test]
+fn ip_classification_predicates_report_their_own_conversion_errors() {
+    for predicate in ["ip/loopback?", "ip/link-local?", "ip/multicast?"] {
+        let program = format!("(filter ({predicate} $1))");
+        let error = cho::run(&program, Cursor::new("not-an-ip\n"), Vec::new()).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .starts_with(&format!("record 1: {predicate}: argument 1 expects IpAddr")),
+            "{error}"
+        );
+    }
+}
+
+#[test]
 fn default_can_recover_from_an_invalid_ip() {
     assert_eq!(
         output(

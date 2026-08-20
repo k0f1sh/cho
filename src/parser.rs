@@ -1,6 +1,6 @@
 use crate::ast::{
-    ArithmeticOperator, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, Predicate,
-    Program, Value,
+    ArithmeticOperator, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, IpClass,
+    Predicate, Program, Value,
 };
 use crate::lexer::{Token, tokenize};
 
@@ -79,10 +79,13 @@ impl Parser {
         if operator == Some(Token::Atom("or".into())) {
             return Ok(Predicate::Or(self.parse_predicates_until_right_paren()?));
         }
-        if operator == Some(Token::Atom("ip/private?".into())) {
+        if let Some(kind) = match operator {
+            Some(Token::Atom(ref operator)) => ip_class(operator),
+            _ => None,
+        } {
             let value = self.parse_value()?;
             self.expect_right_paren()?;
-            return Ok(Predicate::IpPrivate(value));
+            return Ok(Predicate::IpClass { kind, value });
         }
         if operator == Some(Token::Atom("cidr/contains?".into())) {
             let cidr = self.parse_value()?;
@@ -528,6 +531,16 @@ fn arithmetic_operator(value: &str) -> Option<ArithmeticOperator> {
     }
 }
 
+fn ip_class(value: &str) -> Option<IpClass> {
+    match value {
+        "ip/private?" => Some(IpClass::Private),
+        "ip/loopback?" => Some(IpClass::Loopback),
+        "ip/link-local?" => Some(IpClass::LinkLocal),
+        "ip/multicast?" => Some(IpClass::Multicast),
+        _ => None,
+    }
+}
+
 fn parse_comparison_operator(value: &str) -> Option<(ComparisonType, ComparisonOperator)> {
     let (kind, operator) = if let Some(operator) = value.strip_prefix("s/") {
         (ComparisonType::String, operator)
@@ -672,6 +685,9 @@ mod tests {
         assert!(parse(r#"(filter (dt/>= $1 "2026-08-01T00:00:00Z"))"#).is_ok());
         assert!(parse(r#"(filter (s/= $1 "Alice"))"#).is_ok());
         assert!(parse(r#"(filter (ip/private? $1))"#).is_ok());
+        assert!(parse(r#"(filter (ip/loopback? $1))"#).is_ok());
+        assert!(parse(r#"(filter (ip/link-local? $1))"#).is_ok());
+        assert!(parse(r#"(filter (ip/multicast? $1))"#).is_ok());
         assert!(parse(r#"(filter (cidr/contains? "10.0.0.0/8" $1))"#).is_ok());
         assert!(parse(r#"(print (dt/add (dt/unix $1) (du/m 2)))"#).is_ok());
         assert!(parse(r#"(print (dt/fmt "%Y-%m-%d" $1))"#).is_ok());
@@ -761,6 +777,9 @@ mod tests {
             "(print (upper $1))",
             "(print (dt/add $1))",
             "(print (-> $1 (unknown)))",
+            "(filter (ip/loopback?))",
+            "(filter (ip/link-local? $1 $2))",
+            "(filter (ip/multicast?))",
         ] {
             assert_eq!(parse(program), Err(ParseError::InvalidSyntax), "{program}");
         }

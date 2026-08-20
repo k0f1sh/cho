@@ -27,6 +27,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - `dt/now`、`dt/add`、`dt/sub`、`dt/diff`
 - `dt/floor-s`、`dt/floor-m`、`dt/floor-h`、`dt/floor-d`によるUTC境界への切り下げ
 - `ip/private?`、`ip/=`、`ip/!=`、`cidr/contains?`
+- IPv4/IPv6対応の`ip/loopback?`、`ip/link-local?`、`ip/multicast?`
 - 値式用の`->`と`->>`
 - 目的別の`examples/`
 - LLMエージェント向けの`skills/cho-process-text/`
@@ -67,9 +68,6 @@ Durationはそのまま出力すれば秒数になる。人向けの表示が本
 
 実際の用途を確認し、必要なものだけを追加する。
 
-- `ip/loopback?`
-- `ip/link-local?`
-- `ip/multicast?`
 - `ip/v4?`
 - `ip/v6?`
 - IPv6 unique-local用の述語

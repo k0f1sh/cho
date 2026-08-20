@@ -44,6 +44,15 @@ dates and `cidr/contains?` expects a CIDR and an IP address, so cho converts the
 string arguments in context. Invalid input is an error instead of a silent false;
 use `default` only where recovery is intentional.
 
+IP predicates classify both address families where applicable:
+
+```console
+$ printf '127.0.0.1\n::1\n10.0.0.1\n' |
+    cho '(filter (ip/loopback? $1)) (print $1)'
+127.0.0.1
+::1
+```
+
 ```console
 $ cho '(print (dt/floor-m (dt/now)))'
 2026-08-18T12:34:00Z

@@ -99,6 +99,9 @@ Predicates:
   (dt/= DATETIME DATETIME)  (dt/!= DATETIME DATETIME)
   (ip/= IPADDR IPADDR)  (ip/!= IPADDR IPADDR)
   (ip/private? IPADDR)       true only for private IPv4 addresses
+  (ip/loopback? IPADDR)      true for IPv4 or IPv6 loopback addresses
+  (ip/link-local? IPADDR)    true for IPv4 or IPv6 link-local addresses
+  (ip/multicast? IPADDR)     true for IPv4 or IPv6 multicast addresses
   (cidr/contains? CIDR IPADDR)
   (reg /PATTERN/)            match $0 against a regular expression
   (reg VALUE /PATTERN/)      match VALUE against a regular expression
