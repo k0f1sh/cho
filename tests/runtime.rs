@@ -95,15 +95,22 @@ fn part_composes_with_values_threading_and_typed_predicates() {
 }
 
 #[test]
-fn part_errors_are_strict_and_default_can_recover() {
+fn part_returns_empty_for_a_missing_part_and_composes_with_other_values() {
     assert_eq!(
         output(
-            r#"(print (default (s/part ":" 3 $1) "missing") (default (s/part ":" 2 $2) "empty"))"#,
+            concat!(
+                r#"(print (s/join "|" (s/part ":" 3 $1) (s/upper (s/part ":" 3 $1)))) "#,
+                r#"(print (default (s/part ":" 3 $1) "missing") "#,
+                r#"(default (s/part ":" 2 $2) "empty"))"#,
+            ),
             "a:b x:\n",
         ),
-        "missing empty\n"
+        "|\nmissing empty\n"
     );
+}
 
+#[test]
+fn part_keeps_invalid_delimiters_and_positions_strict() {
     for (program, expected) in [
         (
             r#"(print (s/part "" 1 $1))"#,
@@ -129,14 +136,23 @@ fn part_errors_are_strict_and_default_can_recover() {
             r#"(print (s/part ":" 1e40 $1))"#,
             "record 1: s/part: argument 2 expects Number (representable part position)",
         ),
-        (
-            r#"(print (s/part ":" 3 $1))"#,
-            "record 1: s/part: argument 2 expects an existing part position",
-        ),
     ] {
         let error = cho::run(program, Cursor::new("a:b\n"), Vec::new()).unwrap_err();
         assert!(error.to_string().starts_with(expected), "{error}");
     }
+
+    let error = cho::run(
+        r#"(filter (> (s/part ":" 3 $1) 0))"#,
+        Cursor::new("a:b\n"),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .starts_with("record 1: >: argument 1 expects Number"),
+        "{error}"
+    );
 }
 
 #[test]

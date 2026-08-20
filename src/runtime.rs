@@ -295,19 +295,13 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> EvalResult<RuntimeValue> 
                 ));
             }
             let value = evaluate(value, record)?.render();
-            value
-                .split(&delimiter)
-                .nth(position as usize - 1)
-                .map(|part| RuntimeValue::String(part.to_owned()))
-                .ok_or_else(|| {
-                    EvalError::conversion(
-                        "s/part",
-                        2,
-                        "an existing part position",
-                        position.to_string(),
-                        "is out of range after splitting argument 3",
-                    )
-                })
+            Ok(RuntimeValue::String(
+                value
+                    .split(&delimiter)
+                    .nth(position as usize - 1)
+                    .unwrap_or("")
+                    .to_owned(),
+            ))
         }
         Value::Count(value) => Ok(RuntimeValue::Number(
             evaluate(value, record)?.render().chars().count() as f64,

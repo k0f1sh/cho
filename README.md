@@ -81,6 +81,16 @@ $ printf '192.168.10.20:39652 SRC=10.0.0.25\n' |
 192.168.10.20 10.0.0.25
 ```
 
+If the requested part does not exist, `s/part` returns an empty string, so it
+can be composed directly or handled with `default`:
+
+```console
+$ printf 'alice\nalice:admin\n' |
+    cho '(print $1 (default (s/part ":" 2 $1) "member"))'
+alice member
+alice:admin admin
+```
+
 ## Input formats
 
 For example, suppose `places.csv` contains a quoted comma:
