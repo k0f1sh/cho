@@ -30,6 +30,7 @@ Types:
   Duration    signed seconds with nanosecond precision
   IpAddr      IPv4 or IPv6 addresses
   Cidr        IPv4 or IPv6 networks
+  Url         absolute URLs
 
   A String is converted when an expression requires another type. A failed
   conversion stops processing with the record, expression, and argument number.
@@ -59,6 +60,12 @@ Values:
   (s/lower VALUE)                  -> String
   (s/upper VALUE)                  -> String
   (default VALUE VALUE)            -> Value
+  (url/scheme URL)                 -> String
+  (url/host URL)                   -> String
+  (url/port URL)                   -> String
+  (url/path URL)                   -> String
+  (url/query URL)                  -> String
+  (url/fragment URL)               -> String
     default uses its fallback when VALUE is empty or raises a runtime error.
     Arithmetic is numeric and binary. Division by zero and non-finite results
     are runtime errors.
@@ -67,6 +74,8 @@ Values:
     returns the 1-based part. The delimiter must not be empty. A part that does
     not exist returns an empty string. Empty parts are preserved; if the
     delimiter is absent, position 1 returns the complete value.
+    URL extraction preserves percent encoding. A missing optional component is
+    an empty string; an invalid URL is a runtime error.
 
 Date and duration values:
   (dt/unix NUMBER)                 -> DateTime

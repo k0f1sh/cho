@@ -473,6 +473,59 @@ fn fixed_number_formatting_rejects_invalid_digits_and_values() {
 }
 
 #[test]
+fn url_component_extraction_preserves_encoding_and_composes() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (url/scheme $1) (url/host $1) (url/port $1) "#,
+                r#"(url/path $1) (url/query $1) (url/fragment $1)) "#,
+                r#"(print (str "host=" (s/upper (url/host $1))) (-> $1 (url/path)))"#,
+            ),
+            "https://example.com:8443/a%20b?q=hello%20world#top\n",
+        ),
+        concat!(
+            "https example.com 8443 /a%20b q=hello%20world top\n",
+            "host=EXAMPLE.COM /a%20b\n",
+        )
+    );
+}
+
+#[test]
+fn url_component_extraction_returns_empty_for_missing_optional_parts() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (s/join "|" (url/host $1) (url/port $1) "#,
+                r#"(url/path $1) (url/query $1) (url/fragment $1)))"#,
+            ),
+            "https://example.com\nhttps://[::1]/\nmailto:alice@example.com\n",
+        ),
+        "example.com||/||\n[::1]||/||\n||alice@example.com||\n"
+    );
+}
+
+#[test]
+fn url_component_extraction_rejects_invalid_urls_and_non_strings() {
+    for (program, expected) in [
+        (
+            "(print (url/host $1))",
+            "record 1: url/host: argument 1 expects Url (absolute URL)",
+        ),
+        (
+            "(print (url/path 10))",
+            "record 1: url/path: argument 1 expects String",
+        ),
+        (
+            r#"(print (url/query ""))"#,
+            "record 1: url/query: argument 1 expects Url (absolute URL)",
+        ),
+    ] {
+        let error = cho::run(program, Cursor::new("relative/path\n"), Vec::new()).unwrap_err();
+        assert!(error.to_string().starts_with(expected), "{error}");
+    }
+}
+
+#[test]
 fn regex_filters_match_lines_or_specific_fields() {
     assert_eq!(
         output(

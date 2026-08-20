@@ -28,6 +28,8 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - `dt/floor-s`、`dt/floor-m`、`dt/floor-h`、`dt/floor-d`によるUTC境界への切り下げ
 - `ip/private?`、`ip/=`、`ip/!=`、`cidr/contains?`
 - IPv4/IPv6対応の`ip/loopback?`、`ip/link-local?`、`ip/multicast?`
+- Url型と`url/scheme`、`url/host`、`url/port`、`url/path`、`url/query`、
+  `url/fragment`によるcomponent抽出
 - 値式用の`->`と`->>`
 - 目的別の`examples/`
 - LLMエージェント向けの`skills/cho-process-text/`

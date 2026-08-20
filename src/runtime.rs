@@ -10,7 +10,7 @@ use regex::Regex;
 
 use crate::ast::{
     ArithmeticOperator, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, IpClass,
-    Predicate, Value,
+    Predicate, UrlPart, Value,
 };
 use crate::parser::parse;
 
@@ -178,6 +178,28 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> EvalResult<RuntimeValue> 
                 "{value:.digits$}",
                 digits = digits as usize
             )))
+        }
+        Value::UrlPart { part, value } => {
+            let function = url_part_name(part);
+            let input = expect_string(evaluate(value, record)?, function, 1)?;
+            let url = url::Url::parse(&input).map_err(|_| {
+                EvalError::conversion(
+                    function,
+                    1,
+                    "Url (absolute URL)",
+                    input,
+                    "is not a valid absolute URL",
+                )
+            })?;
+            let part = match part {
+                UrlPart::Scheme => url.scheme().to_owned(),
+                UrlPart::Host => url.host_str().unwrap_or("").to_owned(),
+                UrlPart::Port => url.port().map(|port| port.to_string()).unwrap_or_default(),
+                UrlPart::Path => url.path().to_owned(),
+                UrlPart::Query => url.query().unwrap_or("").to_owned(),
+                UrlPart::Fragment => url.fragment().unwrap_or("").to_owned(),
+            };
+            Ok(RuntimeValue::String(part))
         }
         Value::DateTimeFromUnix(value) => {
             let seconds = expect_number(evaluate(value, record)?, "dt/unix", 1)?;
@@ -739,6 +761,17 @@ fn ip_class_name(kind: &IpClass) -> &'static str {
     }
 }
 
+fn url_part_name(part: &UrlPart) -> &'static str {
+    match part {
+        UrlPart::Scheme => "url/scheme",
+        UrlPart::Host => "url/host",
+        UrlPart::Port => "url/port",
+        UrlPart::Path => "url/path",
+        UrlPart::Query => "url/query",
+        UrlPart::Fragment => "url/fragment",
+    }
+}
+
 fn render_duration(value: &TimeDelta) -> String {
     let nanoseconds = value
         .num_nanoseconds()
@@ -1052,6 +1085,7 @@ fn validate_value(value: &Value) -> io::Result<()> {
             validate_value(digits)?;
             validate_value(value)
         }
+        Value::UrlPart { value, .. } => validate_value(value),
         Value::If {
             predicate,
             then_value,
