@@ -77,6 +77,10 @@ pub enum Value {
         left: Box<Value>,
         right: Box<Value>,
     },
+    FormatNumberFixed {
+        digits: Box<Value>,
+        value: Box<Value>,
+    },
     DateTimeFromUnix(Box<Value>),
     FormatDateTime {
         format: Box<Value>,

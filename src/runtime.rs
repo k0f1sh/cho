@@ -159,6 +159,23 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> EvalResult<RuntimeValue> 
             left,
             right,
         } => evaluate_arithmetic(operator, left, right, record),
+        Value::FormatNumberFixed { digits, value } => {
+            let digits = expect_number(evaluate(digits, record)?, "n/fixed", 1)?;
+            if digits.fract() != 0.0 || !(0.0..=100.0).contains(&digits) {
+                return Err(EvalError::conversion(
+                    "n/fixed",
+                    1,
+                    "Number (whole digits from 0 to 100)",
+                    digits.to_string(),
+                    "is outside the supported precision range",
+                ));
+            }
+            let value = expect_number(evaluate(value, record)?, "n/fixed", 2)?;
+            Ok(RuntimeValue::String(format!(
+                "{value:.digits$}",
+                digits = digits as usize
+            )))
+        }
         Value::DateTimeFromUnix(value) => {
             let seconds = expect_number(evaluate(value, record)?, "dt/unix", 1)?;
             if seconds.fract() != 0.0 || seconds < i64::MIN as f64 || seconds > i64::MAX as f64 {
@@ -1000,6 +1017,10 @@ fn validate_value(value: &Value) -> io::Result<()> {
         Value::Arithmetic { left, right, .. } => {
             validate_value(left)?;
             validate_value(right)
+        }
+        Value::FormatNumberFixed { digits, value } => {
+            validate_value(digits)?;
+            validate_value(value)
         }
         Value::If {
             predicate,

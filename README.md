@@ -66,6 +66,16 @@ $ printf '10 2.5\n' | cho '(print (+ $1 $2) (* $1 2))'
 `+`, `-`, `*`, and `/` accept exactly two numbers. Invalid numbers, division by
 zero, and non-finite results are errors.
 
+Use `n/fixed` when output needs a fixed number of digits after the decimal point:
+
+```console
+$ printf '3 3.14159\n' | cho '(print (n/fixed 2 $1) (n/fixed 3 $2))'
+3.00 3.142
+```
+
+`n/fixed` returns a String and accepts a whole digit count from 0 to 100, keeping
+calculation separate from final display formatting.
+
 ## Composing expressions
 
 ```console

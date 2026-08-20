@@ -208,6 +208,15 @@ impl Parser {
                         right: Box::new(right),
                     })
                 }
+                Some(Token::Atom(operator)) if operator == "n/fixed" => {
+                    let digits = self.parse_value()?;
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::FormatNumberFixed {
+                        digits: Box::new(digits),
+                        value: Box::new(value),
+                    })
+                }
                 Some(Token::Atom(operator)) if operator == "s/join" => {
                     let separator = self.parse_value()?;
                     Ok(Value::Join {
@@ -422,6 +431,13 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
                 operator: arithmetic_operator(operator).expect("operator was matched"),
                 left: Box::new(left),
                 right: Box::new(right),
+            })
+        }
+        "n/fixed" => {
+            let (digits, value) = two(arguments)?;
+            Ok(Value::FormatNumberFixed {
+                digits: Box::new(digits),
+                value: Box::new(value),
             })
         }
         "s/join" if !arguments.is_empty() => {
@@ -646,6 +662,12 @@ mod tests {
     }
 
     #[test]
+    fn parses_fixed_number_formatting() {
+        assert!(parse("(print (n/fixed 2 $1))").is_ok());
+        assert!(parse("(print (str \"$\" (n/fixed (+ 1 1) (* $1 $2))))").is_ok());
+    }
+
+    #[test]
     fn parses_typed_values_and_predicates() {
         assert!(parse(r#"(filter (dt/>= $1 "2026-08-01T00:00:00Z"))"#).is_ok());
         assert!(parse(r#"(filter (s/= $1 "Alice"))"#).is_ok());
@@ -693,6 +715,9 @@ mod tests {
             "(print (-))",
             "(print (* $1))",
             "(print (/ $1 $2 $3))",
+            "(print (n/fixed))",
+            "(print (n/fixed 2))",
+            "(print (n/fixed 2 $1 $2))",
             "(print (s/part))",
             r#"(print (s/part ":"))"#,
             r#"(print (s/part ":" 1))"#,

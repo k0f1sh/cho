@@ -430,6 +430,49 @@ fn arithmetic_reports_invalid_numbers_zero_division_and_non_finite_results() {
 }
 
 #[test]
+fn fixed_number_formatting_rounds_keeps_zeroes_and_composes_as_a_string() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (n/fixed 2 $1) (n/fixed 3 $2) (n/fixed 0 $2) "#,
+                r#"(str "$" (n/fixed (+ 1 1) (* $1 2))))"#,
+            ),
+            "3 3.14159\n-2.5 1.25\n",
+        ),
+        "3.00 3.142 3 $6.00\n-2.50 1.250 1 $-5.00\n"
+    );
+}
+
+#[test]
+fn fixed_number_formatting_rejects_invalid_digits_and_values() {
+    for (program, expected) in [
+        (
+            "(print (n/fixed -1 $1))",
+            "record 1: n/fixed: argument 1 expects Number (whole digits from 0 to 100)",
+        ),
+        (
+            "(print (n/fixed 1.5 $1))",
+            "record 1: n/fixed: argument 1 expects Number (whole digits from 0 to 100)",
+        ),
+        (
+            "(print (n/fixed 101 $1))",
+            "record 1: n/fixed: argument 1 expects Number (whole digits from 0 to 100)",
+        ),
+        (
+            "(print (n/fixed 2 $2))",
+            "record 1: n/fixed: argument 2 expects Number",
+        ),
+        (
+            r#"(print (n/fixed "" $1))"#,
+            "record 1: n/fixed: argument 1 expects Number",
+        ),
+    ] {
+        let error = cho::run(program, Cursor::new("3\n"), Vec::new()).unwrap_err();
+        assert!(error.to_string().starts_with(expected), "{error}");
+    }
+}
+
+#[test]
 fn regex_filters_match_lines_or_specific_fields() {
     assert_eq!(
         output(
