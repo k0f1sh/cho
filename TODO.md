@@ -31,6 +31,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - Url型と`url/scheme`、`url/host`、`url/port`、`url/path`、`url/query`、
   `url/fragment`によるcomponent抽出
 - RFC 3986 component用の`url/encode`と`url/decode`
+- `semver/`によるstrictなSemVer優先順位比較
 - 値式用の`->`と`->>`
 - 目的別の`examples/`
 - LLMエージェント向けの`skills/cho-process-text/`
@@ -86,7 +87,6 @@ choの強みにする。
 優先して検討する候補：
 
 - ByteSize：`10MiB`と`500KB`の比較、単位変換
-- SemVer：`1.10.0`と`1.9.0`の意味的な比較
 - UUID：検証、正規化、等値比較
 - URLまたはURI：scheme、host、path、queryの抽出
 - MACアドレス：表記揺れを吸収した等値比較

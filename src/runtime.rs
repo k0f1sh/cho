@@ -7,6 +7,7 @@ use chrono::format::{Item, StrftimeItems};
 use chrono::{DateTime, SecondsFormat, TimeDelta, Timelike, Utc};
 use ipnet::IpNet;
 use regex::Regex;
+use semver::Version;
 
 use crate::ast::{
     ArithmeticOperator, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, IpClass,
@@ -619,6 +620,31 @@ fn expect_cidr(value: RuntimeValue, function: &'static str, argument: usize) -> 
     }
 }
 
+fn expect_semver(
+    value: RuntimeValue,
+    function: &'static str,
+    argument: usize,
+) -> EvalResult<Version> {
+    match value {
+        RuntimeValue::String(value) => value.parse().map_err(|_| {
+            EvalError::conversion(
+                function,
+                argument,
+                "SemVer",
+                value,
+                "is not a valid MAJOR.MINOR.PATCH semantic version",
+            )
+        }),
+        value => Err(EvalError::conversion(
+            function,
+            argument,
+            "SemVer",
+            value.render(),
+            format!("has type {}", value.type_name()),
+        )),
+    }
+}
+
 fn matches_unprepared(predicate: &Predicate, record: &Record<'_, '_>) -> EvalResult<bool> {
     match predicate {
         Predicate::Compare {
@@ -692,6 +718,11 @@ fn compare(
                 _ => unreachable!("the parser only accepts IP equality comparisons"),
             })
         }
+        ComparisonType::SemVer => {
+            let left = expect_semver(evaluate(left, record)?, function, 1)?;
+            let right = expect_semver(evaluate(right, record)?, function, 2)?;
+            Ok(apply_ordering(operator, Some(left.cmp_precedence(&right))))
+        }
     }
 }
 
@@ -730,6 +761,12 @@ fn comparison_name(kind: &ComparisonType, operator: &ComparisonOperator) -> &'st
         (ComparisonType::IpAddr, ComparisonOperator::Equal) => "ip/=",
         (ComparisonType::IpAddr, ComparisonOperator::NotEqual) => "ip/!=",
         (ComparisonType::IpAddr, _) => unreachable!(),
+        (ComparisonType::SemVer, ComparisonOperator::GreaterThan) => "semver/>",
+        (ComparisonType::SemVer, ComparisonOperator::GreaterThanOrEqual) => "semver/>=",
+        (ComparisonType::SemVer, ComparisonOperator::LessThan) => "semver/<",
+        (ComparisonType::SemVer, ComparisonOperator::LessThanOrEqual) => "semver/<=",
+        (ComparisonType::SemVer, ComparisonOperator::Equal) => "semver/=",
+        (ComparisonType::SemVer, ComparisonOperator::NotEqual) => "semver/!=",
     }
 }
 

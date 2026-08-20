@@ -48,6 +48,7 @@ pub enum ComparisonType {
     String,
     DateTime,
     IpAddr,
+    SemVer,
 }
 
 #[derive(Debug, PartialEq)]
