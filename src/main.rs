@@ -26,6 +26,7 @@ Input:
 Types:
   String      input fields and quoted literals
   Number      numeric literals, NR, NF, and s/count results
+  Boolean     predicate results rendered as true or false
   DateTime    RFC 3339 timestamps, normalized to UTC when rendered
   Duration    signed seconds with nanosecond precision
   IpAddr      IPv4 or IPv6 addresses
@@ -81,6 +82,7 @@ Values:
     an empty string; an invalid URL is a runtime error.
     url/encode uses RFC 3986 unreserved characters and uppercase percent escapes.
     url/decode decodes only %XX; + stays +. Invalid escapes or UTF-8 are errors.
+    Predicates are Boolean values when used where a value is accepted.
 
 Date and duration values:
   (dt/unix NUMBER)                 -> DateTime

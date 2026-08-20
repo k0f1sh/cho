@@ -117,6 +117,7 @@ pub enum Value {
         operation: UrlEncoding,
         value: Box<Value>,
     },
+    Predicate(Box<Predicate>),
     DateTimeFromUnix(Box<Value>),
     FormatDateTime {
         format: Box<Value>,

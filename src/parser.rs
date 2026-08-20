@@ -63,6 +63,13 @@ impl Parser {
             return Err(ParseError::InvalidSyntax);
         }
         let operator = self.next();
+        self.parse_predicate_after_operator(operator)
+    }
+
+    fn parse_predicate_after_operator(
+        &mut self,
+        operator: Option<Token>,
+    ) -> Result<Predicate, ParseError> {
         if matches!(operator, Some(Token::Atom(ref value)) if value == "reg" || value == "~") {
             return self.parse_regex_predicate();
         }
@@ -378,6 +385,9 @@ impl Parser {
                         right: Box::new(right),
                     })
                 }
+                operator @ Some(Token::Atom(_)) => Ok(Value::Predicate(Box::new(
+                    self.parse_predicate_after_operator(operator)?,
+                ))),
                 _ => Err(ParseError::InvalidSyntax),
             },
             _ => Err(ParseError::InvalidSyntax),
@@ -541,6 +551,30 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
                 right: Box::new(right),
             })
         }
+        operator if parse_comparison_operator(operator).is_some() => {
+            let (left, right) = two(arguments)?;
+            let (kind, operator) =
+                parse_comparison_operator(operator).expect("operator was matched");
+            Ok(Value::Predicate(Box::new(Predicate::Compare {
+                kind,
+                operator,
+                left,
+                right,
+            })))
+        }
+        operator if ip_class(operator).is_some() => {
+            Ok(Value::Predicate(Box::new(Predicate::IpClass {
+                kind: ip_class(operator).expect("operator was matched"),
+                value: one(arguments)?,
+            })))
+        }
+        "cidr/contains?" => {
+            let (cidr, ip) = two(arguments)?;
+            Ok(Value::Predicate(Box::new(Predicate::CidrContains {
+                cidr,
+                ip,
+            })))
+        }
         _ => Err(ParseError::InvalidSyntax),
     }
 }
@@ -669,6 +703,16 @@ mod tests {
         assert!(
             parse(r#"(filter (and (not (reg "debug")) (or (s/= $1 "info") (s/= $1 "warn"))))"#)
                 .is_ok()
+        );
+    }
+
+    #[test]
+    fn parses_predicates_as_boolean_values() {
+        assert!(parse("(print (> $1 $2) (semver/> $1 $2) (ip/loopback? $1))").is_ok());
+        assert!(parse("(print (str \"match=\" (and (> $1 0) (< $1 10))))").is_ok());
+        assert_eq!(
+            parse("(print (-> $1 (semver/> \"1.0.0\")))"),
+            parse("(print (semver/> $1 \"1.0.0\"))")
         );
     }
 

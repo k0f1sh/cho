@@ -27,6 +27,7 @@ struct Record<'line, 'separator> {
 enum RuntimeValue {
     String(String),
     Number(f64),
+    Boolean(bool),
     DateTime(DateTime<Utc>),
     Duration(TimeDelta),
 }
@@ -36,6 +37,7 @@ impl RuntimeValue {
         match self {
             Self::String(value) => value.clone(),
             Self::Number(value) => value.to_string(),
+            Self::Boolean(value) => value.to_string(),
             Self::DateTime(value) => value.to_rfc3339_opts(SecondsFormat::AutoSi, true),
             Self::Duration(value) => render_duration(value),
         }
@@ -45,6 +47,7 @@ impl RuntimeValue {
         match self {
             Self::String(_) => "String",
             Self::Number(_) => "Number",
+            Self::Boolean(_) => "Boolean",
             Self::DateTime(_) => "DateTime",
             Self::Duration(_) => "Duration",
         }
@@ -213,6 +216,9 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> EvalResult<RuntimeValue> 
                         EvalError::conversion(function, 1, "String (URL component)", value, reason)
                     }),
             }
+        }
+        Value::Predicate(predicate) => {
+            matches_unprepared(predicate, record).map(RuntimeValue::Boolean)
         }
         Value::DateTimeFromUnix(value) => {
             let seconds = expect_number(evaluate(value, record)?, "dt/unix", 1)?;
@@ -1191,6 +1197,7 @@ fn validate_value(value: &Value) -> io::Result<()> {
         }
         Value::UrlPart { value, .. } => validate_value(value),
         Value::UrlEncoding { value, .. } => validate_value(value),
+        Value::Predicate(predicate) => validate_predicate(predicate),
         Value::If {
             predicate,
             then_value,
