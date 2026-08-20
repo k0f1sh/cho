@@ -53,6 +53,17 @@ $ printf '127.0.0.1\n::1\n10.0.0.1\n' |
 ::1
 ```
 
+URL component expressions parse absolute URLs in context:
+
+```console
+$ printf 'https://example.com:8443/a%20b?q=hello%20world#top\n' |
+    cho '(print (url/scheme $1) (url/host $1) (url/port $1) (url/path $1) (url/query $1) (url/fragment $1))'
+https example.com 8443 /a%20b q=hello%20world top
+```
+
+Extracted components keep their percent encoding. A missing optional component
+is an empty string, while an invalid URL is an error.
+
 ```console
 $ cho '(print (dt/floor-m (dt/now)))'
 2026-08-18T12:34:00Z

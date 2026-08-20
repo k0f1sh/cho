@@ -1,6 +1,6 @@
 use crate::ast::{
     ArithmeticOperator, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, IpClass,
-    Predicate, Program, Value,
+    Predicate, Program, UrlPart, Value,
 };
 use crate::lexer::{Token, tokenize};
 
@@ -217,6 +217,14 @@ impl Parser {
                     self.expect_right_paren()?;
                     Ok(Value::FormatNumberFixed {
                         digits: Box::new(digits),
+                        value: Box::new(value),
+                    })
+                }
+                Some(Token::Atom(operator)) if url_part(&operator).is_some() => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::UrlPart {
+                        part: url_part(&operator).expect("operator was matched"),
                         value: Box::new(value),
                     })
                 }
@@ -443,6 +451,10 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
                 value: Box::new(value),
             })
         }
+        operator if url_part(operator).is_some() => Ok(Value::UrlPart {
+            part: url_part(operator).expect("operator was matched"),
+            value: Box::new(one(arguments)?),
+        }),
         "s/join" if !arguments.is_empty() => {
             let separator = arguments.remove(0);
             Ok(Value::Join {
@@ -537,6 +549,18 @@ fn ip_class(value: &str) -> Option<IpClass> {
         "ip/loopback?" => Some(IpClass::Loopback),
         "ip/link-local?" => Some(IpClass::LinkLocal),
         "ip/multicast?" => Some(IpClass::Multicast),
+        _ => None,
+    }
+}
+
+fn url_part(value: &str) -> Option<UrlPart> {
+    match value {
+        "url/scheme" => Some(UrlPart::Scheme),
+        "url/host" => Some(UrlPart::Host),
+        "url/port" => Some(UrlPart::Port),
+        "url/path" => Some(UrlPart::Path),
+        "url/query" => Some(UrlPart::Query),
+        "url/fragment" => Some(UrlPart::Fragment),
         _ => None,
     }
 }
@@ -681,6 +705,13 @@ mod tests {
     }
 
     #[test]
+    fn parses_url_component_extraction() {
+        assert!(parse("(print (url/scheme $1) (url/host $1) (url/port $1))").is_ok());
+        assert!(parse("(print (url/path $1) (url/query $1) (url/fragment $1))").is_ok());
+        assert!(parse("(print (-> $1 (url/path) (s/upper)))").is_ok());
+    }
+
+    #[test]
     fn parses_typed_values_and_predicates() {
         assert!(parse(r#"(filter (dt/>= $1 "2026-08-01T00:00:00Z"))"#).is_ok());
         assert!(parse(r#"(filter (s/= $1 "Alice"))"#).is_ok());
@@ -734,6 +765,9 @@ mod tests {
             "(print (n/fixed))",
             "(print (n/fixed 2))",
             "(print (n/fixed 2 $1 $2))",
+            "(print (url/host))",
+            "(print (url/path $1 $2))",
+            "(print (url/domain $1))",
             "(print (s/part))",
             r#"(print (s/part ":"))"#,
             r#"(print (s/part ":" 1))"#,

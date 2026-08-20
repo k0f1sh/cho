@@ -77,6 +77,16 @@ pub enum ArithmeticOperator {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum UrlPart {
+    Scheme,
+    Host,
+    Port,
+    Path,
+    Query,
+    Fragment,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Value {
     Field(usize),
     RecordNumber,
@@ -90,6 +100,10 @@ pub enum Value {
     },
     FormatNumberFixed {
         digits: Box<Value>,
+        value: Box<Value>,
+    },
+    UrlPart {
+        part: UrlPart,
         value: Box<Value>,
     },
     DateTimeFromUnix(Box<Value>),
