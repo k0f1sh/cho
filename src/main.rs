@@ -56,9 +56,9 @@ Values:
   (default VALUE VALUE)            -> Value
     default uses its fallback when VALUE is empty or raises a runtime error.
     s/part splits its last value by its first value as a literal delimiter and
-    returns the 1-based part. The delimiter must not be empty, and requesting a
-    part that does not exist is a runtime error. Empty parts are preserved; if
-    the delimiter is absent, position 1 returns the complete value.
+    returns the 1-based part. The delimiter must not be empty. A part that does
+    not exist returns an empty string. Empty parts are preserved; if the
+    delimiter is absent, position 1 returns the complete value.
 
 Date and duration values:
   (dt/unix NUMBER)                 -> DateTime
