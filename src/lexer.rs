@@ -19,6 +19,12 @@ pub(crate) fn tokenize(program: &str) -> Result<Vec<Token>, ParseError> {
             '(' => tokens.push(Token::LeftParen),
             ')' => tokens.push(Token::RightParen),
             '"' => tokens.push(Token::String(read_string(&mut characters)?)),
+            '/' if characters
+                .peek()
+                .is_some_and(|character| character.is_whitespace() || *character == ')') =>
+            {
+                tokens.push(Token::Atom("/".into()));
+            }
             '/' => tokens.push(Token::Regex(read_regex(&mut characters)?)),
             first => {
                 let mut atom = String::from(first);
@@ -115,6 +121,30 @@ mod tests {
         assert_eq!(
             tokenize(r#"/^\d+\/path$/"#),
             Ok(vec![Token::Regex(r#"^\d+/path$"#.into())])
+        );
+    }
+
+    #[test]
+    fn distinguishes_the_division_operator_from_regex_literals() {
+        assert_eq!(
+            tokenize(r#"(/ $1 2) (~ $1 /^\d+$/) (~ $2 //)"#),
+            Ok(vec![
+                Token::LeftParen,
+                Token::Atom("/".into()),
+                Token::Atom("$1".into()),
+                Token::Atom("2".into()),
+                Token::RightParen,
+                Token::LeftParen,
+                Token::Atom("~".into()),
+                Token::Atom("$1".into()),
+                Token::Regex(r#"^\d+$"#.into()),
+                Token::RightParen,
+                Token::LeftParen,
+                Token::Atom("~".into()),
+                Token::Atom("$2".into()),
+                Token::Regex(String::new()),
+                Token::RightParen,
+            ])
         );
     }
 

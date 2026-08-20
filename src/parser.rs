@@ -1,5 +1,6 @@
 use crate::ast::{
-    ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, Predicate, Program, Value,
+    ArithmeticOperator, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, Predicate,
+    Program, Value,
 };
 use crate::lexer::{Token, tokenize};
 
@@ -194,6 +195,18 @@ impl Parser {
                 Some(Token::Atom(operator)) if operator == "->>" => self.parse_threading(false),
                 Some(Token::Atom(operator)) if operator == "str" => {
                     Ok(Value::Concat(self.parse_values_until_right_paren()?))
+                }
+                Some(Token::Atom(operator))
+                    if matches!(operator.as_str(), "+" | "-" | "*" | "/") =>
+                {
+                    let left = self.parse_value()?;
+                    let right = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::Arithmetic {
+                        operator: arithmetic_operator(&operator).expect("operator was matched"),
+                        left: Box::new(left),
+                        right: Box::new(right),
+                    })
                 }
                 Some(Token::Atom(operator)) if operator == "s/join" => {
                     let separator = self.parse_value()?;
@@ -403,6 +416,14 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
     };
     match operator {
         "str" => Ok(Value::Concat(arguments)),
+        "+" | "-" | "*" | "/" => {
+            let (left, right) = two(arguments)?;
+            Ok(Value::Arithmetic {
+                operator: arithmetic_operator(operator).expect("operator was matched"),
+                left: Box::new(left),
+                right: Box::new(right),
+            })
+        }
         "s/join" if !arguments.is_empty() => {
             let separator = arguments.remove(0);
             Ok(Value::Join {
@@ -478,6 +499,16 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
             })
         }
         _ => Err(ParseError::InvalidSyntax),
+    }
+}
+
+fn arithmetic_operator(value: &str) -> Option<ArithmeticOperator> {
+    match value {
+        "+" => Some(ArithmeticOperator::Add),
+        "-" => Some(ArithmeticOperator::Subtract),
+        "*" => Some(ArithmeticOperator::Multiply),
+        "/" => Some(ArithmeticOperator::Divide),
+        _ => None,
     }
 }
 
@@ -609,6 +640,12 @@ mod tests {
     }
 
     #[test]
+    fn parses_binary_arithmetic_values() {
+        assert!(parse("(print (+ $1 2.0) (- $1 $2) (* 3 4) (/ 10 2))").is_ok());
+        assert!(parse("(print (+ (* $1 2) (/ $2 4)))").is_ok());
+    }
+
+    #[test]
     fn parses_typed_values_and_predicates() {
         assert!(parse(r#"(filter (dt/>= $1 "2026-08-01T00:00:00Z"))"#).is_ok());
         assert!(parse(r#"(filter (s/= $1 "Alice"))"#).is_ok());
@@ -650,6 +687,12 @@ mod tests {
         assert_eq!(parse("(print (fmt $1))"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(print (s/join))"), Err(ParseError::InvalidSyntax));
         for program in [
+            "(print (+))",
+            "(print (+ $1))",
+            "(print (+ $1 $2 $3))",
+            "(print (-))",
+            "(print (* $1))",
+            "(print (/ $1 $2 $3))",
             "(print (s/part))",
             r#"(print (s/part ":"))"#,
             r#"(print (s/part ":" 1))"#,

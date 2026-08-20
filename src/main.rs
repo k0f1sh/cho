@@ -45,6 +45,10 @@ Values:
   $0, $1, ...                input line or field
   NR, NF                     line number or field count
   "text", 12, 3.5            string or number
+  (+ NUMBER NUMBER)                -> Number
+  (- NUMBER NUMBER)                -> Number
+  (* NUMBER NUMBER)                -> Number
+  (/ NUMBER NUMBER)                -> Number
   (str VALUE ...)                  -> String
   (s/join VALUE VALUE ...)         -> String
   (s/part DELIMITER POSITION VALUE) -> String
@@ -55,6 +59,8 @@ Values:
   (s/upper VALUE)                  -> String
   (default VALUE VALUE)            -> Value
     default uses its fallback when VALUE is empty or raises a runtime error.
+    Arithmetic is numeric and binary. Division by zero and non-finite results
+    are runtime errors.
     s/part splits its last value by its first value as a literal delimiter and
     returns the 1-based part. The delimiter must not be empty. A part that does
     not exist returns an empty string. Empty parts are preserved; if the

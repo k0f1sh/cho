@@ -378,6 +378,58 @@ fn non_numeric_values_are_runtime_errors() {
 }
 
 #[test]
+fn binary_arithmetic_converts_fields_and_composes_as_values() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (+ $1 $2) (- $1 $2) (* $1 2.0) (/ $1 $2) "#,
+                r#"(+ (* $1 $2) 1) (-> $1 (+ 2) (* $2)))"#,
+            ),
+            "10 2.5\n-3 2\n",
+        ),
+        "12.5 7.5 20 4 26 30\n-1 -5 -6 -1.5 -5 -2\n"
+    );
+}
+
+#[test]
+fn arithmetic_reports_invalid_numbers_zero_division_and_non_finite_results() {
+    for (program, input, expected) in [
+        (
+            "(print (+ $1 2))",
+            "unknown\n",
+            r#"record 1: +: argument 1 expects Number, but "unknown" cannot be parsed as a number"#,
+        ),
+        (
+            "(print (/ 1 $1))",
+            "0\n",
+            r#"record 1: /: argument 2 expects a non-zero Number, but "0" is zero"#,
+        ),
+    ] {
+        let error = cho::run(program, Cursor::new(input), Vec::new()).unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+        assert_eq!(error.to_string(), expected);
+    }
+
+    let error = cho::run("(print (* 1e308 1e308))", Cursor::new("x\n"), Vec::new()).unwrap_err();
+    assert!(
+        error.to_string().starts_with(
+            "record 1: *: argument 2 expects Number producing a finite result with argument 1"
+        ),
+        "{error}"
+    );
+
+    for program in [r#"(print (+ "" 1))"#, "(print (+ $3 1))"] {
+        let error = cho::run(program, Cursor::new("10 20\n"), Vec::new()).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .starts_with("record 1: +: argument 1 expects Number"),
+            "{error}"
+        );
+    }
+}
+
+#[test]
 fn regex_filters_match_lines_or_specific_fields() {
     assert_eq!(
         output(
