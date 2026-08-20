@@ -30,6 +30,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - IPv4/IPv6対応の`ip/loopback?`、`ip/link-local?`、`ip/multicast?`
 - Url型と`url/scheme`、`url/host`、`url/port`、`url/path`、`url/query`、
   `url/fragment`によるcomponent抽出
+- RFC 3986 component用の`url/encode`と`url/decode`
 - 値式用の`->`と`->>`
 - 目的別の`examples/`
 - LLMエージェント向けの`skills/cho-process-text/`
@@ -75,24 +76,6 @@ Durationはそのまま出力すれば秒数になる。人向けの表示が本
 - IPv6 unique-local用の述語
 
 順序比較は当面追加しない。
-
-### URL componentのエンコード
-
-任意の文字列をURL componentとしてpercent-encode、percent-decodeする値式を検討する。
-URL全体を表す型の操作とは分け、戻り値はStringとして他の値式と合成できるようにする。
-
-```lisp
-(url/encode $1)
-(url/decode $1)
-(str "https://example.com/search?q=" (url/encode $1))
-```
-
-最初はRFC 3986に沿って空白を`%20`へ変換し、decodeでは`%XX`だけを復号して`+`を
-そのまま残す案を優先する。次を決めてから実装する。
-
-- path segmentとquery componentで異なる予約文字をどう扱うか
-- 不正または不完全な`%XX`を実行時エラーにするか
-- HTMLフォーム形式の空白と`+`の変換を別の式として追加するか
 
 ### その他の型付き値
 

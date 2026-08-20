@@ -64,6 +64,18 @@ https example.com 8443 /a%20b q=hello%20world top
 Extracted components keep their percent encoding. A missing optional component
 is an empty string, while an invalid URL is an error.
 
+Encode and decode individual URL components explicitly:
+
+```console
+$ printf 'hello world\n東京\n' |
+    cho '(print (url/encode $0))'
+hello%20world
+%E6%9D%B1%E4%BA%AC
+```
+
+`url/decode` decodes `%XX` escapes but leaves `+` unchanged. Invalid escapes and
+decoded bytes that are not UTF-8 are errors.
+
 ```console
 $ cho '(print (dt/floor-m (dt/now)))'
 2026-08-18T12:34:00Z

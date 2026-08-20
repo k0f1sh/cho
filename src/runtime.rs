@@ -10,7 +10,7 @@ use regex::Regex;
 
 use crate::ast::{
     ArithmeticOperator, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, IpClass,
-    Predicate, UrlPart, Value,
+    Predicate, UrlEncoding, UrlPart, Value,
 };
 use crate::parser::parse;
 
@@ -200,6 +200,18 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> EvalResult<RuntimeValue> 
                 UrlPart::Fragment => url.fragment().unwrap_or("").to_owned(),
             };
             Ok(RuntimeValue::String(part))
+        }
+        Value::UrlEncoding { operation, value } => {
+            let function = url_encoding_name(operation);
+            let value = expect_string(evaluate(value, record)?, function, 1)?;
+            match operation {
+                UrlEncoding::Encode => Ok(RuntimeValue::String(encode_url_component(&value))),
+                UrlEncoding::Decode => decode_url_component(&value)
+                    .map(RuntimeValue::String)
+                    .map_err(|reason| {
+                        EvalError::conversion(function, 1, "String (URL component)", value, reason)
+                    }),
+            }
         }
         Value::DateTimeFromUnix(value) => {
             let seconds = expect_number(evaluate(value, record)?, "dt/unix", 1)?;
@@ -772,6 +784,61 @@ fn url_part_name(part: &UrlPart) -> &'static str {
     }
 }
 
+fn url_encoding_name(operation: &UrlEncoding) -> &'static str {
+    match operation {
+        UrlEncoding::Encode => "url/encode",
+        UrlEncoding::Decode => "url/decode",
+    }
+}
+
+fn encode_url_component(value: &str) -> String {
+    const HEX: &[u8; 16] = b"0123456789ABCDEF";
+    let mut encoded = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~') {
+            encoded.push(char::from(byte));
+        } else {
+            encoded.push('%');
+            encoded.push(char::from(HEX[usize::from(byte >> 4)]));
+            encoded.push(char::from(HEX[usize::from(byte & 0x0f)]));
+        }
+    }
+    encoded
+}
+
+fn decode_url_component(value: &str) -> Result<String, String> {
+    let input = value.as_bytes();
+    let mut decoded = Vec::with_capacity(input.len());
+    let mut index = 0;
+    while index < input.len() {
+        if input[index] != b'%' {
+            decoded.push(input[index]);
+            index += 1;
+            continue;
+        }
+        let high = input
+            .get(index + 1)
+            .and_then(|byte| hex_value(*byte))
+            .ok_or_else(|| format!("contains an invalid percent escape at byte {index}"))?;
+        let low = input
+            .get(index + 2)
+            .and_then(|byte| hex_value(*byte))
+            .ok_or_else(|| format!("contains an invalid percent escape at byte {index}"))?;
+        decoded.push(high << 4 | low);
+        index += 3;
+    }
+    String::from_utf8(decoded).map_err(|_| "decodes to bytes that are not valid UTF-8".to_owned())
+}
+
+fn hex_value(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
+}
+
 fn render_duration(value: &TimeDelta) -> String {
     let nanoseconds = value
         .num_nanoseconds()
@@ -1086,6 +1153,7 @@ fn validate_value(value: &Value) -> io::Result<()> {
             validate_value(value)
         }
         Value::UrlPart { value, .. } => validate_value(value),
+        Value::UrlEncoding { value, .. } => validate_value(value),
         Value::If {
             predicate,
             then_value,
