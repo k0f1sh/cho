@@ -100,6 +100,17 @@ $ printf '1.9.0\n1.10.0\n2.0.0-alpha\n' |
 `semver/` comparisons require `MAJOR.MINOR.PATCH`. Build metadata is ignored for
 precedence equality; use `s/=` when the complete text must match.
 
+Predicates can also be printed or composed as Boolean values:
+
+```console
+$ printf '1.2.3 2.0.0\n' |
+    cho '(print (semver/> $1 $2) (str "equal=" (semver/= $1 $2)))'
+false equal=false
+```
+
+They render as `true` or `false`; Boolean values are not implicitly converted to
+numbers or strings required by typed expressions.
+
 Numeric arithmetic converts string fields in context and uses binary operators:
 
 ```console

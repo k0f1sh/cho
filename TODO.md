@@ -32,6 +32,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
   `url/fragment`によるcomponent抽出
 - RFC 3986 component用の`url/encode`と`url/decode`
 - `semver/`によるstrictなSemVer優先順位比較
+- 述語を値として使う場合のBooleanと`true`/`false`表示
 - 値式用の`->`と`->>`
 - 目的別の`examples/`
 - LLMエージェント向けの`skills/cho-process-text/`

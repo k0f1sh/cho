@@ -1004,6 +1004,33 @@ fn semver_comparisons_reject_non_strict_or_invalid_versions() {
 }
 
 #[test]
+fn predicates_render_as_boolean_values_and_compose() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (semver/> $1 $2) (> $3 $4) "#,
+                r#"(str "loopback=" (ip/loopback? $5)) "#,
+                r#"(s/join ":" (s/= $6 "yes") (not (s/= $6 "yes"))) "#,
+                r#"(default (semver/= $1 $2) "fallback"))"#,
+            ),
+            "1.2.3 2.0.0 10 2 127.0.0.1 yes\n2.0.0 1.2.3 1 2 8.8.8.8 no\n",
+        ),
+        concat!(
+            "false true loopback=true true:false false\n",
+            "true false loopback=false false:true false\n",
+        )
+    );
+}
+
+#[test]
+fn boolean_values_do_not_convert_to_numbers_or_strings() {
+    for program in ["(print (+ (> 2 1) 1))", r#"(print (url/encode (> 2 1)))"#] {
+        let error = cho::run(program, Cursor::new("x\n"), Vec::new()).unwrap_err();
+        assert!(error.to_string().contains("has type Boolean"), "{error}");
+    }
+}
+
+#[test]
 fn default_can_recover_from_an_invalid_ip() {
     assert_eq!(
         output(
