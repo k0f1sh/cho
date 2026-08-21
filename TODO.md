@@ -31,7 +31,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
 次へ進む。新しい式は通常の値式として実装し、`print`、`if`、`default`や他の型付き式へ
 ネストできる状態を完了条件とする。
 
-#### 1. 型付きextractorの土台と安全な整数変換
+#### 1. 型付きextractorの土台と安全な整数変換（実装済み）
 
 - `cidr/network`が返すIpAddrを文字列へ戻さず、後続のIP式へ渡せる内部表現を整える。
 - 現在の`Number`は`f64`なので、整数を返す式で精度損失を黙って起こさない共通規則を
@@ -39,6 +39,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - `u64`などからNumberへ変換する場合は、JavaScriptと同じ安全整数上限
   `2^53 - 1`を基準とし、範囲外は回復可能なruntime errorにする案を第一候補とする。
 - エラーには従来どおりrecord、expression、argument number、期待型を含める。
+- `RuntimeValue::IpAddr`と安全な`u64`からNumberへの変換を追加済み。
 
 #### 2. Durationの単位追加（実装済み）
 
@@ -81,7 +82,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - `RuntimeValue::IpAddr`とString/IpAddrの両方を受ける`expect_ip`を追加し、AST、parser、
   runtime、help、README、境界・合成・回復のテストを更新済み。
 
-#### 5. CIDRのアドレス数
+#### 5. CIDRのアドレス数（実装済み）
 
 ```lisp
 (cidr/size CIDR)
@@ -90,8 +91,9 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - 総アドレス数をNumberで正確に表現できる場合だけ返す。
 - 安全整数上限を超える場合はruntime errorとし、`default`で回復可能にする。
 - IPv4/IPv6の通常ケース、最大成功境界、その直前のoverflow、IPv6 `/0`をテストする。
+- 安全整数上限を超える場合のruntime errorと`default`回復を実装・テスト済み。
 
-#### 6. URL query parameterの取得
+#### 6. URL query parameterの取得（実装済み）
 
 ```lisp
 (url/query-get NAME URL)
@@ -107,8 +109,9 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - normal、missing、empty、percent encoding、`+`、duplicate、queryなし、不正URLを
   テストする。
 - 既存の`url/query`はraw query stringを返す式として変更しない。
+- parser、runtime、help、READMEと、取得・存在判定・合成・回復のテストを更新済み。
 
-#### 7. SemVer componentの抽出
+#### 7. SemVer componentの抽出（実装済み）
 
 ```lisp
 (semver/major SEMVER)
@@ -121,6 +124,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - build metadataを含む入力も既存parserどおり受け付け、今回build extractorは追加しない。
 - major、minor、patchがNumberの安全整数範囲を超える場合はruntime errorとし、丸めない。
 - 通常、prereleaseあり・なし、build metadata、不正SemVer、安全整数境界をテストする。
+- parser、runtime、help、READMEと、安全整数を含む抽出・合成・回復のテストを更新済み。
 
 #### 8. Boolean expressionとしてのpredicateの文書整理
 

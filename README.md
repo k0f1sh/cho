@@ -65,6 +65,10 @@ $ printf '192.168.1.42/24\n2001:db8::1/126\n' |
 2001:db8:: 126 2001:db8::3 6
 ```
 
+`cidr/size` returns the total address count only when it fits Number's safe
+integer range. Larger IPv6 ranges are runtime errors and can be handled with
+`default`.
+
 URL component expressions parse absolute URLs in context:
 
 ```console
@@ -75,6 +79,16 @@ https example.com 8443 /a%20b q=hello%20world top
 
 Extracted components keep their percent encoding. A missing optional component
 is an empty string, while an invalid URL is an error.
+
+Query parameters can be decoded separately without changing raw `url/query`.
+Keys and values use form semantics (`+` is a space), and duplicate keys return
+their first value:
+
+```console
+$ printf 'https://example.com/?lang=ja&q=hello+world\n' |
+    cho '(print (url/query-get "lang" $1) (url/query-get "q" $1) (url/query-has? "page" $1))'
+ja hello world false
+```
 
 Encode and decode individual URL components explicitly:
 
@@ -112,6 +126,14 @@ $ printf '1.9.0\n1.10.0\n2.0.0-alpha\n' |
 
 `semver/` comparisons require `MAJOR.MINOR.PATCH`. Build metadata is ignored for
 precedence equality; use `s/=` when the complete text must match.
+
+Components are regular values and build metadata remains accepted:
+
+```console
+$ printf '1.2.3-alpha.1+build.9\n' |
+    cho '(print (semver/major $1) (semver/minor $1) (semver/patch $1) (semver/prerelease $1))'
+1 2 3 alpha.1
+```
 
 Predicates can also be printed or composed as Boolean values:
 

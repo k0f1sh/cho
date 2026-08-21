@@ -67,6 +67,11 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("(cidr/prefix CIDR)"));
     assert!(stdout.contains("(cidr/first CIDR)"));
     assert!(stdout.contains("(cidr/last CIDR)"));
+    assert!(stdout.contains("(cidr/size CIDR)"));
+    assert!(stdout.contains("(url/query-get STRING URL)"));
+    assert!(stdout.contains("(url/query-has? STRING URL)"));
+    assert!(stdout.contains("(semver/major SEMVER)"));
+    assert!(stdout.contains("(semver/prerelease SEMVER)"));
     assert!(stdout.contains("fc00::/7"));
     assert!(!stdout.contains("(dur/m NUMBER)"));
     assert!(stdout.contains("(cidr/contains? CIDR IPADDR)"));
