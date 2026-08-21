@@ -52,7 +52,8 @@ fn help_lists_types_and_signatures() {
         .unwrap();
     assert!(output.status.success());
     let stdout = String::from_utf8(output.stdout).unwrap();
-    assert!(stdout.contains("Types:"));
+    assert!(stdout.contains("Common recipes:"));
+    assert!(stdout.contains("Types and errors:"));
     assert!(stdout.contains("(p VALUE ...)"));
     assert!(stdout.contains("(f BOOLEAN)"));
     assert!(stdout.contains("true, false"));

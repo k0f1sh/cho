@@ -3,177 +3,175 @@ use std::io;
 use std::process::ExitCode;
 
 const USAGE: &str = "Usage: cho [-F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'";
-const HELP: &str = r#"cho — filter and format text with Lisp-like expressions
+const HELP: &str = r#"cho — filter and format line-oriented data with Lisp-like expressions
 
 Usage: cho [-F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'
 
-Options:
-  -F SEPARATOR       split input fields using this regular expression
+Common recipes:
+  Pick fields             cho '(p $1 $3)'
+  Filter numbers          cho '(f (> $2 20)) (p $0)'
+  Match a field           cho '(f (~ $1 /^api-/)) (p $0)'
+  Match the whole record  cho '(f (~ /ERROR|WARN/)) (p $0)'
+  Join values             cho '(p (s/join "," $1 $2))'
+  Use a fallback          cho '(p (default $3 "unknown"))'
+  Read CSV with a header  cho --csv --skip-header '(p $1 $3)'
+  Read TSV                cho --tsv '(p $1 $2)'
+
+Input and options:
+  -F SEPARATOR       split fields using this regular expression
   -FSEPARATOR        short form of -F SEPARATOR
-  --csv              parse CSV records and fields, including quoted values
-  --tsv              split input fields on tabs
+  --csv              parse CSV records, including quoted values
+  --tsv              split fields on tabs
   --skip-header      skip the first CSV or TSV record
   -h, --help         print help
   -V, --version      print version
 
-Input:
-  cho runs PROGRAM once for every input line. By default, whitespace splits fields.
-  $0 is the complete line; $1, $2, ... are fields; NR is the line number; NF is
-  the number of fields. A missing field is an empty string.
-  In CSV or TSV mode, --skip-header skips the first logical record. NR keeps its
-  input position, so the first data record is NR 2.
+  PROGRAM runs once per input record. Whitespace splits fields by default.
+  $0 is the complete record; $1, $2, ... are fields. NR is the record number;
+  NF is the field count. Missing fields are empty strings. With --skip-header,
+  the first data record keeps its input position and therefore has NR 2.
 
-Types:
-  String      input fields and quoted literals
-  Number      numeric literals, NR, NF, and s/count results
-  Boolean     true, false, and Boolean expression results
-  DateTime    RFC 3339 timestamps, normalized to UTC when rendered
-  Duration    signed seconds with nanosecond precision
-  IpAddr      IPv4 or IPv6 addresses
-  Cidr        IPv4 or IPv6 networks
-  Url         absolute URLs
-  SemVer      MAJOR.MINOR.PATCH semantic versions
+Program expressions:
+  (print VALUE ...)              print values separated by spaces
+  (p VALUE ...)                  short form of print
+  (filter BOOLEAN)               continue only when true
+  (f BOOLEAN)                    short form of filter
 
-  A String is converted when an expression requires another type. A failed
-  conversion stops processing with the record, expression, and argument number.
-  Wrap a value expression in default to recover from an expected runtime error.
+Literals and fields:
+  $0, $1, ...                    complete record or field
+  NR, NF                         record number or field count
+  "text", 12, 3.5                String or Number
+  true, false                    Boolean
 
-Expressions:
-  (print VALUE ...)          print values separated by spaces
-  (p VALUE ...)              short form of print
-  (filter BOOLEAN)           continue only when BOOLEAN is true
-  (f BOOLEAN)                short form of filter
-
-Values:
-  $0, $1, ...                input line or field
-  NR, NF                     line number or field count
-  "text", 12, 3.5            string or number
-  true, false                Boolean literals
-  (+ NUMBER NUMBER)                -> Number
-  (- NUMBER NUMBER)                -> Number
-  (* NUMBER NUMBER)                -> Number
-  (/ NUMBER NUMBER)                -> Number
-  (n/fixed NUMBER NUMBER)          -> String
-  (str VALUE ...)                  -> String
-  (s/join VALUE VALUE ...)         -> String
-  (s/part DELIMITER POSITION VALUE) -> String
-  (s/count VALUE)                  -> Number
-  (s/escape VALUE)                 -> String
-  (if BOOLEAN VALUE VALUE)         -> Value
-  (s/lower VALUE)                  -> String
-  (s/upper VALUE)                  -> String
-  (default VALUE VALUE)            -> Value
-  (url/scheme URL)                 -> String
-  (url/host URL)                   -> String
-  (url/port URL)                   -> String
-  (url/path URL)                   -> String
-  (url/query URL)                  -> String
-  (url/query-get STRING URL)       -> String (first decoded value or empty)
-  (url/query-has? STRING URL)      -> Boolean
-  (url/fragment URL)               -> String
-  (url/encode STRING)              -> String
-  (url/decode STRING)              -> String
-    default uses its fallback when VALUE is empty or raises a runtime error.
-    Arithmetic is numeric and binary. Division by zero and non-finite results
-    are runtime errors.
-    n/fixed renders its value with 0 to 100 digits after the decimal point.
-    s/part splits its last value by its first value as a literal delimiter and
-    returns the 1-based part. The delimiter must not be empty. A part that does
-    not exist returns an empty string. Empty parts are preserved; if the
-    delimiter is absent, position 1 returns the complete value.
-    URL extraction preserves percent encoding. A missing optional component is
-    an empty string; an invalid URL is a runtime error.
-    url/query-get and url/query-has? decode query keys and values using form
-    semantics, including + as space. Duplicate keys use the first value.
-    url/encode uses RFC 3986 unreserved characters and uppercase percent escapes.
-    url/decode decodes only %XX; + stays +. Invalid escapes or UTF-8 are errors.
-    Boolean values are not implicitly converted from strings or numbers.
-
-Date and duration values:
-  (dt/unix NUMBER)                 -> DateTime
-  (dt/fmt STRING DATETIME)         -> String
-  (dt/fmt STRING TIMEZONE DATETIME) -> String
-  (dt/now)                         -> DateTime (current UTC time, second precision)
-  (dt/floor-s DATETIME)            -> DateTime
-  (dt/floor-m DATETIME)            -> DateTime
-  (dt/floor-h DATETIME)            -> DateTime
-  (dt/floor-d DATETIME)            -> DateTime
-  (dt/add DATETIME DURATION)       -> DateTime
-  (dt/sub DATETIME DURATION)       -> DateTime
-  (dt/diff DATETIME DATETIME)      -> Duration (left minus right)
-  (du/s NUMBER)                   -> Duration
-  (du/ms NUMBER)                  -> Duration
-  (du/m NUMBER)                   -> Duration
-  (du/h NUMBER)                   -> Duration
-  (du/d NUMBER)                   -> Duration (24 hours per day)
-
-  DateTime input must be RFC 3339 and include an offset or Z. dt/fmt uses UTC
-  unless given an IANA time zone such as Asia/Tokyo or a fixed offset such as
-  +09:00. dt/unix accepts whole seconds, including negative values. dt/floor-*
-  floors to a UTC second, minute, hour, or day boundary. du/d uses fixed 24-hour
-  days. Duration renders as seconds.
-
-IP and CIDR values:
-  (ip/version IPADDR)        -> Number (4 or 6)
-  (cidr/network CIDR)        -> IpAddr
-  (cidr/prefix CIDR)         -> Number
-  (cidr/first CIDR)          -> IpAddr (lowest address)
-  (cidr/last CIDR)           -> IpAddr (highest address)
-  (cidr/size CIDR)           -> Number (error outside the safe integer range)
-
-Semantic version values:
-  (semver/major SEMVER)      -> Number
-  (semver/minor SEMVER)      -> Number
-  (semver/patch SEMVER)      -> Number
-  (semver/prerelease SEMVER) -> String (empty when absent)
-
-Boolean expressions:
-  (> NUMBER NUMBER)  (>= NUMBER NUMBER)    -> Boolean (numeric comparison)
+Numbers:
+  (+ NUMBER NUMBER)              add
+  (- NUMBER NUMBER)              subtract
+  (* NUMBER NUMBER)              multiply
+  (/ NUMBER NUMBER)              divide
+  (n/fixed DIGITS NUMBER)        -> String with 0 to 100 fractional digits
+  (> NUMBER NUMBER)  (>= NUMBER NUMBER)
   (< NUMBER NUMBER)  (<= NUMBER NUMBER)
   (= NUMBER NUMBER)  (!= NUMBER NUMBER)
-  (s/> STRING STRING)  (s/>= STRING STRING) -> Boolean (string comparison)
+
+Strings:
+  (str VALUE ...)                concatenate values
+  (s/join SEPARATOR VALUE ...)   join values
+  (s/part DELIMITER POSITION VALUE) take a 1-based literal-delimited part
+  (s/count VALUE)                count Unicode characters
+  (s/escape VALUE)               escape tabs, newlines, and backslashes
+  (s/lower VALUE)                lowercase
+  (s/upper VALUE)                uppercase
+  (s/> STRING STRING)  (s/>= STRING STRING)
   (s/< STRING STRING)  (s/<= STRING STRING)
   (s/= STRING STRING)  (s/!= STRING STRING)
+
+  s/part preserves empty parts. If no delimiter is found, position 1 returns
+  the complete value; a missing position returns an empty string. DELIMITER
+  must not be empty.
+
+Selection and recovery:
+  (if BOOLEAN VALUE VALUE)       select one value lazily
+  (default VALUE FALLBACK)       use FALLBACK when VALUE is empty or errors
+  (not BOOLEAN)                  negate
+  (and BOOLEAN ...)              true when every value is true
+  (or BOOLEAN ...)               true when any value is true
+
+Regular expressions:
+  (reg /PATTERN/)                match $0
+  (reg VALUE /PATTERN/)          match VALUE
+  (~ /PATTERN/)                  short form of reg
+  (~ VALUE /PATTERN/)
+
+  Regex literals preserve backslashes; escape only a literal / as \/:
+    (~ $1 /^\d+$/)     (~ $1 /^foo\/bar$/)
+  String patterns require doubled backslashes: (reg $1 "^\\d+$")
+  The -F pattern is passed directly: cho -F '\s+' '(p $1)'
+
+DateTime and Duration:
+  (dt/unix NUMBER)               Unix seconds -> DateTime
+  (dt/fmt STRING DATETIME)       format in UTC -> String
+  (dt/fmt STRING TIMEZONE DATETIME) -> String
+  (dt/now)                       current UTC time, second precision
+  (dt/floor-s DATETIME)          floor to UTC second
+  (dt/floor-m DATETIME)          floor to UTC minute
+  (dt/floor-h DATETIME)          floor to UTC hour
+  (dt/floor-d DATETIME)          floor to UTC day
+  (dt/add DATETIME DURATION)     -> DateTime
+  (dt/sub DATETIME DURATION)     -> DateTime
+  (dt/diff DATETIME DATETIME)    left minus right -> Duration
+  (du/s NUMBER)                  seconds -> Duration
+  (du/ms NUMBER)                 milliseconds -> Duration
+  (du/m NUMBER)                  minutes -> Duration
+  (du/h NUMBER)                  hours -> Duration
+  (du/d NUMBER)                  fixed 24-hour days -> Duration
   (dt/> DATETIME DATETIME)  (dt/>= DATETIME DATETIME)
   (dt/< DATETIME DATETIME)  (dt/<= DATETIME DATETIME)
   (dt/= DATETIME DATETIME)  (dt/!= DATETIME DATETIME)
-  (ip/= IPADDR IPADDR)  (ip/!= IPADDR IPADDR)
-  (ip/private? IPADDR)       -> Boolean (RFC 1918 IPv4 or fc00::/7 IPv6 ULA)
-  (ip/loopback? IPADDR)      -> Boolean
-  (ip/link-local? IPADDR)    -> Boolean
-  (ip/multicast? IPADDR)     -> Boolean
-  (cidr/contains? CIDR IPADDR) -> Boolean
+
+  DateTime input must be RFC 3339 with an offset or Z. DateTime renders in UTC;
+  Duration renders as seconds. TIMEZONE is an IANA name such as Asia/Tokyo or a
+  fixed offset such as +09:00. dt/floor-* always uses UTC boundaries.
+
+IP and CIDR:
+  (ip/version IPADDR)            -> Number (4 or 6)
+  (ip/= IPADDR IPADDR)           -> Boolean
+  (ip/!= IPADDR IPADDR)          -> Boolean
+  (ip/private? IPADDR)           RFC 1918 IPv4 or fc00::/7 IPv6 ULA
+  (ip/loopback? IPADDR)          -> Boolean
+  (ip/link-local? IPADDR)        -> Boolean
+  (ip/multicast? IPADDR)         -> Boolean
+  (cidr/contains? CIDR IPADDR)   -> Boolean
+  (cidr/network CIDR)            -> IpAddr
+  (cidr/prefix CIDR)             -> Number
+  (cidr/first CIDR)              -> IpAddr (lowest address)
+  (cidr/last CIDR)               -> IpAddr (highest address)
+  (cidr/size CIDR)               -> Number (must be at most 2^53 - 1)
+
+URLs:
+  (url/scheme URL)               -> String
+  (url/host URL)                 -> String
+  (url/port URL)                 -> String
+  (url/path URL)                 -> String
+  (url/query URL)                -> String
+  (url/fragment URL)             -> String
+  (url/query-get STRING URL)     first decoded value or empty -> String
+  (url/query-has? STRING URL)    -> Boolean
+  (url/encode STRING)            RFC 3986 component encoding -> String
+  (url/decode STRING)            percent decoding -> String
+
+  Extracted components preserve percent encoding. Query operations use form
+  semantics (+ is space), decode names and values, and use the first duplicate.
+  url/encode uses uppercase escapes. url/decode decodes only %XX and leaves +
+  unchanged. Invalid URLs, escapes, or UTF-8 are errors.
+
+Semantic versions:
   (semver/> SEMVER SEMVER)  (semver/>= SEMVER SEMVER)
   (semver/< SEMVER SEMVER)  (semver/<= SEMVER SEMVER)
   (semver/= SEMVER SEMVER)  (semver/!= SEMVER SEMVER)
-  (reg /PATTERN/)            -> Boolean (match $0)
-  (reg VALUE /PATTERN/)      -> Boolean (match VALUE)
-  (~ /PATTERN/)              short form of reg
-  (~ VALUE /PATTERN/)
-  (not BOOLEAN)              -> Boolean
-  (and BOOLEAN ...)          -> Boolean (true when every value is true)
-  (or BOOLEAN ...)           -> Boolean (true when any value is true)
+  (semver/major SEMVER)           -> Number
+  (semver/minor SEMVER)           -> Number
+  (semver/patch SEMVER)           -> Number
+  (semver/prerelease SEMVER)      -> String (empty when absent)
 
-  Boolean expressions are regular values: print them, return them from if, or
-  compose them with not, and, and or. filter and if require Boolean values.
+Types and errors:
+  String      fields and quoted literals    DateTime  RFC 3339 timestamps
+  Number      numeric literals, NR, NF       Duration  signed seconds
+  Boolean     true, false, predicates        IpAddr    IPv4 or IPv6
+  Cidr        IPv4 or IPv6 networks          Url       absolute URLs
+  SemVer      MAJOR.MINOR.PATCH versions
 
-Regex escaping:
-  Regex literals preserve backslashes; escape only a literal / as \/:
-    (~ $1 /^\d+$/)
-    (~ $1 /^foo\/bar$/)
-  Patterns may also be strings, where each \ must be written as \\:
-    (reg $1 "^\\d+$")
-  The -F pattern is passed directly; quote it only for your shell:
-    cho -F '\s+' '(print $1)'
+  Expressions convert Strings when they require another type. Failed conversion
+  reports the record, expression, and argument number. Boolean values never
+  convert implicitly from strings or numbers. Numeric arithmetic is binary;
+  division by zero and non-finite results are errors.
 
-Programs:
-  Put one or more expressions in PROGRAM. They run from left to right for each
-  input line. A failed filter skips the remaining expressions for that line;
-  multiple filters therefore act like AND.
+Composition:
+  Values nest anywhere a VALUE is accepted. Multiple program expressions run
+  left to right; a failed filter skips the rest of that record. Multiple filters
+  therefore act like AND.
 
-Threading values:
-  (-> VALUE (FORM ...)) inserts VALUE as each form's first argument.
-  (->> VALUE (FORM ...)) inserts VALUE as each form's last argument.
+  (-> VALUE (FORM ...))   insert VALUE as each form's first argument
+  (->> VALUE (FORM ...))  insert VALUE as each form's last argument
 
     (-> $1 (dt/add (du/s 10)))
       is (dt/add $1 (du/s 10))
@@ -181,18 +179,12 @@ Threading values:
     (->> $1 (dt/fmt "%Y/%m/%d") (str "date: "))
       is (str "date: " (dt/fmt "%Y/%m/%d" $1))
 
-Examples:
-  Print the first field of rows whose second field is greater than 20:
-    cho '(filter (> $2 20)) (print $1)'
-
+More examples:
   Format an RFC 3339 timestamp in Tokyo time:
-    cho '(print (dt/fmt "%Y-%m-%d %H:%M" "Asia/Tokyo" $1))'
+    cho '(p (dt/fmt "%Y-%m-%d %H:%M" "Asia/Tokyo" $1))'
 
-  Join transformed fields, using a fallback when the third field is missing:
-    cho '(print (s/join ":" (s/upper $1) (default $3 "UNKNOWN")))'
-
-  Read CSV with a header and print its first and third fields:
-    cho --csv --skip-header '(print $1 $3)'"#;
+  Join transformed fields, with a fallback for a missing third field:
+    cho '(p (s/join ":" (s/upper $1) (default $3 "UNKNOWN")))'"#;
 
 #[derive(Debug, PartialEq)]
 struct Options {
