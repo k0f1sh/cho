@@ -2,7 +2,7 @@
 name = "cho"
 version = "0.2.0"
 edition = "2024"
-description = "A tiny semantic awk for filtering and transforming line-oriented data"
+description = "A small, type-aware text processor for the command line"
 license = "MIT"
 repository = "https://github.com/k0f1sh/cho"
 

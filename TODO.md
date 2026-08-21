@@ -1,13 +1,13 @@
 # TODO
 
-choは、小さく組み合わせやすい「Lisp風のsemantic awk」を目指す。
+choは、小さく組み合わせやすい、型を意識したコマンドラインのテキスト処理系を目指す。
 
 ```text
-cho is a tiny semantic awk with Lisp-like expressions.
+cho is a small, type-aware text processor for the command line.
 ```
 
 文字列、数値、日時、期間、IPアドレス、CIDRなどを、各式のシグネチャが要求する型へ
-文脈的に変換する。型コンストラクタを入力のたびに書かせず、変換できない入力は
+文脈的に変換する。入力のたびに明示的な型変換を書かせず、変換できない入力は
 レコード番号、式名、引数位置、期待型を含む実行時エラーにする。
 
 ### 現在の主な規則
