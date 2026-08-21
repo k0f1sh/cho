@@ -1,10 +1,11 @@
 # cho
 
-A tiny semantic awk for the parts of shell scripting that get AWKward.
+A small, type-aware text processor for the command line.
 
 cho is a command-line tool for filtering and transforming line-oriented text,
-CSV, TSV, and command output with small Lisp-like expressions. It processes
-input one record at a time and exposes fields as `$1`, `$2`, and so on.
+CSV, TSV, and command output with small Lisp-like expressions. Inspired by awk,
+it processes input one record at a time and exposes fields as `$1`, `$2`, and so
+on.
 
 Operators parse fields according to the type they require: date operators parse
 dates, IP operators parse addresses, and numeric operators parse numbers. This
@@ -67,10 +68,10 @@ $ printf '%s\n' \
 2026-08-02T09:00:00Z 10.1.2.3 deploy
 ```
 
-The fields do not need date or IP constructors. `dt/>=` expects RFC 3339
-datetimes, and `cidr/contains?` expects a CIDR and an IP address. cho parses each
-string as the type required by the expression. Invalid input produces an error
-instead of silently failing to match.
+The fields do not need explicit type annotations or conversion calls. `dt/>=`
+expects RFC 3339 datetimes, and `cidr/contains?` expects a CIDR and an IP address.
+cho parses each string as the type required by the expression. Invalid input
+produces an error instead of silently failing to match.
 
 In CSV mode, quoted commas remain part of one field:
 
@@ -87,13 +88,12 @@ For JSON input, use `jq`.
 
 ## Language basics
 
-cho runs the program once per input record. `$0` contains the whole record;
-`$1`, `$2`, ... contain its fields. `NR` is the record number and `NF` is the
-field count.
+For each input record, cho evaluates the expressions from left to right. `$0`
+contains the whole record; `$1`, `$2`, ... contain its fields. `NR` is the record
+number and `NF` is the field count.
 
-Program expressions run from left to right. When a `filter` fails, cho skips the
-remaining expressions for that record. Value expressions can be nested anywhere
-a value is accepted.
+When a `filter` fails, cho skips the remaining expressions for that record.
+Value expressions can be nested anywhere a value is accepted.
 
 ```console
 $ printf 'alice\nalice:admin\n' |
@@ -118,8 +118,8 @@ expressions such as `str`, `s/join`, and `n/fixed` for formatting.
 | Boolean | composable predicates, `if`, `and`, `or`, and `not` |
 
 Expressions preserve typed results when nested. For example, `dt/diff` returns
-a Duration, `du/to-h` converts it to a Number of hours, and `n/trunc` discards
-the fractional part:
+a duration, `du/to-h` converts it to hours, and `n/trunc` discards the fractional
+part:
 
 ```console
 $ printf '2026-08-18T02:30:45Z 2026-08-18T00:00:00Z\n' |
@@ -170,7 +170,8 @@ $ cargo clippy --all-targets -- -D warnings
 
 ## The name
 
-awk sounds like 「億」 in Japanese, so cho comes next: 「兆」.
+The name is Japanese wordplay. "awk" loosely resembles *oku* (億, 10^8), and
+*chō* (兆, 10^12) is the next named large-number unit.
 
 ## License
 
