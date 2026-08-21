@@ -5,7 +5,8 @@ use std::ops::Deref;
 use std::time::SystemTime;
 
 use chrono::format::{Item, StrftimeItems};
-use chrono::{DateTime, SecondsFormat, TimeDelta, Timelike, Utc};
+use chrono::{DateTime, FixedOffset, SecondsFormat, TimeDelta, Timelike, Utc};
+use chrono_tz::Tz;
 use ipnet::IpNet;
 use regex::Regex;
 use semver::Version;
@@ -306,7 +307,11 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
                     )
                 })
         }
-        Value::FormatDateTime { format, value } => {
+        Value::FormatDateTime {
+            format,
+            timezone,
+            value,
+        } => {
             let format = expect_string(evaluate(format, record)?, "dt/fmt", 1)?;
             if StrftimeItems::new(&format).any(|item| item == Item::Error) {
                 return Err(EvalError::conversion(
@@ -317,8 +322,17 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
                     "contains an invalid format specifier",
                 ));
             }
-            let datetime = expect_datetime(evaluate(value, record)?, "dt/fmt", 2)?;
-            Ok(RuntimeValue::String(datetime.format(&format).to_string()))
+            let timezone = timezone
+                .as_ref()
+                .map(|timezone| expect_string(evaluate(timezone, record)?, "dt/fmt", 2))
+                .transpose()?;
+            let datetime_argument = if timezone.is_some() { 3 } else { 2 };
+            let datetime = expect_datetime(evaluate(value, record)?, "dt/fmt", datetime_argument)?;
+            let formatted = match timezone {
+                Some(timezone) => format_datetime_in_timezone(datetime, &format, timezone)?,
+                None => datetime.format(&format).to_string(),
+            };
+            Ok(RuntimeValue::String(formatted))
         }
         Value::DurationSeconds(value) => duration_from_value(value, 1.0, "du/s", record),
         Value::DurationMilliseconds(value) => duration_from_value(value, 0.001, "du/ms", record),
@@ -643,6 +657,48 @@ fn expect_datetime(
             value.render(),
             format!("has type {}", value.type_name()),
         )),
+    }
+}
+
+fn format_datetime_in_timezone(
+    datetime: DateTime<Utc>,
+    format: &str,
+    timezone: String,
+) -> EvalResult<String> {
+    if let Ok(timezone) = timezone.parse::<Tz>() {
+        return Ok(datetime.with_timezone(&timezone).format(format).to_string());
+    }
+    if let Some(offset) = parse_utc_offset(&timezone) {
+        return Ok(datetime.with_timezone(&offset).format(format).to_string());
+    }
+    Err(EvalError::conversion(
+        "dt/fmt",
+        2,
+        "String (IANA time zone or UTC offset ±HH:MM)",
+        timezone,
+        "is not a recognized time zone",
+    ))
+}
+
+fn parse_utc_offset(value: &str) -> Option<FixedOffset> {
+    let bytes = value.as_bytes();
+    if bytes.len() != 6 || !matches!(bytes[0], b'+' | b'-') || bytes[3] != b':' {
+        return None;
+    }
+    let digits = [bytes[1], bytes[2], bytes[4], bytes[5]];
+    if !digits.iter().all(u8::is_ascii_digit) {
+        return None;
+    }
+    let hours = i32::from(bytes[1] - b'0') * 10 + i32::from(bytes[2] - b'0');
+    let minutes = i32::from(bytes[4] - b'0') * 10 + i32::from(bytes[5] - b'0');
+    if minutes >= 60 {
+        return None;
+    }
+    let seconds = hours.checked_mul(3_600)?.checked_add(minutes * 60)?;
+    match bytes[0] {
+        b'+' => FixedOffset::east_opt(seconds),
+        b'-' => FixedOffset::west_opt(seconds),
+        _ => None,
     }
 }
 
@@ -1284,8 +1340,15 @@ fn validate_value(value: &Value) -> io::Result<()> {
         | Value::DurationMinutes(value)
         | Value::DurationHours(value)
         | Value::DurationDays(value) => validate_value(value),
-        Value::FormatDateTime { format, value } => {
+        Value::FormatDateTime {
+            format,
+            timezone,
+            value,
+        } => {
             validate_value(format)?;
+            if let Some(timezone) = timezone {
+                validate_value(timezone)?;
+            }
             validate_value(value)
         }
         Value::AddDateTime { datetime, duration }

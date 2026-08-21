@@ -60,6 +60,9 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("--skip-header"));
     assert!(stdout.contains("(s/part DELIMITER POSITION VALUE)"));
     assert!(stdout.contains("(dt/fmt STRING DATETIME)"));
+    assert!(stdout.contains("(dt/fmt STRING TIMEZONE DATETIME)"));
+    assert!(stdout.contains("Asia/Tokyo"));
+    assert!(stdout.contains("+09:00"));
     assert!(stdout.contains("(dt/floor-m DATETIME)"));
     assert!(stdout.contains("(du/m NUMBER)"));
     assert!(stdout.contains("(du/ms NUMBER)"));

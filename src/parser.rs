@@ -374,10 +374,17 @@ impl Parser {
                 }
                 Some(Token::Atom(operator)) if operator == "dt/fmt" => {
                     let format = self.parse_value()?;
-                    let value = self.parse_value()?;
+                    let second = self.parse_value()?;
+                    let (timezone, value) =
+                        if self.tokens.get(self.position) == Some(&Token::RightParen) {
+                            (None, second)
+                        } else {
+                            (Some(Box::new(second)), self.parse_value()?)
+                        };
                     self.expect_right_paren()?;
                     Ok(Value::FormatDateTime {
                         format: Box::new(format),
+                        timezone,
                         value: Box::new(value),
                     })
                 }
@@ -610,9 +617,23 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
             value: Box::new(one(arguments)?),
         }),
         "dt/fmt" => {
-            let (format, value) = two(arguments)?;
+            let mut arguments = arguments.into_iter();
+            let (format, timezone, value) = match arguments.len() {
+                2 => (
+                    arguments.next().expect("length was checked"),
+                    None,
+                    arguments.next().expect("length was checked"),
+                ),
+                3 => (
+                    arguments.next().expect("length was checked"),
+                    Some(arguments.next().expect("length was checked")),
+                    arguments.next().expect("length was checked"),
+                ),
+                _ => return Err(ParseError::InvalidSyntax),
+            };
             Ok(Value::FormatDateTime {
                 format: Box::new(format),
+                timezone: timezone.map(Box::new),
                 value: Box::new(value),
             })
         }
@@ -958,6 +979,7 @@ mod tests {
         assert!(parse(r#"(print (dt/add (dt/unix $1) (du/m 2)))"#).is_ok());
         assert!(parse(r#"(print (du/ms 250) (du/d -1.5))"#).is_ok());
         assert!(parse(r#"(print (dt/fmt "%Y-%m-%d" $1))"#).is_ok());
+        assert!(parse(r#"(print (dt/fmt "%Y-%m-%d" "Asia/Tokyo" $1))"#).is_ok());
         assert!(parse(r#"(print (dt/floor-m (dt/now)))"#).is_ok());
     }
 
@@ -970,6 +992,10 @@ mod tests {
         assert_eq!(
             parse(r#"(print (->> $1 (dt/fmt "%Y/%m/%d") (str "date: ")))"#),
             parse(r#"(print (str "date: " (dt/fmt "%Y/%m/%d" $1)))"#)
+        );
+        assert_eq!(
+            parse(r#"(print (->> $1 (dt/fmt "%Y/%m/%d" "Asia/Tokyo")))"#),
+            parse(r#"(print (dt/fmt "%Y/%m/%d" "Asia/Tokyo" $1))"#)
         );
         assert!(parse("(print (-> $1 (s/lower) (s/count)))").is_ok());
         assert_eq!(
@@ -1053,6 +1079,7 @@ mod tests {
             "(print (dt/unix))",
             "(print (dt/unix $1 $2))",
             "(print (dt/fmt $1))",
+            "(print (dt/fmt $1 $2 $3 $4))",
             "(print (ip/version))",
             "(print (ip/version $1 $2))",
             "(print (cidr/network))",
