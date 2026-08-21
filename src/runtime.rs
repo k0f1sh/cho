@@ -1,6 +1,7 @@
 use std::fmt;
 use std::io::{self, BufRead, Write};
 use std::net::IpAddr;
+use std::ops::Deref;
 use std::time::SystemTime;
 
 use chrono::format::{Item, StrftimeItems};
@@ -11,7 +12,7 @@ use semver::Version;
 
 use crate::ast::{
     ArithmeticOperator, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, IpClass,
-    Predicate, UrlEncoding, UrlPart, Value,
+    Predicate, Program, UrlEncoding, UrlPart, Value,
 };
 use crate::parser::parse;
 
@@ -21,6 +22,19 @@ struct Record<'line, 'separator> {
     field_separator: Option<&'separator Regex>,
     csv_fields: Option<&'line [String]>,
     now: DateTime<Utc>,
+}
+
+struct EvalContext<'record, 'line, 'separator, 'program> {
+    record: &'record Record<'line, 'separator>,
+    regexes: &'program [Regex],
+}
+
+impl<'line, 'separator> Deref for EvalContext<'_, 'line, 'separator, '_> {
+    type Target = Record<'line, 'separator>;
+
+    fn deref(&self) -> &Self::Target {
+        self.record
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -97,35 +111,6 @@ impl fmt::Display for EvalError {
 
 type EvalResult<T> = Result<T, EvalError>;
 
-enum PreparedPredicate<'a> {
-    Compare {
-        kind: &'a ComparisonType,
-        operator: &'a ComparisonOperator,
-        left: &'a Value,
-        right: &'a Value,
-    },
-    Regex {
-        target: &'a Value,
-        regex: Regex,
-    },
-    IpClass {
-        kind: &'a IpClass,
-        value: &'a Value,
-    },
-    CidrContains {
-        cidr: &'a Value,
-        ip: &'a Value,
-    },
-    Not(Box<PreparedPredicate<'a>>),
-    And(Vec<PreparedPredicate<'a>>),
-    Or(Vec<PreparedPredicate<'a>>),
-}
-
-enum PreparedExpr<'a> {
-    Print(&'a [Value]),
-    Filter(PreparedPredicate<'a>),
-}
-
 impl Record<'_, '_> {
     fn field(&self, number: usize) -> Option<&str> {
         if let Some(fields) = self.csv_fields {
@@ -151,7 +136,7 @@ impl Record<'_, '_> {
     }
 }
 
-fn evaluate(value: &Value, record: &Record<'_, '_>) -> EvalResult<RuntimeValue> {
+fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<RuntimeValue> {
     match value {
         Value::Field(0) => Ok(RuntimeValue::String(record.line.to_owned())),
         Value::Field(number) => Ok(RuntimeValue::String(
@@ -217,9 +202,7 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> EvalResult<RuntimeValue> 
                     }),
             }
         }
-        Value::Predicate(predicate) => {
-            matches_unprepared(predicate, record).map(RuntimeValue::Boolean)
-        }
+        Value::Predicate(predicate) => matches(predicate, record).map(RuntimeValue::Boolean),
         Value::DateTimeFromUnix(value) => {
             let seconds = expect_number(evaluate(value, record)?, "dt/unix", 1)?;
             if seconds.fract() != 0.0 || seconds < i64::MIN as f64 || seconds > i64::MAX as f64 {
@@ -383,7 +366,7 @@ fn evaluate(value: &Value, record: &Record<'_, '_>) -> EvalResult<RuntimeValue> 
             then_value,
             else_value,
         } => {
-            if matches_unprepared(predicate, record)? {
+            if matches(predicate, record)? {
                 evaluate(then_value, record)
             } else {
                 evaluate(else_value, record)
@@ -406,7 +389,7 @@ fn evaluate_arithmetic(
     operator: &ArithmeticOperator,
     left: &Value,
     right: &Value,
-    record: &Record<'_, '_>,
+    record: &EvalContext<'_, '_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let function = match operator {
         ArithmeticOperator::Add => "+",
@@ -447,7 +430,7 @@ fn duration_from_value(
     value: &Value,
     multiplier: f64,
     function: &'static str,
-    record: &Record<'_, '_>,
+    record: &EvalContext<'_, '_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let number = expect_number(evaluate(value, record)?, function, 1)?;
     let nanoseconds = number * multiplier * 1_000_000_000.0;
@@ -651,7 +634,7 @@ fn expect_semver(
     }
 }
 
-fn matches_unprepared(predicate: &Predicate, record: &Record<'_, '_>) -> EvalResult<bool> {
+fn matches(predicate: &Predicate, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<bool> {
     match predicate {
         Predicate::Compare {
             kind,
@@ -659,8 +642,10 @@ fn matches_unprepared(predicate: &Predicate, record: &Record<'_, '_>) -> EvalRes
             left,
             right,
         } => compare(kind, operator, left, right, record),
-        Predicate::Regex { target, pattern } => Ok(Regex::new(pattern)
-            .expect("regular expressions are prepared before execution")
+        Predicate::Regex { target, regex } => Ok(record
+            .regexes
+            .get(regex.0)
+            .expect("RegexId is assigned from this program's regex pool")
             .is_match(&evaluate(target, record)?.render())),
         Predicate::IpClass { kind, value } => {
             let ip = expect_ip(evaluate(value, record)?, ip_class_name(kind), 1)?;
@@ -671,10 +656,10 @@ fn matches_unprepared(predicate: &Predicate, record: &Record<'_, '_>) -> EvalRes
             let ip = expect_ip(evaluate(ip, record)?, "cidr/contains?", 2)?;
             Ok(cidr.contains(&ip))
         }
-        Predicate::Not(predicate) => Ok(!matches_unprepared(predicate, record)?),
+        Predicate::Not(predicate) => Ok(!matches(predicate, record)?),
         Predicate::And(predicates) => {
             for predicate in predicates {
-                if !matches_unprepared(predicate, record)? {
+                if !matches(predicate, record)? {
                     return Ok(false);
                 }
             }
@@ -682,7 +667,7 @@ fn matches_unprepared(predicate: &Predicate, record: &Record<'_, '_>) -> EvalRes
         }
         Predicate::Or(predicates) => {
             for predicate in predicates {
-                if matches_unprepared(predicate, record)? {
+                if matches(predicate, record)? {
                     return Ok(true);
                 }
             }
@@ -696,7 +681,7 @@ fn compare(
     operator: &ComparisonOperator,
     left: &Value,
     right: &Value,
-    record: &Record<'_, '_>,
+    record: &EvalContext<'_, '_, '_, '_>,
 ) -> EvalResult<bool> {
     let function = comparison_name(kind, operator);
     match kind {
@@ -930,54 +915,12 @@ fn floor_name(unit: &DateTimeFloorUnit) -> &'static str {
     }
 }
 
-fn matches(predicate: &PreparedPredicate<'_>, record: &Record<'_, '_>) -> EvalResult<bool> {
-    match predicate {
-        PreparedPredicate::Compare {
-            kind,
-            operator,
-            left,
-            right,
-        } => compare(kind, operator, left, right, record),
-        PreparedPredicate::Regex { target, regex } => {
-            Ok(regex.is_match(&evaluate(target, record)?.render()))
-        }
-        PreparedPredicate::IpClass { kind, value } => {
-            let ip = expect_ip(evaluate(value, record)?, ip_class_name(kind), 1)?;
-            Ok(matches_ip_class(ip, kind))
-        }
-        PreparedPredicate::CidrContains { cidr, ip } => {
-            let cidr = expect_cidr(evaluate(cidr, record)?, "cidr/contains?", 1)?;
-            let ip = expect_ip(evaluate(ip, record)?, "cidr/contains?", 2)?;
-            Ok(cidr.contains(&ip))
-        }
-        PreparedPredicate::Not(predicate) => Ok(!matches(predicate, record)?),
-        PreparedPredicate::And(predicates) => {
-            for predicate in predicates {
-                if !matches(predicate, record)? {
-                    return Ok(false);
-                }
-            }
-            Ok(true)
-        }
-        PreparedPredicate::Or(predicates) => {
-            for predicate in predicates {
-                if matches(predicate, record)? {
-                    return Ok(true);
-                }
-            }
-            Ok(false)
-        }
-    }
-}
-
 pub fn run<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::Result<()> {
     run_with_field_separator(program, None, input, &mut output)
 }
 
 pub fn run_csv<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::Result<()> {
-    let program = parse(program)
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid program"))?;
-    let expressions = prepare_expressions(&program.expressions)?;
+    let program = compile_program(program)?;
     let mut input = input;
     let mut raw = Vec::new();
     let mut number = 0;
@@ -995,7 +938,11 @@ pub fn run_csv<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> 
             csv_fields: Some(&fields),
             now,
         };
-        execute(&expressions, &record, &mut output)?;
+        let context = EvalContext {
+            record: &record,
+            regexes: &program.regexes,
+        };
+        execute(&program.program.expressions, &context, &mut output)?;
     }
     Ok(())
 }
@@ -1006,10 +953,8 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
     input: R,
     mut output: W,
 ) -> io::Result<()> {
-    let program = parse(program)
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid program"))?;
+    let program = compile_program(program)?;
     let field_separator = compile_field_separator(field_separator)?;
-    let expressions = prepare_expressions(&program.expressions)?;
     let now = current_datetime();
 
     for (index, line) in input.lines().enumerate() {
@@ -1021,7 +966,11 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
             csv_fields: None,
             now,
         };
-        execute(&expressions, &record, &mut output)?;
+        let context = EvalContext {
+            record: &record,
+            regexes: &program.regexes,
+        };
+        execute(&program.program.expressions, &context, &mut output)?;
     }
     Ok(())
 }
@@ -1033,13 +982,13 @@ fn current_datetime() -> DateTime<Utc> {
 }
 
 fn execute<W: Write>(
-    expressions: &[PreparedExpr<'_>],
-    record: &Record<'_, '_>,
+    expressions: &[Expr],
+    record: &EvalContext<'_, '_, '_, '_>,
     output: &mut W,
 ) -> io::Result<()> {
     for expression in expressions {
         let result = match expression {
-            PreparedExpr::Print(values) => {
+            Expr::Print(values) => {
                 let rendered = values
                     .iter()
                     .map(|value| evaluate(value, record).map(|value| value.render()))
@@ -1053,7 +1002,7 @@ fn execute<W: Write>(
                     Err(error) => Err(error),
                 }
             }
-            PreparedExpr::Filter(predicate) => matches(predicate, record),
+            Expr::Filter(predicate) => matches(predicate, record),
         };
         match result {
             Ok(true) => {}
@@ -1134,19 +1083,27 @@ fn compile_field_separator(pattern: Option<&str>) -> io::Result<Option<Regex>> {
     Ok(separator)
 }
 
-fn prepare_expressions(expressions: &[Expr]) -> io::Result<Vec<PreparedExpr<'_>>> {
-    expressions
+struct CompiledProgram {
+    program: Program,
+    regexes: Vec<Regex>,
+}
+
+fn compile_program(source: &str) -> io::Result<CompiledProgram> {
+    let program = parse(source)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid program"))?;
+    for expression in &program.expressions {
+        match expression {
+            Expr::Print(values) => values.iter().try_for_each(validate_value)?,
+            Expr::Filter(predicate) => validate_predicate(predicate)?,
+        }
+    }
+    let regexes = program
+        .regex_patterns
         .iter()
-        .map(|expression| match expression {
-            Expr::Print(values) => {
-                for value in values {
-                    validate_value(value)?;
-                }
-                Ok(PreparedExpr::Print(values))
-            }
-            Expr::Filter(predicate) => prepare_predicate(predicate).map(PreparedExpr::Filter),
-        })
-        .collect()
+        .map(|pattern| Regex::new(pattern))
+        .collect::<Result<_, _>>()
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))?;
+    Ok(CompiledProgram { program, regexes })
 }
 
 fn validate_value(value: &Value) -> io::Result<()> {
@@ -1226,12 +1183,7 @@ fn validate_predicate(predicate: &Predicate) -> io::Result<()> {
             validate_value(left)?;
             validate_value(right)
         }
-        Predicate::Regex { target, pattern } => {
-            validate_value(target)?;
-            Regex::new(pattern)
-                .map(|_| ())
-                .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))
-        }
+        Predicate::Regex { target, .. } => validate_value(target),
         Predicate::IpClass { value, .. } => validate_value(value),
         Predicate::CidrContains { cidr, ip } => {
             validate_value(cidr)?;
@@ -1241,44 +1193,5 @@ fn validate_predicate(predicate: &Predicate) -> io::Result<()> {
         Predicate::And(predicates) | Predicate::Or(predicates) => {
             predicates.iter().try_for_each(validate_predicate)
         }
-    }
-}
-
-fn prepare_predicate(predicate: &Predicate) -> io::Result<PreparedPredicate<'_>> {
-    validate_predicate(predicate)?;
-    match predicate {
-        Predicate::Compare {
-            kind,
-            operator,
-            left,
-            right,
-        } => Ok(PreparedPredicate::Compare {
-            kind,
-            operator,
-            left,
-            right,
-        }),
-        Predicate::Regex { target, pattern } => Ok(PreparedPredicate::Regex {
-            target,
-            regex: Regex::new(pattern)
-                .map_err(|error| io::Error::new(io::ErrorKind::InvalidInput, error))?,
-        }),
-        Predicate::IpClass { kind, value } => Ok(PreparedPredicate::IpClass { kind, value }),
-        Predicate::CidrContains { cidr, ip } => Ok(PreparedPredicate::CidrContains { cidr, ip }),
-        Predicate::Not(predicate) => Ok(PreparedPredicate::Not(Box::new(prepare_predicate(
-            predicate,
-        )?))),
-        Predicate::And(predicates) => Ok(PreparedPredicate::And(
-            predicates
-                .iter()
-                .map(prepare_predicate)
-                .collect::<io::Result<_>>()?,
-        )),
-        Predicate::Or(predicates) => Ok(PreparedPredicate::Or(
-            predicates
-                .iter()
-                .map(prepare_predicate)
-                .collect::<io::Result<_>>()?,
-        )),
     }
 }
