@@ -241,8 +241,10 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
             Ok(RuntimeValue::String(datetime.format(&format).to_string()))
         }
         Value::DurationSeconds(value) => duration_from_value(value, 1.0, "du/s", record),
+        Value::DurationMilliseconds(value) => duration_from_value(value, 0.001, "du/ms", record),
         Value::DurationMinutes(value) => duration_from_value(value, 60.0, "du/m", record),
         Value::DurationHours(value) => duration_from_value(value, 3600.0, "du/h", record),
+        Value::DurationDays(value) => duration_from_value(value, 86_400.0, "du/d", record),
         Value::DateTimeNow => Ok(RuntimeValue::DateTime(record.now)),
         Value::FloorDateTime { unit, value } => {
             let function = floor_name(unit);
@@ -1129,8 +1131,10 @@ fn validate_value(value: &Value) -> io::Result<()> {
         | Value::DateTimeFromUnix(value)
         | Value::FloorDateTime { value, .. }
         | Value::DurationSeconds(value)
+        | Value::DurationMilliseconds(value)
         | Value::DurationMinutes(value)
-        | Value::DurationHours(value) => validate_value(value),
+        | Value::DurationHours(value)
+        | Value::DurationDays(value) => validate_value(value),
         Value::FormatDateTime { format, value } => {
             validate_value(format)?;
             validate_value(value)

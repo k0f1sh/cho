@@ -96,12 +96,15 @@ Date and duration values:
   (dt/sub DATETIME DURATION)       -> DateTime
   (dt/diff DATETIME DATETIME)      -> Duration (left minus right)
   (du/s NUMBER)                   -> Duration
+  (du/ms NUMBER)                  -> Duration
   (du/m NUMBER)                   -> Duration
   (du/h NUMBER)                   -> Duration
+  (du/d NUMBER)                   -> Duration (24 hours per day)
 
   DateTime input must be RFC 3339 and include an offset or Z. dt/unix accepts
   whole seconds, including negative values. dt/floor-* floors to a UTC second,
-  minute, hour, or day boundary. Duration renders as seconds.
+  minute, hour, or day boundary. du/d uses fixed 24-hour days. Duration renders
+  as seconds.
 
 Predicates:
   (> NUMBER NUMBER)  (>= NUMBER NUMBER)    numeric comparisons

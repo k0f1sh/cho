@@ -345,6 +345,11 @@ impl Parser {
                     self.expect_right_paren()?;
                     Ok(Value::DurationSeconds(Box::new(value)))
                 }
+                Some(Token::Atom(operator)) if operator == "du/ms" => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::DurationMilliseconds(Box::new(value)))
+                }
                 Some(Token::Atom(operator)) if operator == "du/m" => {
                     let value = self.parse_value()?;
                     self.expect_right_paren()?;
@@ -354,6 +359,11 @@ impl Parser {
                     let value = self.parse_value()?;
                     self.expect_right_paren()?;
                     Ok(Value::DurationHours(Box::new(value)))
+                }
+                Some(Token::Atom(operator)) if operator == "du/d" => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::DurationDays(Box::new(value)))
                 }
                 Some(Token::Atom(operator)) if operator == "dt/now" => {
                     self.expect_right_paren()?;
@@ -541,8 +551,10 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
             })
         }
         "du/s" => Ok(Value::DurationSeconds(Box::new(one(arguments)?))),
+        "du/ms" => Ok(Value::DurationMilliseconds(Box::new(one(arguments)?))),
         "du/m" => Ok(Value::DurationMinutes(Box::new(one(arguments)?))),
         "du/h" => Ok(Value::DurationHours(Box::new(one(arguments)?))),
+        "du/d" => Ok(Value::DurationDays(Box::new(one(arguments)?))),
         "dt/add" => {
             let (datetime, duration) = two(arguments)?;
             Ok(Value::AddDateTime {
@@ -832,6 +844,7 @@ mod tests {
         assert!(parse(r#"(filter (semver/>= $1 "2.4.0"))"#).is_ok());
         assert!(parse(r#"(filter (cidr/contains? "10.0.0.0/8" $1))"#).is_ok());
         assert!(parse(r#"(print (dt/add (dt/unix $1) (du/m 2)))"#).is_ok());
+        assert!(parse(r#"(print (du/ms 250) (du/d -1.5))"#).is_ok());
         assert!(parse(r#"(print (dt/fmt "%Y-%m-%d" $1))"#).is_ok());
         assert!(parse(r#"(print (dt/floor-m (dt/now)))"#).is_ok());
     }
@@ -913,6 +926,10 @@ mod tests {
             "(print (dt/unix $1 $2))",
             "(print (dt/fmt $1))",
             "(print (du/s))",
+            "(print (du/ms))",
+            "(print (du/ms $1 $2))",
+            "(print (du/d))",
+            "(print (du/d $1 $2))",
             "(print (dur/s 1))",
             "(print (dt/now $1))",
             "(print (dt/floor-s))",

@@ -81,11 +81,12 @@ $ cho '(print (dt/floor-m (dt/now)))'
 2026-08-18T12:34:00Z
 ```
 
-Duration units stay explicit and compose with datetime arithmetic:
+Duration units stay explicit and compose with datetime arithmetic. `du/ms` creates
+milliseconds, while `du/d` uses fixed 24-hour days:
 
 ```console
-$ cat people.txt | cho '(filter (= NR 1)) (print (du/h 1))'
-3600
+$ cat people.txt | cho '(filter (= NR 1)) (print (du/ms 250) (du/d 1))'
+0.25 86400
 ```
 
 Semantic versions compare by SemVer precedence rather than as strings:
