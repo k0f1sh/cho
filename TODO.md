@@ -52,7 +52,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - monthやyearのような可変長単位は追加しない。
 - AST、parser、runtime、help、README、引数検証とruntime testを更新済み。
 
-#### 3. IP versionとprivateのIPv6対応
+#### 3. IP versionとprivateのIPv6対応（実装済み）
 
 ```lisp
 (ip/version IPADDR)
@@ -62,6 +62,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - `ip/private?`はRFC 1918のIPv4に加え、IPv6 ULA `fc00::/7`をtrueとする。
 - loopback、link-local、multicastは既存の専用predicateに委ね、privateには含めない。
 - helpとREADMEにprivateの範囲を明記する。
+- AST、parser、runtime、help、README、IPv4/IPv6境界と回復のテストを更新済み。
 
 #### 4. CIDRの基本情報抽出
 

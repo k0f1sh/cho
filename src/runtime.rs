@@ -202,6 +202,13 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
                     }),
             }
         }
+        Value::IpVersion(value) => {
+            let ip = expect_ip(evaluate(value, record)?, "ip/version", 1)?;
+            Ok(RuntimeValue::Number(match ip {
+                IpAddr::V4(_) => 4.0,
+                IpAddr::V6(_) => 6.0,
+            }))
+        }
         Value::Predicate(predicate) => matches(predicate, record).map(RuntimeValue::Boolean),
         Value::DateTimeFromUnix(value) => {
             let seconds = expect_number(evaluate(value, record)?, "dt/unix", 1)?;
@@ -778,7 +785,10 @@ fn is_private_ipv4(ip: std::net::Ipv4Addr) -> bool {
 
 fn matches_ip_class(ip: IpAddr, kind: &IpClass) -> bool {
     match kind {
-        IpClass::Private => matches!(ip, IpAddr::V4(ip) if is_private_ipv4(ip)),
+        IpClass::Private => match ip {
+            IpAddr::V4(ip) => is_private_ipv4(ip),
+            IpAddr::V6(ip) => ip.segments()[0] & 0xfe00 == 0xfc00,
+        },
         IpClass::Loopback => match ip {
             IpAddr::V4(ip) => ip.octets()[0] == 127,
             IpAddr::V6(ip) => ip == std::net::Ipv6Addr::LOCALHOST,
@@ -1128,6 +1138,7 @@ fn validate_value(value: &Value) -> io::Result<()> {
         | Value::Escape(value)
         | Value::Lower(value)
         | Value::Upper(value)
+        | Value::IpVersion(value)
         | Value::DateTimeFromUnix(value)
         | Value::FloorDateTime { value, .. }
         | Value::DurationSeconds(value)
