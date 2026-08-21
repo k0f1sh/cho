@@ -1,6 +1,6 @@
 use crate::ast::{
     ArithmeticOperator, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, IpClass,
-    Predicate, Program, UrlEncoding, UrlPart, Value,
+    Predicate, Program, RegexId, UrlEncoding, UrlPart, Value,
 };
 use crate::lexer::{Token, tokenize};
 
@@ -15,6 +15,7 @@ pub enum ParseError {
 struct Parser {
     tokens: Vec<Token>,
     position: usize,
+    regex_patterns: Vec<String>,
 }
 
 impl Parser {
@@ -22,6 +23,7 @@ impl Parser {
         Self {
             tokens,
             position: 0,
+            regex_patterns: Vec::new(),
         }
     }
 
@@ -36,7 +38,10 @@ impl Parser {
         while self.position < self.tokens.len() {
             expressions.push(self.parse_expression()?);
         }
-        Ok(Program { expressions })
+        Ok(Program {
+            expressions,
+            regex_patterns: std::mem::take(&mut self.regex_patterns),
+        })
     }
 
     fn parse_expression(&mut self) -> Result<Expr, ParseError> {
@@ -133,9 +138,10 @@ impl Parser {
             if self.next() != Some(Token::RightParen) {
                 return Err(ParseError::InvalidSyntax);
             }
+            let regex = self.register_regex(pattern);
             return Ok(Predicate::Regex {
                 target: Value::Field(0),
-                pattern,
+                regex,
             });
         }
 
@@ -155,7 +161,14 @@ impl Parser {
         if self.next() != Some(Token::RightParen) {
             return Err(ParseError::InvalidSyntax);
         }
-        Ok(Predicate::Regex { target, pattern })
+        let regex = self.register_regex(pattern);
+        Ok(Predicate::Regex { target, regex })
+    }
+
+    fn register_regex(&mut self, pattern: String) -> RegexId {
+        let id = RegexId(self.regex_patterns.len());
+        self.regex_patterns.push(pattern);
+        id
     }
 
     fn parse_predicates_until_right_paren(&mut self) -> Result<Vec<Predicate>, ParseError> {
@@ -676,7 +689,8 @@ mod tests {
                         Value::String(":".into()),
                         Value::Field(1),
                     ])]),
-                ]
+                ],
+                regex_patterns: vec![],
             })
         );
     }
@@ -696,6 +710,28 @@ mod tests {
         assert!(parse(r#"(filter (reg $1 "^[A-Z]"))"#).is_ok());
         assert!(parse(r#"(filter (reg /^error/))"#).is_ok());
         assert!(parse(r#"(filter (~ $1 /^\d+$/))"#).is_ok());
+    }
+
+    #[test]
+    fn assigns_regex_ids_in_source_order() {
+        let program = parse(r#"(filter (and (reg /error/) (~ $1 "^warn")))"#).unwrap();
+        assert_eq!(program.regex_patterns, vec!["error", "^warn"]);
+        let Expr::Filter(Predicate::And(predicates)) = &program.expressions[0] else {
+            panic!("expected an and filter");
+        };
+        assert!(matches!(
+            predicates.as_slice(),
+            [
+                Predicate::Regex {
+                    regex: RegexId(0),
+                    ..
+                },
+                Predicate::Regex {
+                    regex: RegexId(1),
+                    ..
+                }
+            ]
+        ));
     }
 
     #[test]
@@ -725,6 +761,7 @@ mod tests {
                     separator: Box::new(Value::String(",".into())),
                     values: vec![Value::Field(1), Value::Field(2)],
                 }])],
+                regex_patterns: vec![],
             })
         );
     }
@@ -742,6 +779,7 @@ mod tests {
                     position: Box::new(Value::Count(Box::new(Value::String("x".into())))),
                     value: Box::new(Value::Field(1)),
                 }])],
+                regex_patterns: vec![],
             })
         );
         assert_eq!(

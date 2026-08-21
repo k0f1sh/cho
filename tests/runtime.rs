@@ -304,6 +304,17 @@ fn boolean_predicates_can_be_nested_with_regexes() {
 }
 
 #[test]
+fn regex_predicates_share_the_same_execution_path_as_boolean_values() {
+    assert_eq!(
+        output(
+            r#"(print (~ $1 /^a/) (if (~ $2 /z$/) "yes" "no"))"#,
+            "apple jazz\npear music\n"
+        ),
+        "true yes\nfalse no\n"
+    );
+}
+
+#[test]
 fn supports_all_comparison_operators() {
     let input = "low 10\nequal 20\nhigh 30\n";
     assert_eq!(output("(filter (> $2 20)) (print $1)", input), "high\n");

@@ -1,7 +1,11 @@
 #[derive(Debug, PartialEq)]
 pub struct Program {
     pub expressions: Vec<Expr>,
+    pub regex_patterns: Vec<String>,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RegexId(pub usize);
 
 #[derive(Debug, PartialEq)]
 pub enum Expr {
@@ -19,7 +23,7 @@ pub enum Predicate {
     },
     Regex {
         target: Value,
-        pattern: String,
+        regex: RegexId,
     },
     IpClass {
         kind: IpClass,
