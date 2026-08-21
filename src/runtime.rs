@@ -11,8 +11,8 @@ use regex::Regex;
 use semver::Version;
 
 use crate::ast::{
-    ArithmeticOperator, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, IpClass,
-    Predicate, Program, UrlEncoding, UrlPart, Value,
+    ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
+    IpClass, Predicate, Program, UrlEncoding, UrlPart, Value,
 };
 use crate::parser::parse;
 
@@ -44,6 +44,7 @@ enum RuntimeValue {
     Boolean(bool),
     DateTime(DateTime<Utc>),
     Duration(TimeDelta),
+    IpAddr(IpAddr),
 }
 
 impl RuntimeValue {
@@ -54,6 +55,7 @@ impl RuntimeValue {
             Self::Boolean(value) => value.to_string(),
             Self::DateTime(value) => value.to_rfc3339_opts(SecondsFormat::AutoSi, true),
             Self::Duration(value) => render_duration(value),
+            Self::IpAddr(value) => value.to_string(),
         }
     }
 
@@ -64,6 +66,7 @@ impl RuntimeValue {
             Self::Boolean(_) => "Boolean",
             Self::DateTime(_) => "DateTime",
             Self::Duration(_) => "Duration",
+            Self::IpAddr(_) => "IpAddr",
         }
     }
 
@@ -208,6 +211,15 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
                 IpAddr::V4(_) => 4.0,
                 IpAddr::V6(_) => 6.0,
             }))
+        }
+        Value::CidrPart { part, value } => {
+            let function = cidr_part_name(part);
+            let cidr = expect_cidr(evaluate(value, record)?, function, 1)?;
+            match part {
+                CidrPart::Network | CidrPart::First => Ok(RuntimeValue::IpAddr(cidr.network())),
+                CidrPart::Prefix => Ok(RuntimeValue::Number(cidr.prefix_len() as f64)),
+                CidrPart::Last => Ok(RuntimeValue::IpAddr(cidr.broadcast())),
+            }
         }
         Value::Predicate(predicate) => matches(predicate, record).map(RuntimeValue::Boolean),
         Value::DateTimeFromUnix(value) => {
@@ -578,6 +590,7 @@ fn expect_duration(
 
 fn expect_ip(value: RuntimeValue, function: &'static str, argument: usize) -> EvalResult<IpAddr> {
     match value {
+        RuntimeValue::IpAddr(value) => Ok(value),
         RuntimeValue::String(value) => value.parse().map_err(|_| {
             EvalError::conversion(
                 function,
@@ -594,6 +607,15 @@ fn expect_ip(value: RuntimeValue, function: &'static str, argument: usize) -> Ev
             value.render(),
             format!("has type {}", value.type_name()),
         )),
+    }
+}
+
+fn cidr_part_name(part: &CidrPart) -> &'static str {
+    match part {
+        CidrPart::Network => "cidr/network",
+        CidrPart::Prefix => "cidr/prefix",
+        CidrPart::First => "cidr/first",
+        CidrPart::Last => "cidr/last",
     }
 }
 
@@ -1139,6 +1161,7 @@ fn validate_value(value: &Value) -> io::Result<()> {
         | Value::Lower(value)
         | Value::Upper(value)
         | Value::IpVersion(value)
+        | Value::CidrPart { value, .. }
         | Value::DateTimeFromUnix(value)
         | Value::FloorDateTime { value, .. }
         | Value::DurationSeconds(value)

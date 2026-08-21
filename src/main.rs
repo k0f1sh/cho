@@ -106,6 +106,13 @@ Date and duration values:
   minute, hour, or day boundary. du/d uses fixed 24-hour days. Duration renders
   as seconds.
 
+IP and CIDR values:
+  (ip/version IPADDR)        -> Number (4 or 6)
+  (cidr/network CIDR)        -> IpAddr
+  (cidr/prefix CIDR)         -> Number
+  (cidr/first CIDR)          -> IpAddr (lowest address)
+  (cidr/last CIDR)           -> IpAddr (highest address)
+
 Predicates:
   (> NUMBER NUMBER)  (>= NUMBER NUMBER)    numeric comparisons
   (< NUMBER NUMBER)  (<= NUMBER NUMBER)
@@ -116,7 +123,6 @@ Predicates:
   (dt/> DATETIME DATETIME)  (dt/>= DATETIME DATETIME)
   (dt/< DATETIME DATETIME)  (dt/<= DATETIME DATETIME)
   (dt/= DATETIME DATETIME)  (dt/!= DATETIME DATETIME)
-  (ip/version IPADDR)        -> Number (4 or 6)
   (ip/= IPADDR IPADDR)  (ip/!= IPADDR IPADDR)
   (ip/private? IPADDR)       true for RFC 1918 IPv4 or fc00::/7 IPv6 ULA
   (ip/loopback? IPADDR)      true for IPv4 or IPv6 loopback addresses
