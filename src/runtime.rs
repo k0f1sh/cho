@@ -13,7 +13,7 @@ use semver::Version;
 
 use crate::ast::{
     ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
-    IpClass, Predicate, Program, SemVerPart, UrlEncoding, UrlPart, Value,
+    IpClass, NumberOperator, Predicate, Program, SemVerPart, UrlEncoding, UrlPart, Value,
 };
 use crate::parser::parse;
 
@@ -156,6 +156,9 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
             left,
             right,
         } => evaluate_arithmetic(operator, left, right, record),
+        Value::NumberOperation { operator, value } => {
+            evaluate_number_operation(operator, value, record)
+        }
         Value::FormatNumberFixed { digits, value } => {
             let digits = expect_number(evaluate(digits, record)?, "n/fixed", 1)?;
             if digits.fract() != 0.0 || !(0.0..=100.0).contains(&digits) {
@@ -527,6 +530,33 @@ fn evaluate_arithmetic(
         ));
     }
     Ok(RuntimeValue::Number(result))
+}
+
+fn evaluate_number_operation(
+    operator: &NumberOperator,
+    value: &Value,
+    record: &EvalContext<'_, '_, '_, '_>,
+) -> EvalResult<RuntimeValue> {
+    let function = match operator {
+        NumberOperator::Truncate => "n/trunc",
+        NumberOperator::Floor => "n/floor",
+        NumberOperator::Ceil => "n/ceil",
+        NumberOperator::Round => "n/round",
+        NumberOperator::Absolute => "n/abs",
+    };
+    let number = expect_number(evaluate(value, record)?, function, 1)?;
+    let result = match operator {
+        NumberOperator::Truncate => number.trunc(),
+        NumberOperator::Floor => number.floor(),
+        NumberOperator::Ceil => number.ceil(),
+        NumberOperator::Round => number.round(),
+        NumberOperator::Absolute => number.abs(),
+    };
+    Ok(RuntimeValue::Number(if result == 0.0 {
+        0.0
+    } else {
+        result
+    }))
 }
 
 fn duration_from_value(
@@ -1391,6 +1421,7 @@ fn validate_value(value: &Value) -> io::Result<()> {
             validate_value(left)?;
             validate_value(right)
         }
+        Value::NumberOperation { value, .. } => validate_value(value),
         Value::FormatNumberFixed { digits, value } => {
             validate_value(digits)?;
             validate_value(value)

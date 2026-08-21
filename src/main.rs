@@ -48,6 +48,11 @@ Numbers:
   (- NUMBER NUMBER)              subtract
   (* NUMBER NUMBER)              multiply
   (/ NUMBER NUMBER)              divide
+  (n/trunc NUMBER)               discard fractional digits toward zero
+  (n/floor NUMBER)               round down toward negative infinity
+  (n/ceil NUMBER)                round up toward positive infinity
+  (n/round NUMBER)               round to nearest, halves away from zero
+  (n/abs NUMBER)                 absolute value
   (n/fixed DIGITS NUMBER)        -> String with 0 to 100 fractional digits
   (> NUMBER NUMBER)  (>= NUMBER NUMBER)
   (< NUMBER NUMBER)  (<= NUMBER NUMBER)
