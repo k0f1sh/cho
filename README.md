@@ -1,7 +1,10 @@
 # cho
 
-Small tool, expressive one-liners.\
+A tiny semantic awk with Lisp-like expressions.\
 Built for the AWKward bits of shell scripting.
+
+Filter and transform line-oriented text, CSV, TSV, and command output using
+small, composable expressions and context-aware values.
 
 ## Quick start
 

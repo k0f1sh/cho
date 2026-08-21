@@ -3,7 +3,7 @@ use std::io;
 use std::process::ExitCode;
 
 const USAGE: &str = "Usage: cho [-F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'";
-const HELP: &str = r#"cho — filter and format line-oriented data with Lisp-like expressions
+const HELP: &str = r#"cho — a tiny semantic awk with Lisp-like expressions
 
 Usage: cho [-F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'
 
