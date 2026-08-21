@@ -44,13 +44,15 @@ dates and `cidr/contains?` expects a CIDR and an IP address, so cho converts the
 string arguments in context. Invalid input is an error instead of a silent false;
 use `default` only where recovery is intentional.
 
-IP predicates classify both address families where applicable:
+IP expressions classify both address families where applicable. `ip/private?`
+recognizes RFC 1918 IPv4 addresses and IPv6 unique-local addresses in `fc00::/7`;
+`ip/version` returns `4` or `6`:
 
 ```console
-$ printf '127.0.0.1\n::1\n10.0.0.1\n' |
-    cho '(filter (ip/loopback? $1)) (print $1)'
-127.0.0.1
-::1
+$ printf '10.0.0.1\nfc00::1\n8.8.8.8\n' |
+    cho '(filter (ip/private? $1)) (print $1 (ip/version $1))'
+10.0.0.1 4
+fc00::1 6
 ```
 
 URL component expressions parse absolute URLs in context:

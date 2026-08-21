@@ -910,7 +910,7 @@ fn ip_and_cidr_predicates_are_typed() {
             "(filter (ip/private? $1)) (print $1)",
             "10.1.2.3\n8.8.8.8\nfc00::1\n"
         ),
-        "10.1.2.3\n"
+        "10.1.2.3\nfc00::1\n"
     );
     assert_eq!(
         output(
@@ -925,6 +925,42 @@ fn ip_and_cidr_predicates_are_typed() {
             "2001:0db8:0:0:0:0:0:1\n2001:db8::2\n"
         ),
         "2001:0db8:0:0:0:0:0:1\n"
+    );
+}
+
+#[test]
+fn ip_version_returns_a_number_and_composes_as_a_value() {
+    assert_eq!(
+        output(
+            "(print $1 (ip/version $1) (if (= (ip/version $1) 4) \"v4\" \"v6\"))",
+            "192.0.2.1\n2001:db8::1\n"
+        ),
+        "192.0.2.1 4 v4\n2001:db8::1 6 v6\n"
+    );
+    assert_eq!(
+        output(
+            "(print (default (ip/version $1) \"invalid\"))",
+            "not-an-ip\n"
+        ),
+        "invalid\n"
+    );
+}
+
+#[test]
+fn private_ip_predicate_includes_ipv6_unique_local_boundaries() {
+    assert_eq!(
+        output(
+            "(filter (ip/private? $1)) (print $1)",
+            concat!(
+                "10.0.0.0\n172.16.0.0\n172.31.255.255\n192.168.255.255\n",
+                "9.255.255.255\n172.32.0.0\n192.169.0.0\n",
+                "fc00::\nfdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff\nfbff::1\nfe00::1\n",
+            ),
+        ),
+        concat!(
+            "10.0.0.0\n172.16.0.0\n172.31.255.255\n192.168.255.255\n",
+            "fc00::\nfdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff\n",
+        )
     );
 }
 

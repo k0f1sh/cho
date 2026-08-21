@@ -326,6 +326,11 @@ impl Parser {
                         fallback: Box::new(fallback),
                     })
                 }
+                Some(Token::Atom(operator)) if operator == "ip/version" => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::IpVersion(Box::new(value)))
+                }
                 Some(Token::Atom(operator)) if operator == "dt/unix" => {
                     let value = self.parse_value()?;
                     self.expect_right_paren()?;
@@ -526,6 +531,7 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
                 fallback: Box::new(fallback),
             })
         }
+        "ip/version" => Ok(Value::IpVersion(Box::new(one(arguments)?))),
         "dt/unix" => Ok(Value::DateTimeFromUnix(Box::new(one(arguments)?))),
         "dt/floor-s" => Ok(Value::FloorDateTime {
             unit: DateTimeFloorUnit::Second,
@@ -838,6 +844,7 @@ mod tests {
         assert!(parse(r#"(filter (dt/>= $1 "2026-08-01T00:00:00Z"))"#).is_ok());
         assert!(parse(r#"(filter (s/= $1 "Alice"))"#).is_ok());
         assert!(parse(r#"(filter (ip/private? $1))"#).is_ok());
+        assert!(parse(r#"(print (ip/version $1))"#).is_ok());
         assert!(parse(r#"(filter (ip/loopback? $1))"#).is_ok());
         assert!(parse(r#"(filter (ip/link-local? $1))"#).is_ok());
         assert!(parse(r#"(filter (ip/multicast? $1))"#).is_ok());
@@ -863,6 +870,10 @@ mod tests {
         assert_eq!(
             parse(r#"(print (-> $1 (dt/floor-h)))"#),
             parse(r#"(print (dt/floor-h $1))"#)
+        );
+        assert_eq!(
+            parse(r#"(print (-> $1 (ip/version)))"#),
+            parse(r#"(print (ip/version $1))"#)
         );
     }
 
@@ -925,6 +936,8 @@ mod tests {
             "(print (dt/unix))",
             "(print (dt/unix $1 $2))",
             "(print (dt/fmt $1))",
+            "(print (ip/version))",
+            "(print (ip/version $1 $2))",
             "(print (du/s))",
             "(print (du/ms))",
             "(print (du/ms $1 $2))",

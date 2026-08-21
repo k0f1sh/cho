@@ -116,8 +116,9 @@ Predicates:
   (dt/> DATETIME DATETIME)  (dt/>= DATETIME DATETIME)
   (dt/< DATETIME DATETIME)  (dt/<= DATETIME DATETIME)
   (dt/= DATETIME DATETIME)  (dt/!= DATETIME DATETIME)
+  (ip/version IPADDR)        -> Number (4 or 6)
   (ip/= IPADDR IPADDR)  (ip/!= IPADDR IPADDR)
-  (ip/private? IPADDR)       true only for private IPv4 addresses
+  (ip/private? IPADDR)       true for RFC 1918 IPv4 or fc00::/7 IPv6 ULA
   (ip/loopback? IPADDR)      true for IPv4 or IPv6 loopback addresses
   (ip/link-local? IPADDR)    true for IPv4 or IPv6 link-local addresses
   (ip/multicast? IPADDR)     true for IPv4 or IPv6 multicast addresses

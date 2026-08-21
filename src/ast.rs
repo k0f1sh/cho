@@ -121,6 +121,7 @@ pub enum Value {
         operation: UrlEncoding,
         value: Box<Value>,
     },
+    IpVersion(Box<Value>),
     Predicate(Box<Predicate>),
     DateTimeFromUnix(Box<Value>),
     FormatDateTime {
