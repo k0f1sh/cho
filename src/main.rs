@@ -104,6 +104,11 @@ DateTime and Duration:
   (du/m NUMBER)                  minutes -> Duration
   (du/h NUMBER)                  hours -> Duration
   (du/d NUMBER)                  fixed 24-hour days -> Duration
+  (du/to-ms DURATION)            Duration -> milliseconds as Number
+  (du/to-s DURATION)             Duration -> seconds as Number
+  (du/to-m DURATION)             Duration -> minutes as Number
+  (du/to-h DURATION)             Duration -> hours as Number
+  (du/to-d DURATION)             Duration -> fixed 24-hour days as Number
   (dt/> DATETIME DATETIME)  (dt/>= DATETIME DATETIME)
   (dt/< DATETIME DATETIME)  (dt/<= DATETIME DATETIME)
   (dt/= DATETIME DATETIME)  (dt/!= DATETIME DATETIME)

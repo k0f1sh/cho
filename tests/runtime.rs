@@ -1096,6 +1096,31 @@ fn duration_milliseconds_and_days_follow_existing_duration_rules() {
 }
 
 #[test]
+fn durations_convert_to_numbers_in_explicit_units() {
+    assert_eq!(
+        output(
+            "(print (du/to-ms (du/ms 250)) (du/to-s (du/s 0)) (du/to-m (du/m 3)) (du/to-h (du/h 2.5)) (du/to-d (du/d 1.5)))",
+            "x\n"
+        ),
+        "250 0 3 2.5 1.5\n"
+    );
+    assert_eq!(
+        output(
+            "(print (/ (du/to-s (dt/diff $1 $2)) 3600) (du/to-h (dt/diff $1 $2)))",
+            "2026-08-18T02:30:45Z 2026-08-18T00:00:00Z\n"
+        ),
+        "2.5125 2.5125\n"
+    );
+}
+
+#[test]
+fn duration_number_conversions_reject_non_durations_and_empty_values() {
+    for program in ["(print (du/to-s 1))", "(print (du/to-m $2))"] {
+        assert!(cho::run(program, Cursor::new("x\n"), Vec::new()).is_err());
+    }
+}
+
+#[test]
 fn ip_and_cidr_predicates_are_typed() {
     assert_eq!(
         output(

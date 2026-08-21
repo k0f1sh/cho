@@ -413,6 +413,31 @@ impl Parser {
                     self.expect_right_paren()?;
                     Ok(Value::DurationDays(Box::new(value)))
                 }
+                Some(Token::Atom(operator)) if operator == "du/to-ms" => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::DurationToMilliseconds(Box::new(value)))
+                }
+                Some(Token::Atom(operator)) if operator == "du/to-s" => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::DurationToSeconds(Box::new(value)))
+                }
+                Some(Token::Atom(operator)) if operator == "du/to-m" => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::DurationToMinutes(Box::new(value)))
+                }
+                Some(Token::Atom(operator)) if operator == "du/to-h" => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::DurationToHours(Box::new(value)))
+                }
+                Some(Token::Atom(operator)) if operator == "du/to-d" => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::DurationToDays(Box::new(value)))
+                }
                 Some(Token::Atom(operator)) if operator == "dt/now" => {
                     self.expect_right_paren()?;
                     Ok(Value::DateTimeNow)
@@ -642,6 +667,11 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
         "du/m" => Ok(Value::DurationMinutes(Box::new(one(arguments)?))),
         "du/h" => Ok(Value::DurationHours(Box::new(one(arguments)?))),
         "du/d" => Ok(Value::DurationDays(Box::new(one(arguments)?))),
+        "du/to-ms" => Ok(Value::DurationToMilliseconds(Box::new(one(arguments)?))),
+        "du/to-s" => Ok(Value::DurationToSeconds(Box::new(one(arguments)?))),
+        "du/to-m" => Ok(Value::DurationToMinutes(Box::new(one(arguments)?))),
+        "du/to-h" => Ok(Value::DurationToHours(Box::new(one(arguments)?))),
+        "du/to-d" => Ok(Value::DurationToDays(Box::new(one(arguments)?))),
         "dt/add" => {
             let (datetime, duration) = two(arguments)?;
             Ok(Value::AddDateTime {
@@ -1103,6 +1133,19 @@ mod tests {
             "(print (du/ms $1 $2))",
             "(print (du/d))",
             "(print (du/d $1 $2))",
+            "(print (du/to-ms))",
+            "(print (du/to-ms $1 $2))",
+            "(print (du/to-s))",
+            "(print (du/to-s $1 $2))",
+            "(print (du/to-m))",
+            "(print (du/to-m $1 $2))",
+            "(print (du/to-h))",
+            "(print (du/to-h $1 $2))",
+            "(print (du/to-d))",
+            "(print (du/to-d $1 $2))",
+            "(print (du/sec (du/s 1)))",
+            "(print (du/min (du/m 1)))",
+            "(print (du/hour (du/h 1)))",
             "(print (dur/s 1))",
             "(print (dt/now $1))",
             "(print (dt/floor-s))",
