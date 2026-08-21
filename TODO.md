@@ -64,7 +64,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - helpとREADMEにprivateの範囲を明記する。
 - AST、parser、runtime、help、README、IPv4/IPv6境界と回復のテストを更新済み。
 
-#### 4. CIDRの基本情報抽出
+#### 4. CIDRの基本情報抽出（実装済み）
 
 ```lisp
 (cidr/network CIDR)
@@ -78,6 +78,8 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - `last`はusable hostではなく純粋な最大アドレスとし、IPv4のbroadcast addressも返す。
 - IPv4/IPv6、host bitsが立った入力、`/0`、`/32`、`/128`、不正入力をテストする。
 - 戻り値のIpAddrを`ip/version`やIP predicateへ直接ネストできることを確認する。
+- `RuntimeValue::IpAddr`とString/IpAddrの両方を受ける`expect_ip`を追加し、AST、parser、
+  runtime、help、README、境界・合成・回復のテストを更新済み。
 
 #### 5. CIDRのアドレス数
 

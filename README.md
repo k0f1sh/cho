@@ -55,6 +55,16 @@ $ printf '10.0.0.1\nfc00::1\n8.8.8.8\n' |
 fc00::1 6
 ```
 
+CIDR expressions expose the normalized network, prefix length, and range boundaries.
+Returned addresses remain typed and can be passed directly to IP expressions:
+
+```console
+$ printf '192.168.1.42/24\n2001:db8::1/126\n' |
+    cho '(print (cidr/network $1) (cidr/prefix $1) (cidr/last $1) (ip/version (cidr/first $1)))'
+192.168.1.0 24 192.168.1.255 4
+2001:db8:: 126 2001:db8::3 6
+```
+
 URL component expressions parse absolute URLs in context:
 
 ```console

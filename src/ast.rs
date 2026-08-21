@@ -98,6 +98,14 @@ pub enum UrlEncoding {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum CidrPart {
+    Network,
+    Prefix,
+    First,
+    Last,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Value {
     Field(usize),
     RecordNumber,
@@ -122,6 +130,10 @@ pub enum Value {
         value: Box<Value>,
     },
     IpVersion(Box<Value>),
+    CidrPart {
+        part: CidrPart,
+        value: Box<Value>,
+    },
     Predicate(Box<Predicate>),
     DateTimeFromUnix(Box<Value>),
     FormatDateTime {

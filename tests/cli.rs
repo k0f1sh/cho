@@ -63,6 +63,10 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("(du/ms NUMBER)"));
     assert!(stdout.contains("(du/d NUMBER)"));
     assert!(stdout.contains("(ip/version IPADDR)"));
+    assert!(stdout.contains("(cidr/network CIDR)"));
+    assert!(stdout.contains("(cidr/prefix CIDR)"));
+    assert!(stdout.contains("(cidr/first CIDR)"));
+    assert!(stdout.contains("(cidr/last CIDR)"));
     assert!(stdout.contains("fc00::/7"));
     assert!(!stdout.contains("(dur/m NUMBER)"));
     assert!(stdout.contains("(cidr/contains? CIDR IPADDR)"));

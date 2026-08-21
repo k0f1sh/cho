@@ -965,6 +965,66 @@ fn private_ip_predicate_includes_ipv6_unique_local_boundaries() {
 }
 
 #[test]
+fn cidr_extractors_return_ipv4_and_ipv6_boundaries() {
+    assert_eq!(
+        output(
+            concat!(
+                "(print (cidr/network $1) (cidr/prefix $1) ",
+                "(cidr/first $1) (cidr/last $1))",
+            ),
+            concat!(
+                "192.168.1.42/24\n0.0.0.0/0\n192.0.2.1/32\n",
+                "2001:db8::42/64\n::/0\n2001:db8::1/128\n",
+            ),
+        ),
+        concat!(
+            "192.168.1.0 24 192.168.1.0 192.168.1.255\n",
+            "0.0.0.0 0 0.0.0.0 255.255.255.255\n",
+            "192.0.2.1 32 192.0.2.1 192.0.2.1\n",
+            "2001:db8:: 64 2001:db8:: 2001:db8::ffff:ffff:ffff:ffff\n",
+            ":: 0 :: ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff\n",
+            "2001:db8::1 128 2001:db8::1 2001:db8::1\n",
+        )
+    );
+}
+
+#[test]
+fn cidr_ip_results_remain_typed_and_compose_with_ip_expressions() {
+    assert_eq!(
+        output(
+            concat!(
+                "(print (ip/version (cidr/network $1)) ",
+                "(ip/private? (cidr/first $1)) ",
+                "(ip/= (cidr/last $1) $2))",
+            ),
+            "10.1.2.3/24 10.1.2.255\n2001:db8::1/126 2001:db8::3\n",
+        ),
+        "4 true true\n6 false true\n"
+    );
+}
+
+#[test]
+fn cidr_extractors_report_and_recover_from_conversion_errors() {
+    for extractor in ["cidr/network", "cidr/prefix", "cidr/first", "cidr/last"] {
+        let program = format!("(print ({extractor} $1))");
+        let error = cho::run(&program, Cursor::new("not-a-cidr\n"), Vec::new()).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .starts_with(&format!("record 1: {extractor}: argument 1 expects Cidr")),
+            "{error}"
+        );
+    }
+    assert_eq!(
+        output(
+            "(print (default (cidr/network $1) \"invalid\"))",
+            "not-a-cidr\n"
+        ),
+        "invalid\n"
+    );
+}
+
+#[test]
 fn ip_classification_predicates_cover_ipv4_and_ipv6_boundaries() {
     assert_eq!(
         output(

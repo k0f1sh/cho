@@ -1,6 +1,6 @@
 use crate::ast::{
-    ArithmeticOperator, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr, IpClass,
-    Predicate, Program, RegexId, UrlEncoding, UrlPart, Value,
+    ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
+    IpClass, Predicate, Program, RegexId, UrlEncoding, UrlPart, Value,
 };
 use crate::lexer::{Token, tokenize};
 
@@ -331,6 +331,14 @@ impl Parser {
                     self.expect_right_paren()?;
                     Ok(Value::IpVersion(Box::new(value)))
                 }
+                Some(Token::Atom(operator)) if cidr_part(&operator).is_some() => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::CidrPart {
+                        part: cidr_part(&operator).expect("operator was matched"),
+                        value: Box::new(value),
+                    })
+                }
                 Some(Token::Atom(operator)) if operator == "dt/unix" => {
                     let value = self.parse_value()?;
                     self.expect_right_paren()?;
@@ -532,6 +540,10 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
             })
         }
         "ip/version" => Ok(Value::IpVersion(Box::new(one(arguments)?))),
+        operator if cidr_part(operator).is_some() => Ok(Value::CidrPart {
+            part: cidr_part(operator).expect("operator was matched"),
+            value: Box::new(one(arguments)?),
+        }),
         "dt/unix" => Ok(Value::DateTimeFromUnix(Box::new(one(arguments)?))),
         "dt/floor-s" => Ok(Value::FloorDateTime {
             unit: DateTimeFloorUnit::Second,
@@ -626,6 +638,16 @@ fn ip_class(value: &str) -> Option<IpClass> {
         "ip/loopback?" => Some(IpClass::Loopback),
         "ip/link-local?" => Some(IpClass::LinkLocal),
         "ip/multicast?" => Some(IpClass::Multicast),
+        _ => None,
+    }
+}
+
+fn cidr_part(value: &str) -> Option<CidrPart> {
+    match value {
+        "cidr/network" => Some(CidrPart::Network),
+        "cidr/prefix" => Some(CidrPart::Prefix),
+        "cidr/first" => Some(CidrPart::First),
+        "cidr/last" => Some(CidrPart::Last),
         _ => None,
     }
 }
@@ -850,6 +872,10 @@ mod tests {
         assert!(parse(r#"(filter (ip/multicast? $1))"#).is_ok());
         assert!(parse(r#"(filter (semver/>= $1 "2.4.0"))"#).is_ok());
         assert!(parse(r#"(filter (cidr/contains? "10.0.0.0/8" $1))"#).is_ok());
+        assert!(
+            parse(r#"(print (cidr/network $1) (cidr/prefix $1) (cidr/first $1) (cidr/last $1))"#)
+                .is_ok()
+        );
         assert!(parse(r#"(print (dt/add (dt/unix $1) (du/m 2)))"#).is_ok());
         assert!(parse(r#"(print (du/ms 250) (du/d -1.5))"#).is_ok());
         assert!(parse(r#"(print (dt/fmt "%Y-%m-%d" $1))"#).is_ok());
@@ -874,6 +900,10 @@ mod tests {
         assert_eq!(
             parse(r#"(print (-> $1 (ip/version)))"#),
             parse(r#"(print (ip/version $1))"#)
+        );
+        assert_eq!(
+            parse(r#"(print (-> $1 (cidr/network) (ip/version)))"#),
+            parse(r#"(print (ip/version (cidr/network $1)))"#)
         );
     }
 
@@ -938,6 +968,11 @@ mod tests {
             "(print (dt/fmt $1))",
             "(print (ip/version))",
             "(print (ip/version $1 $2))",
+            "(print (cidr/network))",
+            "(print (cidr/network $1 $2))",
+            "(print (cidr/prefix))",
+            "(print (cidr/first $1 $2))",
+            "(print (cidr/last))",
             "(print (du/s))",
             "(print (du/ms))",
             "(print (du/ms $1 $2))",
