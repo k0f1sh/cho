@@ -40,7 +40,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
   `2^53 - 1`を基準とし、範囲外は回復可能なruntime errorにする案を第一候補とする。
 - エラーには従来どおりrecord、expression、argument number、期待型を含める。
 
-#### 2. Durationの単位追加
+#### 2. Durationの単位追加（実装済み）
 
 ```lisp
 (du/ms NUMBER)
@@ -50,6 +50,7 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - `du/ms`はmilliseconds、`du/d`は厳密に24時間単位とする。
 - `du/s`、`du/m`、`du/h`と同じ負数、小数、rounding、overflow規則を使う。
 - monthやyearのような可変長単位は追加しない。
+- AST、parser、runtime、help、README、引数検証とruntime testを更新済み。
 
 #### 3. IP versionとprivateのIPv6対応
 

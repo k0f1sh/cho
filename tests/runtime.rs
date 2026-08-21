@@ -886,6 +886,24 @@ fn duration_values_support_fractional_arithmetic_and_differences() {
 }
 
 #[test]
+fn duration_milliseconds_and_days_follow_existing_duration_rules() {
+    assert_eq!(
+        output(
+            "(print (du/ms 250) (du/ms -1.5) (du/d 1) (du/d -0.5))",
+            "x\n"
+        ),
+        "0.25 -0.0015 86400 -43200\n"
+    );
+    assert_eq!(
+        output(
+            "(print (dt/add $1 (du/ms 1)) (dt/sub $1 (du/d 1)))",
+            "2026-08-21T00:00:00Z\n"
+        ),
+        "2026-08-21T00:00:00.001Z 2026-08-20T00:00:00Z\n"
+    );
+}
+
+#[test]
 fn ip_and_cidr_predicates_are_typed() {
     assert_eq!(
         output(
