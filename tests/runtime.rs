@@ -498,6 +498,38 @@ fn fixed_number_formatting_rounds_keeps_zeroes_and_composes_as_a_string() {
 }
 
 #[test]
+fn named_number_operations_handle_positive_negative_and_nested_values() {
+    assert_eq!(
+        output(
+            "(print (n/trunc $1) (n/trunc $2) (n/floor $2) (n/ceil $2) (n/round $1) (n/round $2) (n/abs $2) (+ 1 (n/trunc $1)))",
+            "2.5125 -2.5125\n"
+        ),
+        "2 -2 -3 -2 3 -3 2.5125 3\n"
+    );
+    assert_eq!(
+        output(
+            "(print (n/trunc $1) (n/floor $1) (n/ceil $1) (n/round $1) (n/abs $1))",
+            "-0.25\n"
+        ),
+        "0 -1 0 0 0.25\n"
+    );
+}
+
+#[test]
+fn named_number_operations_reject_non_numbers_and_empty_values() {
+    for function in ["n/trunc", "n/floor", "n/ceil", "n/round", "n/abs"] {
+        let program = format!("(print ({function} $2))");
+        let error = cho::run(&program, Cursor::new("x\n"), Vec::new()).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .starts_with(&format!("record 1: {function}: argument 1 expects Number")),
+            "{error}"
+        );
+    }
+}
+
+#[test]
 fn fixed_number_formatting_rejects_invalid_digits_and_values() {
     for (program, expected) in [
         (

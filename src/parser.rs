@@ -1,6 +1,6 @@
 use crate::ast::{
     ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
-    IpClass, Predicate, Program, RegexId, SemVerPart, UrlEncoding, UrlPart, Value,
+    IpClass, NumberOperator, Predicate, Program, RegexId, SemVerPart, UrlEncoding, UrlPart, Value,
 };
 use crate::lexer::{Token, tokenize};
 
@@ -248,6 +248,14 @@ impl Parser {
                     self.expect_right_paren()?;
                     Ok(Value::FormatNumberFixed {
                         digits: Box::new(digits),
+                        value: Box::new(value),
+                    })
+                }
+                Some(Token::Atom(operator)) if number_operator(&operator).is_some() => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::NumberOperation {
+                        operator: number_operator(&operator).expect("operator was matched"),
                         value: Box::new(value),
                     })
                 }
@@ -563,6 +571,10 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
                 value: Box::new(value),
             })
         }
+        operator if number_operator(operator).is_some() => Ok(Value::NumberOperation {
+            operator: number_operator(operator).expect("operator was matched"),
+            value: Box::new(one(arguments)?),
+        }),
         operator if url_part(operator).is_some() => Ok(Value::UrlPart {
             part: url_part(operator).expect("operator was matched"),
             value: Box::new(one(arguments)?),
@@ -734,6 +746,17 @@ fn arithmetic_operator(value: &str) -> Option<ArithmeticOperator> {
         "-" => Some(ArithmeticOperator::Subtract),
         "*" => Some(ArithmeticOperator::Multiply),
         "/" => Some(ArithmeticOperator::Divide),
+        _ => None,
+    }
+}
+
+fn number_operator(value: &str) -> Option<NumberOperator> {
+    match value {
+        "n/trunc" => Some(NumberOperator::Truncate),
+        "n/floor" => Some(NumberOperator::Floor),
+        "n/ceil" => Some(NumberOperator::Ceil),
+        "n/round" => Some(NumberOperator::Round),
+        "n/abs" => Some(NumberOperator::Absolute),
         _ => None,
     }
 }
@@ -1073,6 +1096,16 @@ mod tests {
             "(print (n/fixed))",
             "(print (n/fixed 2))",
             "(print (n/fixed 2 $1 $2))",
+            "(print (n/trunc))",
+            "(print (n/trunc $1 $2))",
+            "(print (n/floor))",
+            "(print (n/floor $1 $2))",
+            "(print (n/ceil))",
+            "(print (n/ceil $1 $2))",
+            "(print (n/round))",
+            "(print (n/round $1 $2))",
+            "(print (n/abs))",
+            "(print (n/abs $1 $2))",
             "(print (url/host))",
             "(print (url/path $1 $2))",
             "(print (url/domain $1))",

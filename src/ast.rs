@@ -83,6 +83,15 @@ pub enum ArithmeticOperator {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum NumberOperator {
+    Truncate,
+    Floor,
+    Ceil,
+    Round,
+    Absolute,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum UrlPart {
     Scheme,
     Host,
@@ -127,6 +136,10 @@ pub enum Value {
         operator: ArithmeticOperator,
         left: Box<Value>,
         right: Box<Value>,
+    },
+    NumberOperation {
+        operator: NumberOperator,
+        value: Box<Value>,
     },
     FormatNumberFixed {
         digits: Box<Value>,

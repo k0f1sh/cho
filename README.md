@@ -184,6 +184,17 @@ $ printf '10 2.5\n' | cho '(print (+ $1 $2) (* $1 2))'
 `+`, `-`, `*`, and `/` accept exactly two numbers. Invalid numbers, division by
 zero, and non-finite results are errors.
 
+Named numeric expressions return Numbers and can be nested in arithmetic.
+`n/trunc` discards the fractional part toward zero; `n/floor` and `n/ceil`
+round toward negative and positive infinity; `n/round` rounds halves away from
+zero; and `n/abs` returns the absolute value:
+
+```console
+$ printf '2.5125 -2.5125\n' |
+    cho '(print (n/trunc $1) (n/floor $2) (n/ceil $2) (n/round $1) (n/abs $2))'
+2 -3 -2 3 2.5125
+```
+
 Use `n/fixed` when output needs a fixed number of digits after the decimal point:
 
 ```console
