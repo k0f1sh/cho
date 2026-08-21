@@ -1,282 +1,164 @@
 # cho
 
-A tiny semantic awk with Lisp-like expressions.\
-Built for the AWKward bits of shell scripting.
-
-Filter and transform line-oriented text, CSV, TSV, and command output using
-small, composable expressions and context-aware values.
-
-## Quick start
-
-cho reads records from standard input and transforms them with small,
-composable expressions.
-
-For example, suppose `people.txt` contains whitespace-separated fields:
-
-```text
-Alice 18 tokyo
-Bob 30
-Carol 25 osaka
-```
-
-The following command keeps people older than 20 and prints their names and
-ages as comma-separated values:
-
-```console
-$ cat people.txt | cho '(f (> $2 20)) (p (s/join "," $1 $2))'
-Bob,30
-Carol,25
-```
-
-`p` and `f` are short forms of `print` and `filter`.
-
-Fields are `$1`, `$2`, ...; `$0` is the whole record. Expressions compose, so
-filtering, formatting, defaults, case conversion, regex matching, and more can be
-nested wherever a value is accepted.
-
-## Context-aware values
-
-cho can also treat text as a meaningful value when an expression asks for it:
-
-```console
-$ cat access.log | cho '(filter (dt/>= $1 "2026-08-01T00:00:00Z")) (filter (cidr/contains? "10.0.0.0/8" $2)) (print $0)'
-```
-
-There are no date or IP constructors to wrap around every field. `dt/>=` expects
-dates and `cidr/contains?` expects a CIDR and an IP address, so cho converts their
-string arguments in context. Invalid input is an error instead of a silent false;
-use `default` only where recovery is intentional.
-
-IP expressions classify both address families where applicable. `ip/private?`
-recognizes RFC 1918 IPv4 addresses and IPv6 unique-local addresses in `fc00::/7`;
-`ip/version` returns `4` or `6`:
-
-```console
-$ printf '10.0.0.1\nfc00::1\n8.8.8.8\n' |
-    cho '(filter (ip/private? $1)) (print $1 (ip/version $1))'
-10.0.0.1 4
-fc00::1 6
-```
-
-CIDR expressions expose the normalized network, prefix length, and range boundaries.
-Returned addresses remain typed and can be passed directly to IP expressions:
-
-```console
-$ printf '192.168.1.42/24\n2001:db8::1/126\n' |
-    cho '(print (cidr/network $1) (cidr/prefix $1) (cidr/last $1) (ip/version (cidr/first $1)))'
-192.168.1.0 24 192.168.1.255 4
-2001:db8:: 126 2001:db8::3 6
-```
-
-`cidr/size` returns the total address count only when it fits Number's safe
-integer range. Larger IPv6 ranges are runtime errors and can be handled with
-`default`.
-
-URL component expressions parse absolute URLs in context:
-
-```console
-$ printf 'https://example.com:8443/a%20b?q=hello%20world#top\n' |
-    cho '(print (url/scheme $1) (url/host $1) (url/port $1) (url/path $1) (url/query $1) (url/fragment $1))'
-https example.com 8443 /a%20b q=hello%20world top
-```
-
-Extracted components keep their percent encoding. A missing optional component
-is an empty string, while an invalid URL is an error.
-
-Query parameters can be decoded separately without changing raw `url/query`.
-Keys and values use form semantics (`+` is a space), and duplicate keys return
-their first value:
-
-```console
-$ printf 'https://example.com/?lang=ja&q=hello+world\n' |
-    cho '(print (url/query-get "lang" $1) (url/query-get "q" $1) (url/query-has? "page" $1))'
-ja hello world false
-```
-
-Encode and decode individual URL components explicitly:
-
-```console
-$ printf 'hello world\n東京\n' |
-    cho '(print (url/encode $0))'
-hello%20world
-%E6%9D%B1%E4%BA%AC
-```
-
-`url/decode` decodes `%XX` escapes but leaves `+` unchanged. Invalid escapes and
-decoded bytes that are not UTF-8 are errors.
-
-```console
-$ cho '(print (dt/floor-m (dt/now)))'
-2026-08-18T12:34:00Z
-```
-
-`dt/fmt` formats in UTC by default. Pass an IANA time zone for daylight-saving
-rules, or an explicit `±HH:MM` offset for a fixed offset:
-
-```console
-$ printf '2026-01-15T12:00:00Z\n2026-07-15T12:00:00Z\n' |
-    cho '(print (dt/fmt "%Y-%m-%d %H:%M %z" "America/New_York" $1))'
-2026-01-15 07:00 -0500
-2026-07-15 08:00 -0400
-```
-
-The time zone is a regular value, so it can come from a field or another value
-expression. Local time is never taken implicitly from the environment.
-
-Duration units stay explicit and compose with datetime arithmetic. `du/ms` creates
-milliseconds, while `du/d` uses fixed 24-hour days:
-
-```console
-$ cat people.txt | cho '(filter (= NR 1)) (print (du/ms 250) (du/d 1))'
-0.25 86400
-```
-
-Use `du/to-ms`, `du/to-s`, `du/to-m`, `du/to-h`, or `du/to-d` to convert a
-duration to a Number in that unit, so the result can be used in arithmetic:
-
-```console
-$ printf '2026-08-18T02:30:45Z 2026-08-18T00:00:00Z\n' |
-    cho '(print (du/to-h (dt/diff $1 $2)))'
-2.5125
-```
-
-Semantic versions compare by SemVer precedence rather than as strings:
-
-```console
-$ printf '1.9.0\n1.10.0\n2.0.0-alpha\n' |
-    cho '(filter (semver/>= $1 "1.10.0")) (print $1)'
-1.10.0
-2.0.0-alpha
-```
-
-`semver/` comparisons require `MAJOR.MINOR.PATCH`. Build metadata is ignored for
-precedence equality; use `s/=` when the complete text must match.
-
-Components are regular values and build metadata remains accepted:
-
-```console
-$ printf '1.2.3-alpha.1+build.9\n' |
-    cho '(print (semver/major $1) (semver/minor $1) (semver/patch $1) (semver/prerelease $1))'
-1 2 3 alpha.1
-```
-
-Comparisons and predicates return regular Boolean values. They can be printed,
-combined, or selected by `if`, and `filter` accepts any Boolean expression:
-
-```console
-$ printf 'prod 10.0.0.1\ndev 127.0.0.1\ndev 8.8.8.8\n' |
-    cho '(filter (if (s/= $1 "prod") (ip/private? $2) (ip/loopback? $2))) (print $0)'
-prod 10.0.0.1
-dev 127.0.0.1
-```
-
-The literals are `true` and `false`. Boolean values render with those spellings
-and are not implicitly converted from or to strings and numbers. `filter`, `if`,
-`not`, `and`, and `or` require Boolean arguments; `and` and `or` short-circuit.
-
-Numeric arithmetic converts string fields in context and uses binary operators:
-
-```console
-$ printf '10 2.5\n' | cho '(print (+ $1 $2) (* $1 2))'
-12.5 20
-```
-
-`+`, `-`, `*`, and `/` accept exactly two numbers. Invalid numbers, division by
-zero, and non-finite results are errors.
-
-Named numeric expressions return Numbers and can be nested in arithmetic.
-`n/trunc` discards the fractional part toward zero; `n/floor` and `n/ceil`
-round toward negative and positive infinity; `n/round` rounds halves away from
-zero; and `n/abs` returns the absolute value:
-
-```console
-$ printf '2.5125 -2.5125\n' |
-    cho '(print (n/trunc $1) (n/floor $2) (n/ceil $2) (n/round $1) (n/abs $2))'
-2 -3 -2 3 2.5125
-```
-
-Use `n/fixed` when output needs a fixed number of digits after the decimal point:
-
-```console
-$ printf '3 3.14159\n' | cho '(print (n/fixed 2 $1) (n/fixed 3 $2))'
-3.00 3.142
-```
-
-`n/fixed` returns a String and accepts a whole digit count from 0 to 100, keeping
-calculation separate from final display formatting.
-
-## Composing expressions
-
-```console
-# Pick fields
-$ cat people.txt | cho '(print $1 $2)'
-Alice 18
-Bob 30
-Carol 25
-
-# Compose value expressions
-$ cat people.txt |
-    cho '(print (str (s/upper $1) ":" (default $3 "unknown")))'
-ALICE:tokyo
-BOB:unknown
-CAROL:osaka
-```
-
-Extract one literal-delimited part without introducing an array:
-
-```console
-$ printf '192.168.10.20:39652 SRC=10.0.0.25\n' |
-    cho '(print (s/part ":" 1 $1) (s/part "=" 2 $2))'
-192.168.10.20 10.0.0.25
-```
-
-If the requested part does not exist, `s/part` returns an empty string, so it
-can be composed directly or handled with `default`:
-
-```console
-$ printf 'alice\nalice:admin\n' |
-    cho '(print $1 (default (s/part ":" 2 $1) "member"))'
-alice member
-alice:admin admin
-```
-
-## Input formats
-
-For example, suppose `places.csv` contains a quoted comma:
-
-```csv
-name,place
-Alice,"Tokyo, Japan"
-Bob,Osaka
-```
-
-```console
-# Read real CSV, including quoted commas
-$ cat places.csv | cho --csv --skip-header '(print (s/join " -> " $1 $2))'
-Alice -> Tokyo, Japan
-Bob -> Osaka
-```
-
-Whitespace-separated input is the default. CSV, TSV, and regular-expression field
-separators are also supported. Use `--skip-header` with CSV or TSV input to skip
-its first logical record.
-
-Run `cho --help` for the complete syntax and more examples.
-
-The [`examples`](examples) directory contains three complete scenarios: reviewing
-a CSV account export, investigating connection timeouts, and checking release
-versions. Each script is executable against its bundled sample data.
+A tiny semantic awk for the parts of shell scripting that get AWKward.
+
+cho is a command-line tool for filtering and transforming line-oriented text,
+CSV, TSV, and command output with small Lisp-like expressions. It processes
+input one record at a time and exposes fields as `$1`, `$2`, and so on.
+
+Operators parse fields according to the type they require: date operators parse
+dates, IP operators parse addresses, and numeric operators parse numbers. This
+keeps parsing and validation out of the surrounding shell script. Expressions
+can be nested, and CSV input supports quoted fields and embedded newlines.
 
 > [!WARNING]
 > cho is experimental. Its syntax and behavior may change.
 
 ## Install
 
+Rust and Cargo are required.
+
+```console
+$ cargo install --git https://github.com/k0f1sh/cho.git
+```
+
+To install from a local checkout instead:
+
 ```console
 $ git clone https://github.com/k0f1sh/cho.git
 $ cd cho
 $ cargo install --path .
 ```
+
+## Quick start
+
+Filter people older than 20, then print two fields as comma-separated values:
+
+```console
+$ printf 'Alice 18 tokyo\nBob 30\nCarol 25 osaka\n' |
+    cho '(filter (> $2 20)) (print (s/join "," $1 $2))'
+Bob,30
+Carol,25
+```
+
+`$0` is the complete record and `$1`, `$2`, ... are fields. Whitespace separates
+fields by default. `print` and `filter` also have the short forms `p` and `f` for
+interactive use.
+
+Run `cho --help` for the complete syntax and more examples.
+
+## Typed values and composition
+
+The same syntax works for simple field selection and for pipelines that add
+date parsing, typed comparisons, or other transformations.
+
+For example, this keeps records on or after a timestamp and inside a CIDR:
+
+```console
+$ printf '%s\n' \
+    '2026-08-02T09:00:00Z 10.1.2.3 deploy' \
+    '2026-07-31T23:00:00Z 10.2.3.4 old' \
+    '2026-08-03T12:00:00Z 8.8.8.8 external' |
+    cho '
+      (filter (dt/>= $1 "2026-08-01T00:00:00Z"))
+      (filter (cidr/contains? "10.0.0.0/8" $2))
+      (print $0)
+    '
+2026-08-02T09:00:00Z 10.1.2.3 deploy
+```
+
+The fields do not need date or IP constructors. `dt/>=` expects RFC 3339
+datetimes, and `cidr/contains?` expects a CIDR and an IP address. cho parses each
+string as the type required by the expression. Invalid input produces an error
+instead of silently failing to match.
+
+In CSV mode, quoted commas remain part of one field:
+
+```console
+$ printf 'name,place\nAlice,"Tokyo, Japan"\nBob,Osaka\n' |
+    cho --csv --skip-header '(print (s/join " -> " $1 $2))'
+Alice -> Tokyo, Japan
+Bob -> Osaka
+```
+
+Typical inputs include logs, command output, and delimited files. Built-in value
+types cover datetime arithmetic, network addresses, URLs, and release versions.
+For JSON input, use `jq`.
+
+## Language basics
+
+cho runs the program once per input record. `$0` contains the whole record;
+`$1`, `$2`, ... contain its fields. `NR` is the record number and `NF` is the
+field count.
+
+Program expressions run from left to right. When a `filter` fails, cho skips the
+remaining expressions for that record. Value expressions can be nested anywhere
+a value is accepted.
+
+```console
+$ printf 'alice\nalice:admin\n' |
+    cho '(print (s/upper $1) (default (s/part ":" 2 $1) "member"))'
+ALICE member
+ALICE:ADMIN admin
+```
+
+`print` evaluates its arguments and separates them with spaces. Use value
+expressions such as `str`, `s/join`, and `n/fixed` for formatting.
+
+## Supported values
+
+| Values | Examples |
+| --- | --- |
+| Text | regex matching, splitting, joining, case conversion, escaping |
+| Numbers | arithmetic, truncation, floor/ceil/round, fixed-point formatting |
+| DateTime and Duration | RFC 3339 comparison, differences, arithmetic, time zones |
+| IP and CIDR | classification, containment, normalized networks and boundaries |
+| URL | components, query parameters, percent encoding and decoding |
+| SemVer | precedence comparison and component extraction |
+| Boolean | composable predicates, `if`, `and`, `or`, and `not` |
+
+Expressions preserve typed results when nested. For example, `dt/diff` returns
+a Duration, `du/to-h` converts it to a Number of hours, and `n/trunc` discards
+the fractional part:
+
+```console
+$ printf '2026-08-18T02:30:45Z 2026-08-18T00:00:00Z\n' |
+    cho '(print (n/trunc (du/to-h (dt/diff $1 $2))))'
+2
+```
+
+## Input formats
+
+Whitespace-separated input is the default. Use `--csv` for CSV, `--tsv` for
+tab-separated input, or `-F REGEX` for another field separator. `--skip-header`
+skips the first logical CSV or TSV record.
+
+```console
+$ cho --csv --skip-header '(print $1 $3)'
+$ cho --tsv '(filter (~ $2 /^api-/)) (print $1)'
+$ cho -F ':' '(print $1 $3)'
+```
+
+## Errors and recovery
+
+A failed conversion reports the record, expression, and argument number. Missing
+fields evaluate to empty strings. Use `default` to provide a fallback for an
+empty or invalid value:
+
+```console
+$ printf 'Alice tokyo\nBob\n' |
+    cho '(print $1 (default $2 "unknown"))'
+Alice tokyo
+Bob unknown
+```
+
+## Documentation
+
+`cho --help` contains the complete syntax and short command examples.
+
+The [`examples`](examples) directory contains scripts and sample data for
+reviewing a CSV account export, investigating connection timeouts, and checking
+release versions.
 
 ## Development
 
