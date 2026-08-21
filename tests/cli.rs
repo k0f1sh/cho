@@ -54,7 +54,9 @@ fn help_lists_types_and_signatures() {
     let stdout = String::from_utf8(output.stdout).unwrap();
     assert!(stdout.contains("Types:"));
     assert!(stdout.contains("(p VALUE ...)"));
-    assert!(stdout.contains("(f PREDICATE)"));
+    assert!(stdout.contains("(f BOOLEAN)"));
+    assert!(stdout.contains("true, false"));
+    assert!(stdout.contains("(if BOOLEAN VALUE VALUE)"));
     assert!(stdout.contains("--skip-header"));
     assert!(stdout.contains("(s/part DELIMITER POSITION VALUE)"));
     assert!(stdout.contains("(dt/fmt STRING DATETIME)"));

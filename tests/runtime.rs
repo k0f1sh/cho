@@ -304,6 +304,49 @@ fn boolean_predicates_can_be_nested_with_regexes() {
 }
 
 #[test]
+fn boolean_values_compose_in_filter_if_and_logical_expressions() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(filter (if (s/= $1 "prod") (ip/private? $2) (ip/loopback? $2))) "#,
+                r#"(print true false (not (if (> $3 0) true false)))"#,
+            ),
+            "prod 10.0.0.1 1\ndev 127.0.0.1 -1\ndev 8.8.8.8 1\n",
+        ),
+        "true false false\ntrue false true\n"
+    );
+}
+
+#[test]
+fn boolean_consumers_reject_other_types_without_implicit_conversion() {
+    for (program, function) in [
+        (r#"(filter "true")"#, "filter"),
+        (r#"(print (if 1 "yes" "no"))"#, "if"),
+        ("(print (not 1))", "not"),
+        ("(print (and true 1))", "and"),
+        ("(print (or false 1))", "or"),
+    ] {
+        let error = cho::run(program, Cursor::new("x\n"), Vec::new()).unwrap_err();
+        assert!(
+            error.to_string().contains(&format!("{function}: argument")),
+            "{error}"
+        );
+        assert!(error.to_string().contains("expects Boolean"), "{error}");
+    }
+}
+
+#[test]
+fn and_and_or_short_circuit_boolean_value_errors() {
+    assert_eq!(
+        output(
+            r#"(print (and false (> "not-a-number" 0)) (or true (> "not-a-number" 0)))"#,
+            "x\n",
+        ),
+        "false true\n"
+    );
+}
+
+#[test]
 fn regex_predicates_share_the_same_execution_path_as_boolean_values() {
     assert_eq!(
         output(

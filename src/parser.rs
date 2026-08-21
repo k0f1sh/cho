@@ -53,43 +53,37 @@ impl Parser {
                 Ok(Expr::Print(self.parse_values_until_right_paren()?))
             }
             Some(Token::Atom(operator)) if operator == "filter" || operator == "f" => {
-                let predicate = self.parse_predicate()?;
+                let condition = self.parse_value()?;
                 if self.next() != Some(Token::RightParen) {
                     return Err(ParseError::InvalidSyntax);
                 }
-                Ok(Expr::Filter(predicate))
+                Ok(Expr::Filter(condition))
             }
             _ => Err(ParseError::InvalidSyntax),
         }
     }
 
-    fn parse_predicate(&mut self) -> Result<Predicate, ParseError> {
-        if self.next() != Some(Token::LeftParen) {
-            return Err(ParseError::InvalidSyntax);
-        }
-        let operator = self.next();
-        self.parse_predicate_after_operator(operator)
-    }
-
-    fn parse_predicate_after_operator(
+    fn parse_boolean_after_operator(
         &mut self,
         operator: Option<Token>,
-    ) -> Result<Predicate, ParseError> {
+    ) -> Result<Value, ParseError> {
         if matches!(operator, Some(Token::Atom(ref value)) if value == "reg" || value == "~") {
-            return self.parse_regex_predicate();
+            return self
+                .parse_regex_predicate()
+                .map(|predicate| Value::Predicate(Box::new(predicate)));
         }
         if operator == Some(Token::Atom("not".into())) {
-            let predicate = self.parse_predicate()?;
+            let value = self.parse_value()?;
             if self.next() != Some(Token::RightParen) {
                 return Err(ParseError::InvalidSyntax);
             }
-            return Ok(Predicate::Not(Box::new(predicate)));
+            return Ok(Value::Not(Box::new(value)));
         }
         if operator == Some(Token::Atom("and".into())) {
-            return Ok(Predicate::And(self.parse_predicates_until_right_paren()?));
+            return Ok(Value::And(self.parse_boolean_values_until_right_paren()?));
         }
         if operator == Some(Token::Atom("or".into())) {
-            return Ok(Predicate::Or(self.parse_predicates_until_right_paren()?));
+            return Ok(Value::Or(self.parse_boolean_values_until_right_paren()?));
         }
         if let Some(kind) = match operator {
             Some(Token::Atom(ref operator)) => ip_class(operator),
@@ -97,19 +91,28 @@ impl Parser {
         } {
             let value = self.parse_value()?;
             self.expect_right_paren()?;
-            return Ok(Predicate::IpClass { kind, value });
+            return Ok(Value::Predicate(Box::new(Predicate::IpClass {
+                kind,
+                value,
+            })));
         }
         if operator == Some(Token::Atom("cidr/contains?".into())) {
             let cidr = self.parse_value()?;
             let ip = self.parse_value()?;
             self.expect_right_paren()?;
-            return Ok(Predicate::CidrContains { cidr, ip });
+            return Ok(Value::Predicate(Box::new(Predicate::CidrContains {
+                cidr,
+                ip,
+            })));
         }
         if operator == Some(Token::Atom("url/query-has?".into())) {
             let name = self.parse_value()?;
             let url = self.parse_value()?;
             self.expect_right_paren()?;
-            return Ok(Predicate::UrlQueryHas { name, url });
+            return Ok(Value::Predicate(Box::new(Predicate::UrlQueryHas {
+                name,
+                url,
+            })));
         }
         let (kind, operator) = match operator {
             Some(Token::Atom(value)) => {
@@ -122,12 +125,12 @@ impl Parser {
         if self.next() != Some(Token::RightParen) {
             return Err(ParseError::InvalidSyntax);
         }
-        Ok(Predicate::Compare {
+        Ok(Value::Predicate(Box::new(Predicate::Compare {
             kind,
             operator,
             left,
             right,
-        })
+        })))
     }
 
     fn expect_right_paren(&mut self) -> Result<(), ParseError> {
@@ -177,16 +180,16 @@ impl Parser {
         id
     }
 
-    fn parse_predicates_until_right_paren(&mut self) -> Result<Vec<Predicate>, ParseError> {
-        let mut predicates = Vec::new();
+    fn parse_boolean_values_until_right_paren(&mut self) -> Result<Vec<Value>, ParseError> {
+        let mut values = Vec::new();
         while self.tokens.get(self.position) != Some(&Token::RightParen) {
-            predicates.push(self.parse_predicate()?);
+            values.push(self.parse_value()?);
         }
         self.position += 1;
-        if predicates.is_empty() {
+        if values.is_empty() {
             return Err(ParseError::InvalidSyntax);
         }
-        Ok(predicates)
+        Ok(values)
     }
 
     fn parse_values_until_right_paren(&mut self) -> Result<Vec<Value>, ParseError> {
@@ -210,6 +213,8 @@ impl Parser {
             Some(Token::Atom(value)) if value.parse::<f64>().is_ok() => {
                 Ok(Value::Number(value.parse().expect("number was validated")))
             }
+            Some(Token::Atom(value)) if value == "true" => Ok(Value::Boolean(true)),
+            Some(Token::Atom(value)) if value == "false" => Ok(Value::Boolean(false)),
             Some(Token::Atom(field)) => {
                 let number = field
                     .strip_prefix('$')
@@ -295,14 +300,14 @@ impl Parser {
                     Ok(Value::Escape(Box::new(value)))
                 }
                 Some(Token::Atom(operator)) if operator == "if" => {
-                    let predicate = self.parse_predicate()?;
+                    let condition = self.parse_value()?;
                     let then_value = self.parse_value()?;
                     let else_value = self.parse_value()?;
                     if self.next() != Some(Token::RightParen) {
                         return Err(ParseError::InvalidSyntax);
                     }
                     Ok(Value::If {
-                        predicate: Box::new(predicate),
+                        condition: Box::new(condition),
                         then_value: Box::new(then_value),
                         else_value: Box::new(else_value),
                     })
@@ -444,9 +449,7 @@ impl Parser {
                         right: Box::new(right),
                     })
                 }
-                operator @ Some(Token::Atom(_)) => Ok(Value::Predicate(Box::new(
-                    self.parse_predicate_after_operator(operator)?,
-                ))),
+                operator @ Some(Token::Atom(_)) => self.parse_boolean_after_operator(operator),
                 _ => Err(ParseError::InvalidSyntax),
             },
             _ => Err(ParseError::InvalidSyntax),
@@ -553,6 +556,17 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
         }
         "s/count" => Ok(Value::Count(Box::new(one(arguments)?))),
         "s/escape" => Ok(Value::Escape(Box::new(one(arguments)?))),
+        "not" => Ok(Value::Not(Box::new(one(arguments)?))),
+        "and" if !arguments.is_empty() => Ok(Value::And(arguments)),
+        "or" if !arguments.is_empty() => Ok(Value::Or(arguments)),
+        "if" => {
+            let (condition, then_value, else_value) = three(arguments)?;
+            Ok(Value::If {
+                condition: Box::new(condition),
+                then_value: Box::new(then_value),
+                else_value: Box::new(else_value),
+            })
+        }
         "s/lower" => Ok(Value::Lower(Box::new(one(arguments)?))),
         "s/upper" => Ok(Value::Upper(Box::new(one(arguments)?))),
         "default" => {
@@ -770,12 +784,12 @@ mod tests {
             parse(r#"(filter (> (s/count $1) 3)) (print (str NR ":" $1))"#),
             Ok(Program {
                 expressions: vec![
-                    Expr::Filter(Predicate::Compare {
+                    Expr::Filter(Value::Predicate(Box::new(Predicate::Compare {
                         kind: ComparisonType::Number,
                         operator: ComparisonOperator::GreaterThan,
                         left: Value::Count(Box::new(Value::Field(1))),
                         right: Value::Number(3.0),
-                    }),
+                    }))),
                     Expr::Print(vec![Value::Concat(vec![
                         Value::RecordNumber,
                         Value::String(":".into()),
@@ -808,21 +822,21 @@ mod tests {
     fn assigns_regex_ids_in_source_order() {
         let program = parse(r#"(filter (and (reg /error/) (~ $1 "^warn")))"#).unwrap();
         assert_eq!(program.regex_patterns, vec!["error", "^warn"]);
-        let Expr::Filter(Predicate::And(predicates)) = &program.expressions[0] else {
+        let Expr::Filter(Value::And(predicates)) = &program.expressions[0] else {
             panic!("expected an and filter");
         };
         assert!(matches!(
             predicates.as_slice(),
             [
-                Predicate::Regex {
+                Value::Predicate(predicate),
+                Value::Predicate(other_predicate),
+            ] if matches!(predicate.as_ref(), Predicate::Regex {
                     regex: RegexId(0),
                     ..
-                },
-                Predicate::Regex {
+                }) && matches!(other_predicate.as_ref(), Predicate::Regex {
                     regex: RegexId(1),
                     ..
-                }
-            ]
+                })
         ));
     }
 
@@ -832,6 +846,9 @@ mod tests {
             parse(r#"(filter (and (not (reg "debug")) (or (s/= $1 "info") (s/= $1 "warn"))))"#)
                 .is_ok()
         );
+        assert!(parse("(filter true)").is_ok());
+        assert!(parse("(filter (if (> $1 0) true false))").is_ok());
+        assert!(parse("(print (not (if (> $1 0) true false)))").is_ok());
     }
 
     #[test]
@@ -841,6 +858,10 @@ mod tests {
         assert_eq!(
             parse("(print (-> $1 (semver/> \"1.0.0\")))"),
             parse("(print (semver/> $1 \"1.0.0\"))")
+        );
+        assert_eq!(
+            parse("(print (-> true (and (> $1 0))))"),
+            parse("(print (and true (> $1 0)))")
         );
     }
 

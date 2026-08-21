@@ -135,16 +135,19 @@ $ printf '1.2.3-alpha.1+build.9\n' |
 1 2 3 alpha.1
 ```
 
-Predicates can also be printed or composed as Boolean values:
+Comparisons and predicates return regular Boolean values. They can be printed,
+combined, or selected by `if`, and `filter` accepts any Boolean expression:
 
 ```console
-$ printf '1.2.3 2.0.0\n' |
-    cho '(print (semver/> $1 $2) (str "equal=" (semver/= $1 $2)))'
-false equal=false
+$ printf 'prod 10.0.0.1\ndev 127.0.0.1\ndev 8.8.8.8\n' |
+    cho '(filter (if (s/= $1 "prod") (ip/private? $2) (ip/loopback? $2))) (print $0)'
+prod 10.0.0.1
+dev 127.0.0.1
 ```
 
-They render as `true` or `false`; Boolean values are not implicitly converted to
-numbers or strings required by typed expressions.
+The literals are `true` and `false`. Boolean values render with those spellings
+and are not implicitly converted from or to strings and numbers. `filter`, `if`,
+`not`, `and`, and `or` require Boolean arguments; `and` and `or` short-circuit.
 
 Numeric arithmetic converts string fields in context and uses binary operators:
 
