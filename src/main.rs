@@ -92,6 +92,7 @@ Values:
 Date and duration values:
   (dt/unix NUMBER)                 -> DateTime
   (dt/fmt STRING DATETIME)         -> String
+  (dt/fmt STRING TIMEZONE DATETIME) -> String
   (dt/now)                         -> DateTime (current UTC time, second precision)
   (dt/floor-s DATETIME)            -> DateTime
   (dt/floor-m DATETIME)            -> DateTime
@@ -106,10 +107,11 @@ Date and duration values:
   (du/h NUMBER)                   -> Duration
   (du/d NUMBER)                   -> Duration (24 hours per day)
 
-  DateTime input must be RFC 3339 and include an offset or Z. dt/unix accepts
-  whole seconds, including negative values. dt/floor-* floors to a UTC second,
-  minute, hour, or day boundary. du/d uses fixed 24-hour days. Duration renders
-  as seconds.
+  DateTime input must be RFC 3339 and include an offset or Z. dt/fmt uses UTC
+  unless given an IANA time zone such as Asia/Tokyo or a fixed offset such as
+  +09:00. dt/unix accepts whole seconds, including negative values. dt/floor-*
+  floors to a UTC second, minute, hour, or day boundary. du/d uses fixed 24-hour
+  days. Duration renders as seconds.
 
 IP and CIDR values:
   (ip/version IPADDR)        -> Number (4 or 6)
@@ -182,6 +184,9 @@ Threading values:
 Examples:
   Print the first field of rows whose second field is greater than 20:
     cho '(filter (> $2 20)) (print $1)'
+
+  Format an RFC 3339 timestamp in Tokyo time:
+    cho '(print (dt/fmt "%Y-%m-%d %H:%M" "Asia/Tokyo" $1))'
 
   Join transformed fields, using a fallback when the third field is missing:
     cho '(print (s/join ":" (s/upper $1) (default $3 "UNKNOWN")))'

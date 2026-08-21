@@ -160,6 +160,7 @@ pub enum Value {
     DateTimeFromUnix(Box<Value>),
     FormatDateTime {
         format: Box<Value>,
+        timezone: Option<Box<Value>>,
         value: Box<Value>,
     },
     DurationSeconds(Box<Value>),

@@ -898,6 +898,74 @@ fn datetime_values_normalize_format_and_compare() {
 }
 
 #[test]
+fn datetime_format_accepts_iana_timezones_and_fixed_offsets() {
+    assert_eq!(
+        output(
+            r#"(print (dt/fmt "%Y-%m-%d %H:%M %z" "America/New_York" $1))"#,
+            "2026-01-15T12:00:00Z\n2026-07-15T12:00:00Z\n"
+        ),
+        "2026-01-15 07:00 -0500\n2026-07-15 08:00 -0400\n"
+    );
+    assert_eq!(
+        output(
+            r#"(print (dt/fmt "%Y-%m-%d %H:%M %z" "+05:45" $1))"#,
+            "2026-08-18T23:30:00Z\n"
+        ),
+        "2026-08-19 05:15 +0545\n"
+    );
+    assert_eq!(
+        output(
+            r#"(print (dt/fmt "%H:%M %z" $2 $1))"#,
+            "2026-08-18T00:00:00Z Asia/Tokyo\n"
+        ),
+        "09:00 +0900\n"
+    );
+}
+
+#[test]
+fn datetime_format_reports_timezone_and_datetime_arguments() {
+    let error = cho::run(
+        r#"(print (dt/fmt "%Y" $1 $2))"#,
+        Cursor::new("Unknown/Zone 2026-08-18T00:00:00Z\n"),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        r#"record 1: dt/fmt: argument 2 expects String (IANA time zone or UTC offset ±HH:MM), but "Unknown/Zone" is not a recognized time zone"#
+    );
+
+    let error = cho::run(
+        r#"(print (dt/fmt "%Y" "Asia/Tokyo" $1))"#,
+        Cursor::new("invalid\n"),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .starts_with("record 1: dt/fmt: argument 3")
+    );
+
+    assert!(
+        cho::run(
+            r#"(print (dt/fmt "%Y" "" $1))"#,
+            Cursor::new("2026-08-18T00:00:00Z\n"),
+            Vec::new(),
+        )
+        .is_err()
+    );
+    assert!(
+        cho::run(
+            r#"(print (dt/fmt "%Y" 9 $1))"#,
+            Cursor::new("2026-08-18T00:00:00Z\n"),
+            Vec::new(),
+        )
+        .is_err()
+    );
+}
+
+#[test]
 fn typed_values_render_inside_string_operations() {
     assert_eq!(
         output(

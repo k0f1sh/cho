@@ -17,6 +17,8 @@ cho is a tiny semantic awk with Lisp-like expressions.
 - `=`、`!=`、`<`、`<=`、`>`、`>=`はNumberを要求する。
 - 文字列比較は`s/`、日時比較は`dt/`、IP等値比較は`ip/`を使う。
 - DateTime入力はタイムゾーン付きRFC 3339に限定し、既定表示はUTCへ正規化する。
+- `dt/fmt`のタイムゾーンはIANA名または`±HH:MM`で局所的に明示し、実行環境の
+  ローカルタイムゾーンは暗黙に使わない。
 - Durationの既定表示は単位なしの秒数とする。
 - `dt/diff LEFT RIGHT`は`LEFT - RIGHT`を返す。
 - `ip/private?`はRFC 1918のIPv4とIPv6 ULA `fc00::/7`を真とする。

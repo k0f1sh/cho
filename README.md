@@ -107,6 +107,19 @@ $ cho '(print (dt/floor-m (dt/now)))'
 2026-08-18T12:34:00Z
 ```
 
+`dt/fmt` formats in UTC by default. Pass an IANA time zone for daylight-saving
+rules, or an explicit `±HH:MM` offset for a fixed offset:
+
+```console
+$ printf '2026-01-15T12:00:00Z\n2026-07-15T12:00:00Z\n' |
+    cho '(print (dt/fmt "%Y-%m-%d %H:%M %z" "America/New_York" $1))'
+2026-01-15 07:00 -0500
+2026-07-15 08:00 -0400
+```
+
+The time zone is a regular value, so it can come from a field or another value
+expression. Local time is never taken implicitly from the environment.
+
 Duration units stay explicit and compose with datetime arithmetic. `du/ms` creates
 milliseconds, while `du/d` uses fixed 24-hour days:
 
