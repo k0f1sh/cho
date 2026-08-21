@@ -33,6 +33,10 @@ pub enum Predicate {
         cidr: Value,
         ip: Value,
     },
+    UrlQueryHas {
+        name: Value,
+        url: Value,
+    },
     Not(Box<Predicate>),
     And(Vec<Predicate>),
     Or(Vec<Predicate>),
@@ -103,6 +107,15 @@ pub enum CidrPart {
     Prefix,
     First,
     Last,
+    Size,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum SemVerPart {
+    Major,
+    Minor,
+    Patch,
+    Prerelease,
 }
 
 #[derive(Debug, PartialEq)]
@@ -129,9 +142,17 @@ pub enum Value {
         operation: UrlEncoding,
         value: Box<Value>,
     },
+    UrlQueryGet {
+        name: Box<Value>,
+        url: Box<Value>,
+    },
     IpVersion(Box<Value>),
     CidrPart {
         part: CidrPart,
+        value: Box<Value>,
+    },
+    SemVerPart {
+        part: SemVerPart,
         value: Box<Value>,
     },
     Predicate(Box<Predicate>),

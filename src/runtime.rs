@@ -12,7 +12,7 @@ use semver::Version;
 
 use crate::ast::{
     ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
-    IpClass, Predicate, Program, UrlEncoding, UrlPart, Value,
+    IpClass, Predicate, Program, SemVerPart, UrlEncoding, UrlPart, Value,
 };
 use crate::parser::parse;
 
@@ -205,6 +205,16 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
                     }),
             }
         }
+        Value::UrlQueryGet { name, url } => {
+            let name = expect_string(evaluate(name, record)?, "url/query-get", 1)?;
+            let input = expect_string(evaluate(url, record)?, "url/query-get", 2)?;
+            let url = parse_absolute_url(&input, "url/query-get", 2)?;
+            Ok(RuntimeValue::String(
+                url.query_pairs()
+                    .find_map(|(key, value)| (key == name).then(|| value.into_owned()))
+                    .unwrap_or_default(),
+            ))
+        }
         Value::IpVersion(value) => {
             let ip = expect_ip(evaluate(value, record)?, "ip/version", 1)?;
             Ok(RuntimeValue::Number(match ip {
@@ -219,6 +229,36 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
                 CidrPart::Network | CidrPart::First => Ok(RuntimeValue::IpAddr(cidr.network())),
                 CidrPart::Prefix => Ok(RuntimeValue::Number(cidr.prefix_len() as f64)),
                 CidrPart::Last => Ok(RuntimeValue::IpAddr(cidr.broadcast())),
+                CidrPart::Size => {
+                    let address_bits = if cidr.addr().is_ipv4() { 32 } else { 128 };
+                    let host_bits = address_bits - cidr.prefix_len();
+                    if host_bits >= 53 {
+                        return Err(EvalError::conversion(
+                            function,
+                            1,
+                            "Cidr whose size fits Number's safe integer range",
+                            cidr.to_string(),
+                            "contains more than 2^53 - 1 addresses",
+                        ));
+                    }
+                    exact_u64_number(1_u64 << host_bits, function, 1, cidr.to_string())
+                }
+            }
+        }
+        Value::SemVerPart { part, value } => {
+            let function = semver_part_name(part);
+            let version = expect_semver(evaluate(value, record)?, function, 1)?;
+            match part {
+                SemVerPart::Major => {
+                    exact_u64_number(version.major, function, 1, version.to_string())
+                }
+                SemVerPart::Minor => {
+                    exact_u64_number(version.minor, function, 1, version.to_string())
+                }
+                SemVerPart::Patch => {
+                    exact_u64_number(version.patch, function, 1, version.to_string())
+                }
+                SemVerPart::Prerelease => Ok(RuntimeValue::String(version.pre.to_string())),
             }
         }
         Value::Predicate(predicate) => matches(predicate, record).map(RuntimeValue::Boolean),
@@ -504,6 +544,25 @@ fn expect_number(value: RuntimeValue, function: &'static str, argument: usize) -
     Ok(number)
 }
 
+fn exact_u64_number(
+    value: u64,
+    function: &'static str,
+    argument: usize,
+    input: String,
+) -> EvalResult<RuntimeValue> {
+    const MAX_SAFE_INTEGER: u64 = (1_u64 << 53) - 1;
+    if value > MAX_SAFE_INTEGER {
+        return Err(EvalError::conversion(
+            function,
+            argument,
+            "value within Number's safe integer range",
+            input,
+            "produces an integer greater than 2^53 - 1",
+        ));
+    }
+    Ok(RuntimeValue::Number(value as f64))
+}
+
 fn expect_string(
     value: RuntimeValue,
     function: &'static str,
@@ -616,6 +675,16 @@ fn cidr_part_name(part: &CidrPart) -> &'static str {
         CidrPart::Prefix => "cidr/prefix",
         CidrPart::First => "cidr/first",
         CidrPart::Last => "cidr/last",
+        CidrPart::Size => "cidr/size",
+    }
+}
+
+fn semver_part_name(part: &SemVerPart) -> &'static str {
+    match part {
+        SemVerPart::Major => "semver/major",
+        SemVerPart::Minor => "semver/minor",
+        SemVerPart::Patch => "semver/patch",
+        SemVerPart::Prerelease => "semver/prerelease",
     }
 }
 
@@ -665,6 +734,22 @@ fn expect_semver(
     }
 }
 
+fn parse_absolute_url(
+    input: &str,
+    function: &'static str,
+    argument: usize,
+) -> EvalResult<url::Url> {
+    url::Url::parse(input).map_err(|_| {
+        EvalError::conversion(
+            function,
+            argument,
+            "Url (absolute URL)",
+            input,
+            "is not a valid absolute URL",
+        )
+    })
+}
+
 fn matches(predicate: &Predicate, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<bool> {
     match predicate {
         Predicate::Compare {
@@ -686,6 +771,12 @@ fn matches(predicate: &Predicate, record: &EvalContext<'_, '_, '_, '_>) -> EvalR
             let cidr = expect_cidr(evaluate(cidr, record)?, "cidr/contains?", 1)?;
             let ip = expect_ip(evaluate(ip, record)?, "cidr/contains?", 2)?;
             Ok(cidr.contains(&ip))
+        }
+        Predicate::UrlQueryHas { name, url } => {
+            let name = expect_string(evaluate(name, record)?, "url/query-has?", 1)?;
+            let input = expect_string(evaluate(url, record)?, "url/query-has?", 2)?;
+            let url = parse_absolute_url(&input, "url/query-has?", 2)?;
+            Ok(url.query_pairs().any(|(key, _)| key == name))
         }
         Predicate::Not(predicate) => Ok(!matches(predicate, record)?),
         Predicate::And(predicates) => {
@@ -1162,6 +1253,7 @@ fn validate_value(value: &Value) -> io::Result<()> {
         | Value::Upper(value)
         | Value::IpVersion(value)
         | Value::CidrPart { value, .. }
+        | Value::SemVerPart { value, .. }
         | Value::DateTimeFromUnix(value)
         | Value::FloorDateTime { value, .. }
         | Value::DurationSeconds(value)
@@ -1192,6 +1284,10 @@ fn validate_value(value: &Value) -> io::Result<()> {
         }
         Value::UrlPart { value, .. } => validate_value(value),
         Value::UrlEncoding { value, .. } => validate_value(value),
+        Value::UrlQueryGet { name, url } => {
+            validate_value(name)?;
+            validate_value(url)
+        }
         Value::Predicate(predicate) => validate_predicate(predicate),
         Value::If {
             predicate,
@@ -1226,6 +1322,10 @@ fn validate_predicate(predicate: &Predicate) -> io::Result<()> {
         Predicate::CidrContains { cidr, ip } => {
             validate_value(cidr)?;
             validate_value(ip)
+        }
+        Predicate::UrlQueryHas { name, url } => {
+            validate_value(name)?;
+            validate_value(url)
         }
         Predicate::Not(predicate) => validate_predicate(predicate),
         Predicate::And(predicates) | Predicate::Or(predicates) => {

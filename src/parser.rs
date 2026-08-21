@@ -1,6 +1,6 @@
 use crate::ast::{
     ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
-    IpClass, Predicate, Program, RegexId, UrlEncoding, UrlPart, Value,
+    IpClass, Predicate, Program, RegexId, SemVerPart, UrlEncoding, UrlPart, Value,
 };
 use crate::lexer::{Token, tokenize};
 
@@ -104,6 +104,12 @@ impl Parser {
             let ip = self.parse_value()?;
             self.expect_right_paren()?;
             return Ok(Predicate::CidrContains { cidr, ip });
+        }
+        if operator == Some(Token::Atom("url/query-has?".into())) {
+            let name = self.parse_value()?;
+            let url = self.parse_value()?;
+            self.expect_right_paren()?;
+            return Ok(Predicate::UrlQueryHas { name, url });
         }
         let (kind, operator) = match operator {
             Some(Token::Atom(value)) => {
@@ -326,6 +332,15 @@ impl Parser {
                         fallback: Box::new(fallback),
                     })
                 }
+                Some(Token::Atom(operator)) if operator == "url/query-get" => {
+                    let name = self.parse_value()?;
+                    let url = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::UrlQueryGet {
+                        name: Box::new(name),
+                        url: Box::new(url),
+                    })
+                }
                 Some(Token::Atom(operator)) if operator == "ip/version" => {
                     let value = self.parse_value()?;
                     self.expect_right_paren()?;
@@ -336,6 +351,14 @@ impl Parser {
                     self.expect_right_paren()?;
                     Ok(Value::CidrPart {
                         part: cidr_part(&operator).expect("operator was matched"),
+                        value: Box::new(value),
+                    })
+                }
+                Some(Token::Atom(operator)) if semver_part(&operator).is_some() => {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::SemVerPart {
+                        part: semver_part(&operator).expect("operator was matched"),
                         value: Box::new(value),
                     })
                 }
@@ -539,9 +562,20 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
                 fallback: Box::new(fallback),
             })
         }
+        "url/query-get" => {
+            let (name, url) = two(arguments)?;
+            Ok(Value::UrlQueryGet {
+                name: Box::new(name),
+                url: Box::new(url),
+            })
+        }
         "ip/version" => Ok(Value::IpVersion(Box::new(one(arguments)?))),
         operator if cidr_part(operator).is_some() => Ok(Value::CidrPart {
             part: cidr_part(operator).expect("operator was matched"),
+            value: Box::new(one(arguments)?),
+        }),
+        operator if semver_part(operator).is_some() => Ok(Value::SemVerPart {
+            part: semver_part(operator).expect("operator was matched"),
             value: Box::new(one(arguments)?),
         }),
         "dt/unix" => Ok(Value::DateTimeFromUnix(Box::new(one(arguments)?))),
@@ -618,6 +652,13 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
                 ip,
             })))
         }
+        "url/query-has?" => {
+            let (name, url) = two(arguments)?;
+            Ok(Value::Predicate(Box::new(Predicate::UrlQueryHas {
+                name,
+                url,
+            })))
+        }
         _ => Err(ParseError::InvalidSyntax),
     }
 }
@@ -648,6 +689,17 @@ fn cidr_part(value: &str) -> Option<CidrPart> {
         "cidr/prefix" => Some(CidrPart::Prefix),
         "cidr/first" => Some(CidrPart::First),
         "cidr/last" => Some(CidrPart::Last),
+        "cidr/size" => Some(CidrPart::Size),
+        _ => None,
+    }
+}
+
+fn semver_part(value: &str) -> Option<SemVerPart> {
+    match value {
+        "semver/major" => Some(SemVerPart::Major),
+        "semver/minor" => Some(SemVerPart::Minor),
+        "semver/patch" => Some(SemVerPart::Patch),
+        "semver/prerelease" => Some(SemVerPart::Prerelease),
         _ => None,
     }
 }
@@ -876,6 +928,12 @@ mod tests {
             parse(r#"(print (cidr/network $1) (cidr/prefix $1) (cidr/first $1) (cidr/last $1))"#)
                 .is_ok()
         );
+        assert!(parse(r#"(print (cidr/size $1))"#).is_ok());
+        assert!(parse(r#"(print (url/query-get "lang" $1) (url/query-has? "page" $1))"#).is_ok());
+        assert!(
+            parse(r#"(print (semver/major $1) (semver/minor $1) (semver/patch $1) (semver/prerelease $1))"#)
+                .is_ok()
+        );
         assert!(parse(r#"(print (dt/add (dt/unix $1) (du/m 2)))"#).is_ok());
         assert!(parse(r#"(print (du/ms 250) (du/d -1.5))"#).is_ok());
         assert!(parse(r#"(print (dt/fmt "%Y-%m-%d" $1))"#).is_ok());
@@ -904,6 +962,14 @@ mod tests {
         assert_eq!(
             parse(r#"(print (-> $1 (cidr/network) (ip/version)))"#),
             parse(r#"(print (ip/version (cidr/network $1)))"#)
+        );
+        assert_eq!(
+            parse(r#"(print (->> $1 (url/query-get "lang")))"#),
+            parse(r#"(print (url/query-get "lang" $1))"#)
+        );
+        assert_eq!(
+            parse(r#"(print (-> $1 (semver/major)))"#),
+            parse(r#"(print (semver/major $1))"#)
         );
     }
 
@@ -973,6 +1039,17 @@ mod tests {
             "(print (cidr/prefix))",
             "(print (cidr/first $1 $2))",
             "(print (cidr/last))",
+            "(print (cidr/size))",
+            "(print (cidr/size $1 $2))",
+            "(print (url/query-get))",
+            "(print (url/query-get $1))",
+            "(print (url/query-get $1 $2 $3))",
+            "(print (url/query-has? $1))",
+            "(print (url/query-has? $1 $2 $3))",
+            "(print (semver/major))",
+            "(print (semver/minor $1 $2))",
+            "(print (semver/patch))",
+            "(print (semver/prerelease $1 $2))",
             "(print (du/s))",
             "(print (du/ms))",
             "(print (du/ms $1 $2))",

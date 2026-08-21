@@ -67,6 +67,8 @@ Values:
   (url/port URL)                   -> String
   (url/path URL)                   -> String
   (url/query URL)                  -> String
+  (url/query-get STRING URL)       -> String (first decoded value or empty)
+  (url/query-has? STRING URL)      -> Boolean
   (url/fragment URL)               -> String
   (url/encode STRING)              -> String
   (url/decode STRING)              -> String
@@ -80,6 +82,8 @@ Values:
     delimiter is absent, position 1 returns the complete value.
     URL extraction preserves percent encoding. A missing optional component is
     an empty string; an invalid URL is a runtime error.
+    url/query-get and url/query-has? decode query keys and values using form
+    semantics, including + as space. Duplicate keys use the first value.
     url/encode uses RFC 3986 unreserved characters and uppercase percent escapes.
     url/decode decodes only %XX; + stays +. Invalid escapes or UTF-8 are errors.
     Predicates are Boolean values when used where a value is accepted.
@@ -112,6 +116,13 @@ IP and CIDR values:
   (cidr/prefix CIDR)         -> Number
   (cidr/first CIDR)          -> IpAddr (lowest address)
   (cidr/last CIDR)           -> IpAddr (highest address)
+  (cidr/size CIDR)           -> Number (error outside the safe integer range)
+
+Semantic version values:
+  (semver/major SEMVER)      -> Number
+  (semver/minor SEMVER)      -> Number
+  (semver/patch SEMVER)      -> Number
+  (semver/prerelease SEMVER) -> String (empty when absent)
 
 Predicates:
   (> NUMBER NUMBER)  (>= NUMBER NUMBER)    numeric comparisons

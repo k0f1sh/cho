@@ -537,6 +537,87 @@ fn url_component_extraction_rejects_invalid_urls_and_non_strings() {
 }
 
 #[test]
+fn url_query_values_use_form_urlencoded_semantics() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (s/join "|" (url/query-get "lang" $1) "#,
+                r#"(url/query-get "missing" $1) (url/query-get "empty" $1) "#,
+                r#"(url/query-get "a b" $1) (url/query-get "名前" $1)))"#,
+            ),
+            concat!(
+                "https://example.com/?lang=ja&empty=&a+b=hello+world&",
+                "%E5%90%8D%E5%89%8D=%E6%9D%B1%E4%BA%AC\n",
+            ),
+        ),
+        "ja|||hello world|東京\n"
+    );
+    assert_eq!(
+        output(
+            r#"(print (url/query-get "tag" $1) (url/query $1))"#,
+            "https://example.com/?tag=first&tag=second\n",
+        ),
+        "first tag=first&tag=second\n"
+    );
+}
+
+#[test]
+fn url_query_presence_is_boolean_and_distinguishes_missing_keys() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (url/query-has? "foo" $1) (url/query-has? "bar" $1) "#,
+                r#"(if (url/query-has? "empty" $1) "present" "missing"))"#,
+            ),
+            "https://example.com/?foo&empty=\nhttps://example.com/\n",
+        ),
+        "true false present\nfalse false missing\n"
+    );
+    assert_eq!(
+        output(
+            r#"(filter (url/query-has? "keep" $1)) (print $1)"#,
+            "https://example.com/?keep=\nhttps://example.com/?drop=1\n",
+        ),
+        "https://example.com/?keep=\n"
+    );
+    assert_eq!(
+        output(
+            r#"(print (s/join "|" (url/query-get "foo" $1) (url/query-has? "foo" $1)))"#,
+            "https://example.com/?foo\nhttps://example.com/\n",
+        ),
+        "|true\n|false\n"
+    );
+}
+
+#[test]
+fn url_query_operations_report_argument_errors_and_default_can_recover() {
+    for (program, expected) in [
+        (
+            r#"(print (url/query-get "key" $1))"#,
+            "record 1: url/query-get: argument 2 expects Url (absolute URL)",
+        ),
+        (
+            r#"(print (url/query-has? "key" $1))"#,
+            "record 1: url/query-has?: argument 2 expects Url (absolute URL)",
+        ),
+        (
+            r#"(print (url/query-get 1 "https://example.com/"))"#,
+            "record 1: url/query-get: argument 1 expects String",
+        ),
+    ] {
+        let error = cho::run(program, Cursor::new("not-a-url\n"), Vec::new()).unwrap_err();
+        assert!(error.to_string().starts_with(expected), "{error}");
+    }
+    assert_eq!(
+        output(
+            r#"(print (default (url/query-get "key" $1) "invalid"))"#,
+            "not-a-url\n"
+        ),
+        "invalid\n"
+    );
+}
+
+#[test]
 fn url_component_encoding_handles_ascii_unicode_and_composition() {
     assert_eq!(
         output(
@@ -1025,6 +1106,33 @@ fn cidr_extractors_report_and_recover_from_conversion_errors() {
 }
 
 #[test]
+fn cidr_size_is_exact_or_reports_a_recoverable_overflow() {
+    assert_eq!(
+        output(
+            "(print (cidr/size $1))",
+            "0.0.0.0/0\n192.0.2.1/32\n2001:db8::/76\n2001:db8::1/128\n"
+        ),
+        "4294967296\n1\n4503599627370496\n1\n"
+    );
+    let error = cho::run(
+        "(print (cidr/size $1))",
+        Cursor::new("2001:db8::/75\n"),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .starts_with("record 1: cidr/size: argument 1 expects"),
+        "{error}"
+    );
+    assert_eq!(
+        output("(print (default (cidr/size $1) \"too-large\"))", "::/0\n"),
+        "too-large\n"
+    );
+}
+
+#[test]
 fn ip_classification_predicates_cover_ipv4_and_ipv6_boundaries() {
     assert_eq!(
         output(
@@ -1093,6 +1201,73 @@ fn semver_comparisons_follow_precedence_including_prereleases() {
         ),
         "same different\n"
     );
+}
+
+#[test]
+fn semver_extractors_return_components_and_preserve_build_support() {
+    assert_eq!(
+        output(
+            concat!(
+                "(print (semver/major $1) (semver/minor $1) ",
+                "(semver/patch $1) (semver/prerelease $1))",
+            ),
+            "1.2.3-alpha.1+build.9\n2.0.0+metadata\n",
+        ),
+        "1 2 3 alpha.1\n2 0 0 \n"
+    );
+    assert_eq!(
+        output(
+            "(print (+ (semver/major $1) (semver/minor $1)))",
+            "10.2.3\n"
+        ),
+        "12\n"
+    );
+}
+
+#[test]
+fn semver_numeric_extractors_reject_unsafe_integers_without_rounding() {
+    assert_eq!(
+        output("(print (semver/major $1))", "9007199254740991.0.0\n"),
+        "9007199254740991\n"
+    );
+    let error = cho::run(
+        "(print (semver/major $1))",
+        Cursor::new("9007199254740992.0.0\n"),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .starts_with("record 1: semver/major: argument 1 expects"),
+        "{error}"
+    );
+    assert_eq!(
+        output(
+            "(print (default (semver/patch $1) \"invalid\"))",
+            "1.2.9007199254740992\ninvalid\n"
+        ),
+        "invalid\ninvalid\n"
+    );
+}
+
+#[test]
+fn semver_extractors_report_invalid_versions() {
+    for extractor in [
+        "semver/major",
+        "semver/minor",
+        "semver/patch",
+        "semver/prerelease",
+    ] {
+        let program = format!("(print ({extractor} $1))");
+        let error = cho::run(&program, Cursor::new("1.2\n"), Vec::new()).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .starts_with(&format!("record 1: {extractor}: argument 1 expects SemVer")),
+            "{error}"
+        );
+    }
 }
 
 #[test]
