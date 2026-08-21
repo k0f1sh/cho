@@ -26,7 +26,7 @@ Input:
 Types:
   String      input fields and quoted literals
   Number      numeric literals, NR, NF, and s/count results
-  Boolean     predicate results rendered as true or false
+  Boolean     true, false, and Boolean expression results
   DateTime    RFC 3339 timestamps, normalized to UTC when rendered
   Duration    signed seconds with nanosecond precision
   IpAddr      IPv4 or IPv6 addresses
@@ -41,13 +41,14 @@ Types:
 Expressions:
   (print VALUE ...)          print values separated by spaces
   (p VALUE ...)              short form of print
-  (filter PREDICATE)         continue only when PREDICATE is true
-  (f PREDICATE)              short form of filter
+  (filter BOOLEAN)           continue only when BOOLEAN is true
+  (f BOOLEAN)                short form of filter
 
 Values:
   $0, $1, ...                input line or field
   NR, NF                     line number or field count
   "text", 12, 3.5            string or number
+  true, false                Boolean literals
   (+ NUMBER NUMBER)                -> Number
   (- NUMBER NUMBER)                -> Number
   (* NUMBER NUMBER)                -> Number
@@ -58,7 +59,7 @@ Values:
   (s/part DELIMITER POSITION VALUE) -> String
   (s/count VALUE)                  -> Number
   (s/escape VALUE)                 -> String
-  (if PREDICATE VALUE VALUE)       -> Value
+  (if BOOLEAN VALUE VALUE)         -> Value
   (s/lower VALUE)                  -> String
   (s/upper VALUE)                  -> String
   (default VALUE VALUE)            -> Value
@@ -86,7 +87,7 @@ Values:
     semantics, including + as space. Duplicate keys use the first value.
     url/encode uses RFC 3986 unreserved characters and uppercase percent escapes.
     url/decode decodes only %XX; + stays +. Invalid escapes or UTF-8 are errors.
-    Predicates are Boolean values when used where a value is accepted.
+    Boolean values are not implicitly converted from strings or numbers.
 
 Date and duration values:
   (dt/unix NUMBER)                 -> DateTime
@@ -124,32 +125,35 @@ Semantic version values:
   (semver/patch SEMVER)      -> Number
   (semver/prerelease SEMVER) -> String (empty when absent)
 
-Predicates:
-  (> NUMBER NUMBER)  (>= NUMBER NUMBER)    numeric comparisons
+Boolean expressions:
+  (> NUMBER NUMBER)  (>= NUMBER NUMBER)    -> Boolean (numeric comparison)
   (< NUMBER NUMBER)  (<= NUMBER NUMBER)
   (= NUMBER NUMBER)  (!= NUMBER NUMBER)
-  (s/> STRING STRING)  (s/>= STRING STRING) string comparisons
+  (s/> STRING STRING)  (s/>= STRING STRING) -> Boolean (string comparison)
   (s/< STRING STRING)  (s/<= STRING STRING)
   (s/= STRING STRING)  (s/!= STRING STRING)
   (dt/> DATETIME DATETIME)  (dt/>= DATETIME DATETIME)
   (dt/< DATETIME DATETIME)  (dt/<= DATETIME DATETIME)
   (dt/= DATETIME DATETIME)  (dt/!= DATETIME DATETIME)
   (ip/= IPADDR IPADDR)  (ip/!= IPADDR IPADDR)
-  (ip/private? IPADDR)       true for RFC 1918 IPv4 or fc00::/7 IPv6 ULA
-  (ip/loopback? IPADDR)      true for IPv4 or IPv6 loopback addresses
-  (ip/link-local? IPADDR)    true for IPv4 or IPv6 link-local addresses
-  (ip/multicast? IPADDR)     true for IPv4 or IPv6 multicast addresses
-  (cidr/contains? CIDR IPADDR)
+  (ip/private? IPADDR)       -> Boolean (RFC 1918 IPv4 or fc00::/7 IPv6 ULA)
+  (ip/loopback? IPADDR)      -> Boolean
+  (ip/link-local? IPADDR)    -> Boolean
+  (ip/multicast? IPADDR)     -> Boolean
+  (cidr/contains? CIDR IPADDR) -> Boolean
   (semver/> SEMVER SEMVER)  (semver/>= SEMVER SEMVER)
   (semver/< SEMVER SEMVER)  (semver/<= SEMVER SEMVER)
   (semver/= SEMVER SEMVER)  (semver/!= SEMVER SEMVER)
-  (reg /PATTERN/)            match $0 against a regular expression
-  (reg VALUE /PATTERN/)      match VALUE against a regular expression
+  (reg /PATTERN/)            -> Boolean (match $0)
+  (reg VALUE /PATTERN/)      -> Boolean (match VALUE)
   (~ /PATTERN/)              short form of reg
   (~ VALUE /PATTERN/)
-  (not PREDICATE)            invert a predicate
-  (and PREDICATE ...)        true when every predicate is true
-  (or PREDICATE ...)         true when any predicate is true
+  (not BOOLEAN)              -> Boolean
+  (and BOOLEAN ...)          -> Boolean (true when every value is true)
+  (or BOOLEAN ...)           -> Boolean (true when any value is true)
+
+  Boolean expressions are regular values: print them, return them from if, or
+  compose them with not, and, and or. filter and if require Boolean values.
 
 Regex escaping:
   Regex literals preserve backslashes; escape only a literal / as \/:

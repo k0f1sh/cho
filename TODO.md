@@ -25,16 +25,6 @@ cho is a tiny semantic awk with Lisp-like expressions.
 
 ## 次に検討するもの
 
-### Boolean expressionとしてのpredicateの文書整理
-
-- predicateはBooleanを返す通常のvalue expressionであり、`filter`と`if`がBooleanを
-  要求する、という利用者向けモデルをhelpで明確にする。
-- 現在の`Predicate` ASTと`Value::Predicate`で合成できているため、大規模な内部
-  リファクタリングは行わない。
-- predicateを`print`、`if`、`filter`で使うテストを維持・補強する。
-- helpは型ごとにconstructor/conversion、extraction、predicate/operationを探しやすく
-  整理するが、既存の式名や分類を不必要に動かさない。
-
 ### Durationの任意表示
 
 Durationはそのまま出力すれば秒数になる。人向けの表示が本当に必要な実例を集めてから、

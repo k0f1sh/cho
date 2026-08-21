@@ -10,7 +10,7 @@ pub struct RegexId(pub usize);
 #[derive(Debug, PartialEq)]
 pub enum Expr {
     Print(Vec<Value>),
-    Filter(Predicate),
+    Filter(Value),
 }
 
 #[derive(Debug, PartialEq)]
@@ -37,9 +37,6 @@ pub enum Predicate {
         name: Value,
         url: Value,
     },
-    Not(Box<Predicate>),
-    And(Vec<Predicate>),
-    Or(Vec<Predicate>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -125,6 +122,7 @@ pub enum Value {
     FieldCount,
     String(String),
     Number(f64),
+    Boolean(bool),
     Arithmetic {
         operator: ArithmeticOperator,
         left: Box<Value>,
@@ -156,6 +154,9 @@ pub enum Value {
         value: Box<Value>,
     },
     Predicate(Box<Predicate>),
+    Not(Box<Value>),
+    And(Vec<Value>),
+    Or(Vec<Value>),
     DateTimeFromUnix(Box<Value>),
     FormatDateTime {
         format: Box<Value>,
@@ -196,7 +197,7 @@ pub enum Value {
     Count(Box<Value>),
     Escape(Box<Value>),
     If {
-        predicate: Box<Predicate>,
+        condition: Box<Value>,
         then_value: Box<Value>,
         else_value: Box<Value>,
     },

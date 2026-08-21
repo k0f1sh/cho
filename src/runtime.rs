@@ -149,6 +149,7 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
         Value::FieldCount => Ok(RuntimeValue::Number(record.field_count() as f64)),
         Value::String(value) => Ok(RuntimeValue::String(value.clone())),
         Value::Number(number) => Ok(RuntimeValue::Number(*number)),
+        Value::Boolean(value) => Ok(RuntimeValue::Boolean(*value)),
         Value::Arithmetic {
             operator,
             left,
@@ -262,6 +263,26 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
             }
         }
         Value::Predicate(predicate) => matches(predicate, record).map(RuntimeValue::Boolean),
+        Value::Not(value) => {
+            let value = expect_boolean(evaluate(value, record)?, "not", 1)?;
+            Ok(RuntimeValue::Boolean(!value))
+        }
+        Value::And(values) => {
+            for (index, value) in values.iter().enumerate() {
+                if !expect_boolean(evaluate(value, record)?, "and", index + 1)? {
+                    return Ok(RuntimeValue::Boolean(false));
+                }
+            }
+            Ok(RuntimeValue::Boolean(true))
+        }
+        Value::Or(values) => {
+            for (index, value) in values.iter().enumerate() {
+                if expect_boolean(evaluate(value, record)?, "or", index + 1)? {
+                    return Ok(RuntimeValue::Boolean(true));
+                }
+            }
+            Ok(RuntimeValue::Boolean(false))
+        }
         Value::DateTimeFromUnix(value) => {
             let seconds = expect_number(evaluate(value, record)?, "dt/unix", 1)?;
             if seconds.fract() != 0.0 || seconds < i64::MIN as f64 || seconds > i64::MAX as f64 {
@@ -423,11 +444,11 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
             &evaluate(value, record)?.render(),
         ))),
         Value::If {
-            predicate,
+            condition,
             then_value,
             else_value,
         } => {
-            if matches(predicate, record)? {
+            if expect_boolean(evaluate(condition, record)?, "if", 1)? {
                 evaluate(then_value, record)
             } else {
                 evaluate(else_value, record)
@@ -542,6 +563,23 @@ fn expect_number(value: RuntimeValue, function: &'static str, argument: usize) -
         ));
     }
     Ok(number)
+}
+
+fn expect_boolean(
+    value: RuntimeValue,
+    function: &'static str,
+    argument: usize,
+) -> EvalResult<bool> {
+    match value {
+        RuntimeValue::Boolean(value) => Ok(value),
+        value => Err(EvalError::conversion(
+            function,
+            argument,
+            "Boolean",
+            value.render(),
+            format!("has type {}", value.type_name()),
+        )),
+    }
 }
 
 fn exact_u64_number(
@@ -777,23 +815,6 @@ fn matches(predicate: &Predicate, record: &EvalContext<'_, '_, '_, '_>) -> EvalR
             let input = expect_string(evaluate(url, record)?, "url/query-has?", 2)?;
             let url = parse_absolute_url(&input, "url/query-has?", 2)?;
             Ok(url.query_pairs().any(|(key, _)| key == name))
-        }
-        Predicate::Not(predicate) => Ok(!matches(predicate, record)?),
-        Predicate::And(predicates) => {
-            for predicate in predicates {
-                if !matches(predicate, record)? {
-                    return Ok(false);
-                }
-            }
-            Ok(true)
-        }
-        Predicate::Or(predicates) => {
-            for predicate in predicates {
-                if matches(predicate, record)? {
-                    return Ok(true);
-                }
-            }
-            Ok(false)
         }
     }
 }
@@ -1127,7 +1148,9 @@ fn execute<W: Write>(
                     Err(error) => Err(error),
                 }
             }
-            Expr::Filter(predicate) => matches(predicate, record),
+            Expr::Filter(condition) => {
+                evaluate(condition, record).and_then(|value| expect_boolean(value, "filter", 1))
+            }
         };
         match result {
             Ok(true) => {}
@@ -1219,7 +1242,7 @@ fn compile_program(source: &str) -> io::Result<CompiledProgram> {
     for expression in &program.expressions {
         match expression {
             Expr::Print(values) => values.iter().try_for_each(validate_value)?,
-            Expr::Filter(predicate) => validate_predicate(predicate)?,
+            Expr::Filter(condition) => validate_value(condition)?,
         }
     }
     let regexes = program
@@ -1289,12 +1312,14 @@ fn validate_value(value: &Value) -> io::Result<()> {
             validate_value(url)
         }
         Value::Predicate(predicate) => validate_predicate(predicate),
+        Value::Not(value) => validate_value(value),
+        Value::And(values) | Value::Or(values) => values.iter().try_for_each(validate_value),
         Value::If {
-            predicate,
+            condition,
             then_value,
             else_value,
         } => {
-            validate_predicate(predicate)?;
+            validate_value(condition)?;
             validate_value(then_value)?;
             validate_value(else_value)
         }
@@ -1307,6 +1332,7 @@ fn validate_value(value: &Value) -> io::Result<()> {
         | Value::FieldCount
         | Value::String(_)
         | Value::Number(_)
+        | Value::Boolean(_)
         | Value::DateTimeNow => Ok(()),
     }
 }
@@ -1326,10 +1352,6 @@ fn validate_predicate(predicate: &Predicate) -> io::Result<()> {
         Predicate::UrlQueryHas { name, url } => {
             validate_value(name)?;
             validate_value(url)
-        }
-        Predicate::Not(predicate) => validate_predicate(predicate),
-        Predicate::And(predicates) | Predicate::Or(predicates) => {
-            predicates.iter().try_for_each(validate_predicate)
         }
     }
 }
