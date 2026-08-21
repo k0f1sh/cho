@@ -168,6 +168,11 @@ pub enum Value {
     DurationMinutes(Box<Value>),
     DurationHours(Box<Value>),
     DurationDays(Box<Value>),
+    DurationToMilliseconds(Box<Value>),
+    DurationToSeconds(Box<Value>),
+    DurationToMinutes(Box<Value>),
+    DurationToHours(Box<Value>),
+    DurationToDays(Box<Value>),
     DateTimeNow,
     FloorDateTime {
         unit: DateTimeFloorUnit,

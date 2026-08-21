@@ -131,6 +131,15 @@ $ cat people.txt | cho '(filter (= NR 1)) (print (du/ms 250) (du/d 1))'
 0.25 86400
 ```
 
+Use `du/to-ms`, `du/to-s`, `du/to-m`, `du/to-h`, or `du/to-d` to convert a
+duration to a Number in that unit, so the result can be used in arithmetic:
+
+```console
+$ printf '2026-08-18T02:30:45Z 2026-08-18T00:00:00Z\n' |
+    cho '(print (du/to-h (dt/diff $1 $2)))'
+2.5125
+```
+
 Semantic versions compare by SemVer precedence rather than as strings:
 
 ```console

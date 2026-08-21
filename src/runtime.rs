@@ -339,6 +339,13 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
         Value::DurationMinutes(value) => duration_from_value(value, 60.0, "du/m", record),
         Value::DurationHours(value) => duration_from_value(value, 3600.0, "du/h", record),
         Value::DurationDays(value) => duration_from_value(value, 86_400.0, "du/d", record),
+        Value::DurationToMilliseconds(value) => {
+            duration_as_number(value, 0.001, "du/to-ms", record)
+        }
+        Value::DurationToSeconds(value) => duration_as_number(value, 1.0, "du/to-s", record),
+        Value::DurationToMinutes(value) => duration_as_number(value, 60.0, "du/to-m", record),
+        Value::DurationToHours(value) => duration_as_number(value, 3600.0, "du/to-h", record),
+        Value::DurationToDays(value) => duration_as_number(value, 86_400.0, "du/to-d", record),
         Value::DateTimeNow => Ok(RuntimeValue::DateTime(record.now)),
         Value::FloorDateTime { unit, value } => {
             let function = floor_name(unit);
@@ -542,6 +549,21 @@ fn duration_from_value(
     Ok(RuntimeValue::Duration(TimeDelta::nanoseconds(
         nanoseconds.round() as i64,
     )))
+}
+
+fn duration_as_number(
+    value: &Value,
+    divisor: f64,
+    function: &'static str,
+    record: &EvalContext<'_, '_, '_, '_>,
+) -> EvalResult<RuntimeValue> {
+    let duration = expect_duration(evaluate(value, record)?, function, 1)?;
+    let nanoseconds = duration
+        .num_nanoseconds()
+        .expect("Duration values are constrained to nanoseconds");
+    Ok(RuntimeValue::Number(
+        nanoseconds as f64 / 1_000_000_000.0 / divisor,
+    ))
 }
 
 fn expect_number(value: RuntimeValue, function: &'static str, argument: usize) -> EvalResult<f64> {
@@ -1339,7 +1361,12 @@ fn validate_value(value: &Value) -> io::Result<()> {
         | Value::DurationMilliseconds(value)
         | Value::DurationMinutes(value)
         | Value::DurationHours(value)
-        | Value::DurationDays(value) => validate_value(value),
+        | Value::DurationDays(value)
+        | Value::DurationToMilliseconds(value)
+        | Value::DurationToSeconds(value)
+        | Value::DurationToMinutes(value)
+        | Value::DurationToHours(value)
+        | Value::DurationToDays(value) => validate_value(value),
         Value::FormatDateTime {
             format,
             timezone,
