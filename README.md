@@ -227,6 +227,10 @@ its first logical record.
 
 Run `cho --help` for the complete syntax and more examples.
 
+The [`examples`](examples) directory contains three complete scenarios: reviewing
+a CSV account export, investigating connection timeouts, and checking release
+versions. Each script is executable against its bundled sample data.
+
 > [!WARNING]
 > cho is experimental. Its syntax and behavior may change.
 
