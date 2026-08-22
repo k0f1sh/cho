@@ -2,10 +2,11 @@ use std::env;
 use std::io;
 use std::process::ExitCode;
 
-const USAGE: &str = "Usage: cho [-F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'";
+const USAGE: &str =
+    "Usage: cho [--no-input | -F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'";
 const HELP: &str = r#"cho — a small, type-aware text processor for the command line
 
-Usage: cho [-F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'
+Usage: cho [--no-input | -F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'
 
 Common recipes:
   Pick fields             cho '(p $1 $3)'
@@ -16,6 +17,7 @@ Common recipes:
   Use a fallback          cho '(p (default $3 "unknown"))'
   Read CSV with a header  cho --csv --skip-header '(p $1 $3)'
   Read TSV                cho --tsv '(p $1 $2)'
+  Run without input       cho --no-input '(p (dt/now))'
 
 Input and options:
   -F SEPARATOR       split fields using this regular expression
@@ -23,6 +25,7 @@ Input and options:
   --csv              parse CSV records, including quoted values
   --tsv              split fields on tabs
   --skip-header      skip the first CSV or TSV record
+  --no-input         do not read input; run once with an empty record
   -h, --help         print help
   -V, --version      print version
 
@@ -30,6 +33,7 @@ Input and options:
   $0 is the complete record; $1, $2, ... are fields. NR is the record number;
   NF is the field count. Missing fields are empty strings. With --skip-header,
   the first data record keeps its input position and therefore has NR 2.
+  With --no-input, $0 is empty, NR is 1, and NF is 0.
 
 Program expressions:
   (print VALUE ...)              print values separated by spaces
@@ -208,6 +212,7 @@ struct Options {
     csv: bool,
     tsv: bool,
     skip_header: bool,
+    no_input: bool,
     program: String,
 }
 
@@ -217,6 +222,7 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
     let mut csv = false;
     let mut tsv = false;
     let mut skip_header = false;
+    let mut no_input = false;
     let mut program = None;
 
     while let Some(argument) = arguments.next() {
@@ -226,6 +232,8 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
             tsv = true;
         } else if argument == "--skip-header" {
             skip_header = true;
+        } else if argument == "--no-input" {
+            no_input = true;
         } else if argument == "-F" {
             field_separator = Some(arguments.next().ok_or(())?);
         } else if let Some(separator) = argument.strip_prefix("-F") {
@@ -238,7 +246,10 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
         }
     }
 
-    if (csv && tsv) || ((csv || tsv) && field_separator.is_some()) || (skip_header && !(csv || tsv))
+    if (csv && tsv)
+        || ((csv || tsv) && field_separator.is_some())
+        || (skip_header && !(csv || tsv))
+        || (no_input && (csv || tsv || field_separator.is_some() || skip_header))
     {
         return Err(());
     }
@@ -247,6 +258,7 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
         csv,
         tsv,
         skip_header,
+        no_input,
         program: program.ok_or(())?,
     })
 }
@@ -281,11 +293,14 @@ fn main() -> ExitCode {
     } else {
         options.program
     };
-    let stdin = io::stdin();
     let stdout = io::stdout();
-    let result = if options.csv {
+    let result = if options.no_input {
+        cho::run_no_input(&program, stdout.lock())
+    } else if options.csv {
+        let stdin = io::stdin();
         cho::run_csv(&program, stdin.lock(), stdout.lock())
     } else {
+        let stdin = io::stdin();
         let field_separator = options
             .field_separator
             .as_deref()
@@ -318,6 +333,7 @@ mod tests {
                 csv: false,
                 tsv: false,
                 skip_header: false,
+                no_input: false,
                 program: "(print $1)".into(),
             })
         );
@@ -369,5 +385,22 @@ mod tests {
                 .unwrap()
                 .skip_header
         );
+    }
+
+    #[test]
+    fn parses_no_input_mode_and_rejects_input_options() {
+        assert!(
+            parse_args(args(&["--no-input", "(print NR NF)"]))
+                .unwrap()
+                .no_input
+        );
+        for arguments in [
+            vec!["--no-input", "--csv", "(print NR)"],
+            vec!["--no-input", "--tsv", "(print NR)"],
+            vec!["--no-input", "-F,", "(print NR)"],
+            vec!["--no-input", "--skip-header", "(print NR)"],
+        ] {
+            assert!(parse_args(args(&arguments)).is_err());
+        }
     }
 }

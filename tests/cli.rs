@@ -60,6 +60,7 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("true, false"));
     assert!(stdout.contains("(if BOOLEAN VALUE VALUE)"));
     assert!(stdout.contains("--skip-header"));
+    assert!(stdout.contains("--no-input"));
     assert!(stdout.contains("(s/part DELIMITER POSITION VALUE)"));
     assert!(stdout.contains("(dt/fmt STRING DATETIME)"));
     assert!(stdout.contains("(dt/fmt STRING TIMEZONE DATETIME)"));
@@ -83,6 +84,27 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("fc00::/7"));
     assert!(!stdout.contains("(dur/m NUMBER)"));
     assert!(stdout.contains("(cidr/contains? CIDR IPADDR)"));
+}
+
+#[test]
+fn no_input_runs_once_with_an_empty_record() {
+    let output = run_with_args(
+        &["--no-input", r#"(print (s/join "," $0 $1 NR NF))"#],
+        "this input must not be evaluated\n",
+    );
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8(output.stdout).unwrap(), ",,1,0\n");
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn no_input_supports_datetime_values() {
+    let output = run_with_args(&["--no-input", "(print (dt/floor-d (dt/now)))"], "");
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert_eq!(stdout.lines().count(), 1);
+    assert!(stdout.ends_with("T00:00:00Z\n"));
+    assert!(output.stderr.is_empty());
 }
 
 #[test]
