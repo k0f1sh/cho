@@ -189,6 +189,7 @@ pub enum Value {
     DateTimeNow,
     FloorDateTime {
         unit: DateTimeFloorUnit,
+        timezone: Option<Box<Value>>,
         value: Box<Value>,
     },
     AddDateTime {

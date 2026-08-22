@@ -518,10 +518,16 @@ impl Parser {
     }
 
     fn parse_datetime_floor(&mut self, unit: DateTimeFloorUnit) -> Result<Value, ParseError> {
-        let value = self.parse_value()?;
+        let first = self.parse_value()?;
+        let (timezone, value) = if self.tokens.get(self.position) == Some(&Token::RightParen) {
+            (None, first)
+        } else {
+            (Some(Box::new(first)), self.parse_value()?)
+        };
         self.expect_right_paren()?;
         Ok(Value::FloorDateTime {
             unit,
+            timezone,
             value: Box::new(value),
         })
     }
@@ -637,22 +643,10 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
             value: Box::new(one(arguments)?),
         }),
         "dt/unix" => Ok(Value::DateTimeFromUnix(Box::new(one(arguments)?))),
-        "dt/floor-s" => Ok(Value::FloorDateTime {
-            unit: DateTimeFloorUnit::Second,
-            value: Box::new(one(arguments)?),
-        }),
-        "dt/floor-m" => Ok(Value::FloorDateTime {
-            unit: DateTimeFloorUnit::Minute,
-            value: Box::new(one(arguments)?),
-        }),
-        "dt/floor-h" => Ok(Value::FloorDateTime {
-            unit: DateTimeFloorUnit::Hour,
-            value: Box::new(one(arguments)?),
-        }),
-        "dt/floor-d" => Ok(Value::FloorDateTime {
-            unit: DateTimeFloorUnit::Day,
-            value: Box::new(one(arguments)?),
-        }),
+        "dt/floor-s" => build_datetime_floor(DateTimeFloorUnit::Second, arguments),
+        "dt/floor-m" => build_datetime_floor(DateTimeFloorUnit::Minute, arguments),
+        "dt/floor-h" => build_datetime_floor(DateTimeFloorUnit::Hour, arguments),
+        "dt/floor-d" => build_datetime_floor(DateTimeFloorUnit::Day, arguments),
         "dt/fmt" => {
             let mut arguments = arguments.into_iter();
             let (format, timezone, value) = match arguments.len() {
@@ -738,6 +732,26 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
         }
         _ => Err(ParseError::InvalidSyntax),
     }
+}
+
+fn build_datetime_floor(
+    unit: DateTimeFloorUnit,
+    arguments: Vec<Value>,
+) -> Result<Value, ParseError> {
+    let mut arguments = arguments.into_iter();
+    let (timezone, value) = match arguments.len() {
+        1 => (None, arguments.next().expect("length was checked")),
+        2 => (
+            Some(arguments.next().expect("length was checked")),
+            arguments.next().expect("length was checked"),
+        ),
+        _ => return Err(ParseError::InvalidSyntax),
+    };
+    Ok(Value::FloorDateTime {
+        unit,
+        timezone: timezone.map(Box::new),
+        value: Box::new(value),
+    })
 }
 
 fn arithmetic_operator(value: &str) -> Option<ArithmeticOperator> {
@@ -1034,6 +1048,7 @@ mod tests {
         assert!(parse(r#"(print (dt/fmt "%Y-%m-%d" $1))"#).is_ok());
         assert!(parse(r#"(print (dt/fmt "%Y-%m-%d" "Asia/Tokyo" $1))"#).is_ok());
         assert!(parse(r#"(print (dt/floor-m (dt/now)))"#).is_ok());
+        assert!(parse(r#"(print (dt/floor-d "Asia/Tokyo" (dt/now)))"#).is_ok());
     }
 
     #[test]
@@ -1054,6 +1069,10 @@ mod tests {
         assert_eq!(
             parse(r#"(print (-> $1 (dt/floor-h)))"#),
             parse(r#"(print (dt/floor-h $1))"#)
+        );
+        assert_eq!(
+            parse(r#"(print (->> $1 (dt/floor-d "Asia/Tokyo")))"#),
+            parse(r#"(print (dt/floor-d "Asia/Tokyo" $1))"#)
         );
         assert_eq!(
             parse(r#"(print (-> $1 (ip/version)))"#),
@@ -1182,7 +1201,7 @@ mod tests {
             "(print (dur/s 1))",
             "(print (dt/now $1))",
             "(print (dt/floor-s))",
-            "(print (dt/floor-m $1 $2))",
+            "(print (dt/floor-m $1 $2 $3))",
             r#"(print (join "," $1))"#,
             "(print (count $1))",
             "(print (escape $1))",
