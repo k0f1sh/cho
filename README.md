@@ -2,20 +2,9 @@
 
 A small, type-aware text processor for the command line.
 
-`cho` is designed for the space between shell one-liners and small standalone
-scripts. It stays compact at the command line while providing typed values and
-composable expressions for tasks that would otherwise make a shell pipeline
-unwieldy.
-
-`cho` filters and transforms line-oriented text, CSV, TSV, and command output
-with small Lisp-like expressions. Inspired by awk, it processes input one
-record at a time and exposes fields as `$1`, `$2`, and so on.
-
-Operators parse fields according to the type they require: date operators parse
-dates, IP operators parse addresses, and numeric operators parse numbers, so the
-surrounding shell script does not have to handle parsing and validation.
-Expressions can be nested, and CSV input supports quoted fields and embedded
-newlines.
+`cho` fills the gap between shell one-liners and small standalone scripts. It
+keeps command-line text processing compact with typed values and composable
+Lisp-like expressions.
 
 > [!WARNING]
 > `cho` is experimental. Its syntax and behavior may change.
