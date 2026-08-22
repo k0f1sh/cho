@@ -1,0 +1,4 @@
+timestamp	status	source	destination
+2026-08-18T12:30:00Z	timeout	192.168.10.20	10.0.0.25
+2026-08-18T12:31:00Z	connected	192.168.10.21	10.0.0.26
+2026-08-18T12:32:00Z	timeout	8.8.8.8	192.168.1.2
