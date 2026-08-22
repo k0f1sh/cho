@@ -5,7 +5,10 @@ use std::ops::Deref;
 use std::time::SystemTime;
 
 use chrono::format::{Item, StrftimeItems};
-use chrono::{DateTime, FixedOffset, SecondsFormat, TimeDelta, Timelike, Utc};
+use chrono::{
+    DateTime, FixedOffset, LocalResult, NaiveDateTime, SecondsFormat, TimeDelta, TimeZone,
+    Timelike, Utc,
+};
 use chrono_tz::Tz;
 use ipnet::IpNet;
 use regex::Regex;
@@ -350,10 +353,23 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
         Value::DurationToHours(value) => duration_as_number(value, 3600.0, "du/to-h", record),
         Value::DurationToDays(value) => duration_as_number(value, 86_400.0, "du/to-d", record),
         Value::DateTimeNow => Ok(RuntimeValue::DateTime(record.now)),
-        Value::FloorDateTime { unit, value } => {
+        Value::FloorDateTime {
+            unit,
+            timezone,
+            value,
+        } => {
             let function = floor_name(unit);
-            let datetime = expect_datetime(evaluate(value, record)?, function, 1)?;
-            Ok(RuntimeValue::DateTime(floor_datetime(datetime, unit)))
+            let timezone = timezone
+                .as_ref()
+                .map(|timezone| expect_string(evaluate(timezone, record)?, function, 1))
+                .transpose()?;
+            let datetime_argument = if timezone.is_some() { 2 } else { 1 };
+            let datetime = expect_datetime(evaluate(value, record)?, function, datetime_argument)?;
+            let floored = match timezone {
+                Some(timezone) => floor_datetime_in_timezone(datetime, unit, timezone)?,
+                None => floor_datetime(datetime, unit),
+            };
+            Ok(RuntimeValue::DateTime(floored))
         }
         Value::AddDateTime { datetime, duration } => {
             let datetime = expect_datetime(evaluate(datetime, record)?, "dt/add", 1)?;
@@ -1160,6 +1176,77 @@ fn floor_datetime(datetime: DateTime<Utc>, unit: &DateTimeFloorUnit) -> DateTime
     }
 }
 
+fn floor_datetime_in_timezone(
+    datetime: DateTime<Utc>,
+    unit: &DateTimeFloorUnit,
+    timezone: String,
+) -> EvalResult<DateTime<Utc>> {
+    if let Ok(timezone) = timezone.parse::<Tz>() {
+        let local = datetime.with_timezone(&timezone);
+        let boundary = floor_naive_datetime(local.naive_local(), unit);
+        return Ok(resolve_local_floor(&timezone, boundary, datetime));
+    }
+    if let Some(offset) = parse_utc_offset(&timezone) {
+        let local = datetime.with_timezone(&offset);
+        let boundary = floor_naive_datetime(local.naive_local(), unit);
+        return Ok(offset
+            .from_local_datetime(&boundary)
+            .single()
+            .expect("a fixed offset has exactly one local mapping")
+            .with_timezone(&Utc));
+    }
+    Err(EvalError::conversion(
+        floor_name(unit),
+        1,
+        "String (IANA time zone or UTC offset ±HH:MM)",
+        timezone,
+        "is not a recognized time zone",
+    ))
+}
+
+fn floor_naive_datetime(datetime: NaiveDateTime, unit: &DateTimeFloorUnit) -> NaiveDateTime {
+    match unit {
+        DateTimeFloorUnit::Second => datetime.with_nanosecond(0).expect("valid second boundary"),
+        DateTimeFloorUnit::Minute => datetime
+            .with_second(0)
+            .and_then(|value| value.with_nanosecond(0))
+            .expect("valid minute boundary"),
+        DateTimeFloorUnit::Hour => datetime
+            .with_minute(0)
+            .and_then(|value| value.with_second(0))
+            .and_then(|value| value.with_nanosecond(0))
+            .expect("valid hour boundary"),
+        DateTimeFloorUnit::Day => datetime
+            .date()
+            .and_hms_opt(0, 0, 0)
+            .expect("valid day boundary"),
+    }
+}
+
+fn resolve_local_floor<T: TimeZone>(
+    timezone: &T,
+    mut boundary: NaiveDateTime,
+    original: DateTime<Utc>,
+) -> DateTime<Utc> {
+    loop {
+        let candidate = match timezone.from_local_datetime(&boundary) {
+            LocalResult::Single(candidate) => Some(candidate.with_timezone(&Utc)),
+            LocalResult::Ambiguous(first, second) => [first, second]
+                .into_iter()
+                .map(|candidate| candidate.with_timezone(&Utc))
+                .filter(|candidate| *candidate <= original)
+                .max(),
+            LocalResult::None => None,
+        };
+        if let Some(candidate) = candidate.filter(|candidate| *candidate <= original) {
+            return candidate;
+        }
+        boundary = boundary
+            .checked_add_signed(TimeDelta::seconds(1))
+            .expect("a local boundary near a representable DateTime is representable");
+    }
+}
+
 fn floor_name(unit: &DateTimeFloorUnit) -> &'static str {
     match unit {
         DateTimeFloorUnit::Second => "dt/floor-s",
@@ -1386,7 +1473,6 @@ fn validate_value(value: &Value) -> io::Result<()> {
         | Value::CidrPart { value, .. }
         | Value::SemVerPart { value, .. }
         | Value::DateTimeFromUnix(value)
-        | Value::FloorDateTime { value, .. }
         | Value::DurationSeconds(value)
         | Value::DurationMilliseconds(value)
         | Value::DurationMinutes(value)
@@ -1397,6 +1483,14 @@ fn validate_value(value: &Value) -> io::Result<()> {
         | Value::DurationToMinutes(value)
         | Value::DurationToHours(value)
         | Value::DurationToDays(value) => validate_value(value),
+        Value::FloorDateTime {
+            timezone, value, ..
+        } => {
+            if let Some(timezone) = timezone {
+                validate_value(timezone)?;
+            }
+            validate_value(value)
+        }
         Value::FormatDateTime {
             format,
             timezone,

@@ -66,6 +66,7 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("Asia/Tokyo"));
     assert!(stdout.contains("+09:00"));
     assert!(stdout.contains("(dt/floor-m DATETIME)"));
+    assert!(stdout.contains("(dt/floor-d TIMEZONE DATETIME)"));
     assert!(stdout.contains("(du/m NUMBER)"));
     assert!(stdout.contains("(du/ms NUMBER)"));
     assert!(stdout.contains("(du/d NUMBER)"));

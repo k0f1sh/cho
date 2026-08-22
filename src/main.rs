@@ -98,9 +98,13 @@ DateTime and Duration:
   (dt/fmt STRING TIMEZONE DATETIME) -> String
   (dt/now)                       current UTC time, second precision
   (dt/floor-s DATETIME)          floor to UTC second
+  (dt/floor-s TIMEZONE DATETIME) floor to local second -> DateTime
   (dt/floor-m DATETIME)          floor to UTC minute
+  (dt/floor-m TIMEZONE DATETIME) floor to local minute -> DateTime
   (dt/floor-h DATETIME)          floor to UTC hour
-  (dt/floor-d DATETIME)          floor to UTC day
+  (dt/floor-h TIMEZONE DATETIME) floor to local hour -> DateTime
+  (dt/floor-d DATETIME)          floor to UTC calendar day
+  (dt/floor-d TIMEZONE DATETIME) floor to local calendar day -> DateTime
   (dt/add DATETIME DURATION)     -> DateTime
   (dt/sub DATETIME DURATION)     -> DateTime
   (dt/diff DATETIME DATETIME)    left minus right -> Duration
@@ -120,7 +124,9 @@ DateTime and Duration:
 
   DateTime input must be RFC 3339 with an offset or Z. DateTime renders in UTC;
   Duration renders as seconds. TIMEZONE is an IANA name such as Asia/Tokyo or a
-  fixed offset such as +09:00. dt/floor-* always uses UTC boundaries.
+  fixed offset such as +09:00. Without TIMEZONE, dt/floor-* uses UTC boundaries.
+  At DST changes, floor chooses the latest matching boundary not after the input;
+  if that local boundary does not exist, it uses the first local time after it.
 
 IP and CIDR:
   (ip/version IPADDR)            -> Number (4 or 6)

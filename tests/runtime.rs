@@ -1046,6 +1046,35 @@ fn datetime_values_floor_to_utc_boundaries() {
 }
 
 #[test]
+fn datetime_values_floor_to_local_boundaries() {
+    assert_eq!(
+        output(
+            r#"(print (dt/floor-h "+05:45" $1) (dt/floor-d "Asia/Tokyo" $1))"#,
+            "2026-08-22T03:30:45Z\n"
+        ),
+        "2026-08-22T03:15:00Z 2026-08-21T15:00:00Z\n"
+    );
+}
+
+#[test]
+fn datetime_floor_handles_dst_boundaries() {
+    assert_eq!(
+        output(
+            r#"(print (dt/floor-h "America/New_York" $1))"#,
+            "2026-11-01T05:30:00Z\n2026-11-01T06:30:00Z\n"
+        ),
+        "2026-11-01T05:00:00Z\n2026-11-01T06:00:00Z\n"
+    );
+    assert_eq!(
+        output(
+            r#"(print (dt/floor-d "America/Sao_Paulo" $1))"#,
+            "2018-11-04T03:30:00Z\n"
+        ),
+        "2018-11-04T03:00:00Z\n"
+    );
+}
+
+#[test]
 fn datetime_floor_reports_its_own_argument_error() {
     let error = cho::run(
         "(print (dt/floor-m $1))",
@@ -1057,6 +1086,18 @@ fn datetime_floor_reports_its_own_argument_error() {
         error
             .to_string()
             .starts_with("record 1: dt/floor-m: argument 1")
+    );
+
+    let error = cho::run(
+        r#"(print (dt/floor-d "Unknown/Zone" $1))"#,
+        Cursor::new("2026-08-18T00:00:00Z\n"),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .starts_with("record 1: dt/floor-d: argument 1")
     );
 }
 
