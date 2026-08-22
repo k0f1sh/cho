@@ -1260,6 +1260,22 @@ pub fn run<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::
     run_with_field_separator(program, None, input, &mut output)
 }
 
+pub fn run_no_input<W: Write>(program: &str, mut output: W) -> io::Result<()> {
+    let program = compile_program(program)?;
+    let record = Record {
+        line: "",
+        number: 1,
+        field_separator: None,
+        csv_fields: None,
+        now: current_datetime(),
+    };
+    let context = EvalContext {
+        record: &record,
+        regexes: &program.regexes,
+    };
+    execute(&program.program.expressions, &context, &mut output)
+}
+
 pub fn run_csv<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::Result<()> {
     let program = compile_program(program)?;
     let mut input = input;
