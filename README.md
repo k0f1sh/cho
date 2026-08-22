@@ -121,19 +121,6 @@ $ printf '2026-08-18T02:30:45Z 2026-08-18T00:00:00Z\n' |
 2
 ```
 
-Time-zone-aware floors use local calendar boundaries and still return a UTC
-DateTime, so they compose with the other datetime expressions:
-
-```console
-$ printf '%s\n' '2026-08-22T03:30:00Z' |
-    cho '(print (dt/floor-d "Asia/Tokyo" $1))'
-2026-08-21T15:00:00Z
-```
-
-At daylight-saving transitions, an ambiguous boundary resolves to the latest
-matching instant not after the input. A nonexistent boundary advances to the
-first local time after it.
-
 ## Input formats
 
 Whitespace-separated input is the default. Use `--csv` for CSV, `--tsv` for
