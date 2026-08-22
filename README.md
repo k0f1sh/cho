@@ -2,9 +2,9 @@
 
 A small, type-aware text processor for the command line.
 
-`cho` fills the gap between shell one-liners and small standalone scripts. It
-keeps command-line text processing compact with typed values and composable
-Lisp-like expressions.
+Inspired by awk, `cho` processes input one record at a time. It fills the gap
+between shell one-liners and small standalone scripts with typed values and
+composable Lisp-like expressions.
 
 > [!WARNING]
 > `cho` is experimental. Its syntax and behavior may change.
