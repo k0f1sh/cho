@@ -1,3 +1,0 @@
-2026-08-18T12:30:00+09:00 host tailscaled[100]: open-conn-track: timeout opening (TCP 192.168.10.20:39652 => 10.0.0.25:443)
-2026-08-18T12:31:00+09:00 host tailscaled[100]: unrelated message
-2026-08-18T12:32:00+09:00 host tailscaled[100]: open-conn-track: timeout opening (TCP 8.8.8.8:53 => 192.168.1.2:1234)
