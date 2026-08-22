@@ -2,15 +2,15 @@
 
 A small, type-aware text processor for the command line.
 
-cho is a command-line tool for filtering and transforming line-oriented text,
-CSV, TSV, and command output with small Lisp-like expressions. Inspired by awk,
-it processes input one record at a time and exposes fields as `$1`, `$2`, and so
-on.
+cho filters and transforms line-oriented text, CSV, TSV, and command output with
+small Lisp-like expressions. Inspired by awk, cho processes input one record at
+a time and exposes fields as `$1`, `$2`, and so on.
 
 Operators parse fields according to the type they require: date operators parse
-dates, IP operators parse addresses, and numeric operators parse numbers. This
-keeps parsing and validation out of the surrounding shell script. Expressions
-can be nested, and CSV input supports quoted fields and embedded newlines.
+dates, IP operators parse addresses, and numeric operators parse numbers, so the
+surrounding shell script does not have to handle parsing and validation.
+Expressions can be nested, and CSV input supports quoted fields and embedded
+newlines.
 
 > [!WARNING]
 > cho is experimental. Its syntax and behavior may change.
@@ -50,8 +50,8 @@ Run `cho --help` for the complete syntax and more examples.
 
 ## Typed values and composition
 
-The same syntax works for simple field selection and for pipelines that add
-date parsing, typed comparisons, or other transformations.
+Expressions compose the same way whether selecting fields, parsing dates,
+comparing typed values, or applying other transformations.
 
 For example, this keeps records on or after a timestamp and inside a CIDR:
 
@@ -170,8 +170,8 @@ $ cargo clippy --all-targets -- -D warnings
 
 ## The name
 
-The name is Japanese wordplay. "awk" loosely resembles *oku* (億, 10^8), and
-*chō* (兆, 10^12) is the next named large-number unit.
+In Japanese, "awk" sounds a little like *oku* (億, 10^8). *Chō* (兆,
+10^12) is the next named large-number unit.
 
 ## License
 
