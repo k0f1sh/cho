@@ -2,9 +2,14 @@
 
 A small, type-aware text processor for the command line.
 
-cho filters and transforms line-oriented text, CSV, TSV, and command output with
-small Lisp-like expressions. Inspired by awk, cho processes input one record at
-a time and exposes fields as `$1`, `$2`, and so on.
+`cho` is designed for the space between shell one-liners and small standalone
+scripts. It stays compact at the command line while providing typed values and
+composable expressions for tasks that would otherwise make a shell pipeline
+unwieldy.
+
+`cho` filters and transforms line-oriented text, CSV, TSV, and command output
+with small Lisp-like expressions. Inspired by awk, it processes input one
+record at a time and exposes fields as `$1`, `$2`, and so on.
 
 Operators parse fields according to the type they require: date operators parse
 dates, IP operators parse addresses, and numeric operators parse numbers, so the
@@ -13,7 +18,7 @@ Expressions can be nested, and CSV input supports quoted fields and embedded
 newlines.
 
 > [!WARNING]
-> cho is experimental. Its syntax and behavior may change.
+> `cho` is experimental. Its syntax and behavior may change.
 
 ## Install
 
@@ -70,7 +75,7 @@ $ printf '%s\n' \
 
 The fields do not need explicit type annotations or conversion calls. `dt/>=`
 expects RFC 3339 datetimes, and `cidr/contains?` expects a CIDR and an IP address.
-cho parses each string as the type required by the expression. Invalid input
+`cho` parses each string as the type required by the expression. Invalid input
 produces an error instead of silently failing to match.
 
 In CSV mode, quoted commas remain part of one field:
@@ -88,11 +93,11 @@ For JSON input, use `jq`.
 
 ## Language basics
 
-For each input record, cho evaluates the expressions from left to right. `$0`
+For each input record, `cho` evaluates the expressions from left to right. `$0`
 contains the whole record; `$1`, `$2`, ... contain its fields. `NR` is the record
 number and `NF` is the field count.
 
-When a `filter` fails, cho skips the remaining expressions for that record.
+When a `filter` fails, `cho` skips the remaining expressions for that record.
 Value expressions can be nested anywhere a value is accepted.
 
 ```console
