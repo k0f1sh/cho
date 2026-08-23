@@ -216,14 +216,7 @@ impl Parser {
             }
             Some(Token::Atom(value)) if value == "true" => Ok(Value::Boolean(true)),
             Some(Token::Atom(value)) if value == "false" => Ok(Value::Boolean(false)),
-            Some(Token::Atom(field)) => {
-                let number = field
-                    .strip_prefix('$')
-                    .ok_or(ParseError::InvalidSyntax)?
-                    .parse::<usize>()
-                    .map_err(|_| ParseError::InvalidField)?;
-                Ok(Value::Field(number))
-            }
+            Some(Token::Atom(field)) => parse_field(&field),
             Some(Token::String(value)) => Ok(Value::String(value)),
             Some(Token::LeftParen) => match self.next() {
                 Some(Token::Atom(operator)) if operator == "->" => self.parse_threading(true),
@@ -556,6 +549,47 @@ impl Parser {
             value: Box::new(value),
         })
     }
+}
+
+fn parse_field(field: &str) -> Result<Value, ParseError> {
+    let field = field.strip_prefix('$').ok_or(ParseError::InvalidSyntax)?;
+
+    if let Some(end) = field.strip_prefix('-') {
+        let end = parse_range_bound(end)?;
+        return Ok(Value::FieldRange {
+            start: 1,
+            end: Some(end),
+        });
+    }
+
+    if let Some((start, end)) = field.split_once('-') {
+        let start = parse_range_bound(start)?;
+        let end = if end.is_empty() {
+            None
+        } else {
+            let end = parse_range_bound(end)?;
+            if start > end {
+                return Err(ParseError::InvalidField);
+            }
+            Some(end)
+        };
+        return Ok(Value::FieldRange { start, end });
+    }
+
+    field
+        .parse::<usize>()
+        .map(Value::Field)
+        .map_err(|_| ParseError::InvalidField)
+}
+
+fn parse_range_bound(bound: &str) -> Result<usize, ParseError> {
+    let bound = bound
+        .parse::<usize>()
+        .map_err(|_| ParseError::InvalidField)?;
+    if bound == 0 {
+        return Err(ParseError::InvalidField);
+    }
+    Ok(bound)
 }
 
 fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<Value, ParseError> {
@@ -942,6 +976,46 @@ mod tests {
             parse("(filter (> $2 20)) (print $1)")
         );
         assert_eq!(parse("(p)"), parse("(print)"));
+    }
+
+    #[test]
+    fn parses_field_ranges_as_single_values() {
+        assert_eq!(
+            parse("(p $-3 $3- $2-4)"),
+            Ok(Program {
+                expressions: vec![Expr::Print(vec![
+                    Value::FieldRange {
+                        start: 1,
+                        end: Some(3),
+                    },
+                    Value::FieldRange {
+                        start: 3,
+                        end: None,
+                    },
+                    Value::FieldRange {
+                        start: 2,
+                        end: Some(4),
+                    },
+                ])],
+                regex_patterns: vec![],
+            })
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_field_ranges() {
+        for program in [
+            "(p $-)",
+            "(p $0-)",
+            "(p $-0)",
+            "(p $0-2)",
+            "(p $3-2)",
+            "(p $1-2-3)",
+            "(p $-x)",
+            "(p $x-)",
+        ] {
+            assert_eq!(parse(program), Err(ParseError::InvalidField), "{program}");
+        }
     }
 
     #[test]

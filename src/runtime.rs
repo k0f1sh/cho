@@ -150,6 +150,17 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
         Value::Field(number) => Ok(RuntimeValue::String(
             record.field(*number).unwrap_or("").to_owned(),
         )),
+        Value::FieldRange { start, end } => {
+            let last = end.unwrap_or_else(|| record.field_count());
+            let last = last.min(record.field_count());
+            let mut joined = String::new();
+            if *start <= last {
+                for number in *start..=last {
+                    joined.push_str(record.field(number).unwrap_or(""));
+                }
+            }
+            Ok(RuntimeValue::String(joined))
+        }
         Value::RecordNumber => Ok(RuntimeValue::Number(record.number as f64)),
         Value::FieldCount => Ok(RuntimeValue::Number(record.field_count() as f64)),
         Value::String(value) => Ok(RuntimeValue::String(value.clone())),
@@ -1606,6 +1617,7 @@ fn validate_value(value: &Value) -> io::Result<()> {
             validate_value(fallback)
         }
         Value::Field(_)
+        | Value::FieldRange { .. }
         | Value::RecordNumber
         | Value::FieldCount
         | Value::String(_)
