@@ -25,25 +25,6 @@ fn prints_fields_strings_and_concatenated_values() {
 }
 
 #[test]
-fn field_ranges_concatenate_fields_without_a_separator() {
-    assert_eq!(
-        output(
-            r#"(p $-3 $3- $2-4) (p (s/upper $2-))"#,
-            "a b c d e\none two\n",
-        ),
-        "abc cde bcd\nBCDE\nonetwo  two\nTWO\n"
-    );
-}
-
-#[test]
-fn field_ranges_ignore_bounds_beyond_nf_and_preserve_empty_fields() {
-    assert_eq!(
-        output_with_separator(r#"(p (s/join "|" $-5 $3- $3-8))"#, ",", "a,,c\na,b\n\n"),
-        "ac|c|c\nab||\n||\n"
-    );
-}
-
-#[test]
 fn short_top_level_aliases_filter_and_print() {
     assert_eq!(
         output("(f (> $2 20)) (p $1)", "Alice 18\nBob 30\n"),

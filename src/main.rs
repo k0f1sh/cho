@@ -46,7 +46,6 @@ Program expressions:
 
 Literals and fields:
   $0, $1, ...                    complete record or field
-  $-N, $N-, $N-M                concatenate an inclusive field range
   NR, NF                         record number or field count
   "text", 12, 3.5                String or Number
   true, false                    Boolean
@@ -91,10 +90,6 @@ Strings:
   s/dquote and s/squote escape the enclosing quote, backslashes, tabs, and
   line breaks with a backslash.
   Example: cho --no-input '(p (dq (s/trim "  hello  ")))'
-
-  Field ranges are single String values and concatenate without a separator:
-    $-3 is (str $1 $2 $3), $3- continues through NF, and $2-4 selects $2..$4.
-  Range bounds start at 1; fields beyond NF are ignored.
 
 Selection and recovery:
   (if BOOLEAN VALUE VALUE)       select one value lazily
