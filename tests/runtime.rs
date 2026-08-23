@@ -260,6 +260,25 @@ fn multiple_filters_form_an_and_condition() {
 }
 
 #[test]
+fn filter_only_programs_implicitly_print_passing_records() {
+    assert_eq!(
+        output(
+            "(filter (> $2 20)) (filter (< $2 40))",
+            "Alice 18\nBob 30\nCarol 45\n"
+        ),
+        "Bob 30\n"
+    );
+}
+
+#[test]
+fn empty_program_passes_records_through_unchanged() {
+    assert_eq!(
+        output("", "  Alice 20  \n\nBob\t30\n"),
+        "  Alice 20  \n\nBob\t30\n"
+    );
+}
+
+#[test]
 fn not_inverts_a_predicate() {
     assert_eq!(
         output(
