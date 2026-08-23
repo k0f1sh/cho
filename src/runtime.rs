@@ -1448,8 +1448,15 @@ struct CompiledProgram {
 }
 
 fn compile_program(source: &str) -> io::Result<CompiledProgram> {
-    let program = parse(source)
+    let mut program = parse(source)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid program"))?;
+    if program
+        .expressions
+        .iter()
+        .all(|expression| matches!(expression, Expr::Filter(_)))
+    {
+        program.expressions.push(Expr::Print(vec![Value::Field(0)]));
+    }
     for expression in &program.expressions {
         match expression {
             Expr::Print(values) => values.iter().try_for_each(validate_value)?,

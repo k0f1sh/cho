@@ -57,6 +57,8 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("Types and errors:"));
     assert!(stdout.contains("(p VALUE ...)"));
     assert!(stdout.contains("(f BOOLEAN)"));
+    assert!(stdout.contains("only filters implicitly prints $0"));
+    assert!(stdout.contains("An empty program also prints $0"));
     assert!(stdout.contains("true, false"));
     assert!(stdout.contains("(if BOOLEAN VALUE VALUE)"));
     assert!(stdout.contains("--skip-header"));

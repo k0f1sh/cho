@@ -10,9 +10,9 @@ Usage: cho [--no-input | -F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'
 
 Common recipes:
   Pick fields             cho '(p $1 $3)'
-  Filter numbers          cho '(f (> $2 20)) (p $0)'
-  Match a field           cho '(f (~ $1 /^api-/)) (p $0)'
-  Match the whole record  cho '(f (~ /ERROR|WARN/)) (p $0)'
+  Filter numbers          cho '(f (> $2 20))'
+  Match a field           cho '(f (~ $1 /^api-/))'
+  Match the whole record  cho '(f (~ /ERROR|WARN/))'
   Join values             cho '(p (s/join "," $1 $2))'
   Use a fallback          cho '(p (default $3 "unknown"))'
   Read CSV with a header  cho --csv --skip-header '(p $1 $3)'
@@ -40,6 +40,9 @@ Program expressions:
   (p VALUE ...)                  short form of print
   (filter BOOLEAN)               continue only when true
   (f BOOLEAN)                    short form of filter
+
+  A program containing only filters implicitly prints $0 after they pass.
+  An empty program also prints $0. Any explicit print disables implicit output.
 
 Literals and fields:
   $0, $1, ...                    complete record or field
@@ -188,7 +191,8 @@ Types and errors:
 Composition:
   Values nest anywhere a VALUE is accepted. Multiple program expressions run
   left to right; a failed filter skips the rest of that record. Multiple filters
-  therefore act like AND.
+  therefore act like AND. If the program is empty or contains only filters,
+  cho implicitly prints $0 after the filters pass.
 
   (-> VALUE (FORM ...))   insert VALUE as each form's first argument
   (->> VALUE (FORM ...))  insert VALUE as each form's last argument

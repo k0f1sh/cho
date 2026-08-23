@@ -57,7 +57,6 @@ $ printf '%s\n' \
     cho '
       (filter (dt/>= $1 "2026-08-01T00:00:00Z"))
       (filter (cidr/contains? "10.0.0.0/8" $2))
-      (print $0)
     '
 2026-08-02T09:00:00Z 10.1.2.3 deploy
 ```
@@ -87,7 +86,10 @@ contains the whole record; `$1`, `$2`, ... contain its fields. `NR` is the recor
 number and `NF` is the field count.
 
 When a `filter` fails, `cho` skips the remaining expressions for that record.
-Value expressions can be nested anywhere a value is accepted.
+A program containing only filters prints each complete record that passes, so
+`(print $0)` is unnecessary. An empty program also passes records through
+unchanged. Any explicit `print` disables this implicit output. Value expressions
+can be nested anywhere a value is accepted.
 
 ```console
 $ printf 'alice\nalice:admin\n' |
