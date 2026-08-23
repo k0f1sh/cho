@@ -197,7 +197,7 @@ fn quote_stringifies_values_and_escapes_the_enclosing_quote() {
     );
     assert_eq!(output("(print (s/dquote $2))", "x\n"), "\"\"\n");
     assert_eq!(
-        output("(print (dq $1) (q $1))", "Alice\n"),
+        output("(print (dq $1) (sq $1))", "Alice\n"),
         "\"Alice\" 'Alice'\n"
     );
 }
