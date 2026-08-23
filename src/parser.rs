@@ -1,7 +1,7 @@
 use crate::ast::{
     ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
-    IpClass, NumberOperator, Predicate, Program, RegexId, SemVerPart, StringQuote, UrlEncoding,
-    UrlPart, Value,
+    IpClass, NumberOperator, Predicate, Program, RegexId, SemVerPart, StringQuote, StringTrim,
+    UrlEncoding, UrlPart, Value,
 };
 use crate::lexer::{Token, tokenize};
 
@@ -349,6 +349,16 @@ impl Parser {
                     }
                     Ok(Value::Upper(Box::new(value)))
                 }
+                Some(Token::Atom(operator))
+                    if matches!(operator.as_str(), "s/trim" | "s/ltrim" | "s/rtrim") =>
+                {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::Trim {
+                        kind: string_trim(&operator).expect("operator was matched"),
+                        value: Box::new(value),
+                    })
+                }
                 Some(Token::Atom(operator)) if operator == "default" => {
                     let value = self.parse_value()?;
                     let fallback = self.parse_value()?;
@@ -642,6 +652,10 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
         }
         "s/lower" => Ok(Value::Lower(Box::new(one(arguments)?))),
         "s/upper" => Ok(Value::Upper(Box::new(one(arguments)?))),
+        operator if string_trim(operator).is_some() => Ok(Value::Trim {
+            kind: string_trim(operator).expect("operator was matched"),
+            value: Box::new(one(arguments)?),
+        }),
         "default" => {
             let (value, fallback) = two(arguments)?;
             Ok(Value::Default {
@@ -849,6 +863,15 @@ fn url_encoding(value: &str) -> Option<UrlEncoding> {
     }
 }
 
+fn string_trim(value: &str) -> Option<StringTrim> {
+    match value {
+        "s/trim" => Some(StringTrim::Both),
+        "s/ltrim" => Some(StringTrim::Left),
+        "s/rtrim" => Some(StringTrim::Right),
+        _ => None,
+    }
+}
+
 fn parse_comparison_operator(value: &str) -> Option<(ComparisonType, ComparisonOperator)> {
     let (kind, operator) = if let Some(operator) = value.strip_prefix("s/") {
         (ComparisonType::String, operator)
@@ -1032,6 +1055,15 @@ mod tests {
     }
 
     #[test]
+    fn parses_trim_values_and_threading() {
+        assert!(parse("(print (s/trim $1) (s/ltrim $2) (s/rtrim 42))").is_ok());
+        assert_eq!(
+            parse("(print (-> $1 (s/trim) (s/upper)))"),
+            parse("(print (s/upper (s/trim $1)))")
+        );
+    }
+
+    #[test]
     fn parses_binary_arithmetic_values() {
         assert!(parse("(print (+ $1 2.0) (- $1 $2) (* 3 4) (/ 10 2))").is_ok());
         assert!(parse("(print (+ (* $1 2) (/ $2 4)))").is_ok());
@@ -1198,6 +1230,12 @@ mod tests {
             "(print (s/lower $1 $2))",
             "(print (s/upper))",
             "(print (s/upper $1 $2))",
+            "(print (s/trim))",
+            "(print (s/trim $1 $2))",
+            "(print (s/ltrim))",
+            "(print (s/ltrim $1 $2))",
+            "(print (s/rtrim))",
+            "(print (s/rtrim $1 $2))",
             "(print (default))",
             "(print (default $1))",
             "(print (default $1 $2 $3))",

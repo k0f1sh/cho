@@ -113,6 +113,13 @@ pub enum StringQuote {
     Single,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StringTrim {
+    Both,
+    Left,
+    Right,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum CidrPart {
     Network,
@@ -233,6 +240,10 @@ pub enum Value {
     },
     Lower(Box<Value>),
     Upper(Box<Value>),
+    Trim {
+        kind: StringTrim,
+        value: Box<Value>,
+    },
     Default {
         value: Box<Value>,
         fallback: Box<Value>,
