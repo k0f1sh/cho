@@ -1,6 +1,7 @@
 use crate::ast::{
     ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
-    IpClass, NumberOperator, Predicate, Program, RegexId, SemVerPart, UrlEncoding, UrlPart, Value,
+    IpClass, NumberOperator, Predicate, Program, RegexId, SemVerPart, StringQuote, UrlEncoding,
+    UrlPart, Value,
 };
 use crate::lexer::{Token, tokenize};
 
@@ -307,6 +308,20 @@ impl Parser {
                     }
                     Ok(Value::Escape(Box::new(value)))
                 }
+                Some(Token::Atom(operator))
+                    if matches!(operator.as_str(), "s/dquote" | "dq" | "s/squote" | "q") =>
+                {
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::Quote {
+                        kind: if matches!(operator.as_str(), "s/dquote" | "dq") {
+                            StringQuote::Double
+                        } else {
+                            StringQuote::Single
+                        },
+                        value: Box::new(value),
+                    })
+                }
                 Some(Token::Atom(operator)) if operator == "if" => {
                     let condition = self.parse_value()?;
                     let then_value = self.parse_value()?;
@@ -606,6 +621,14 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
         }
         "s/count" => Ok(Value::Count(Box::new(one(arguments)?))),
         "s/escape" => Ok(Value::Escape(Box::new(one(arguments)?))),
+        "s/dquote" | "dq" | "s/squote" | "q" => Ok(Value::Quote {
+            kind: if matches!(operator, "s/dquote" | "dq") {
+                StringQuote::Double
+            } else {
+                StringQuote::Single
+            },
+            value: Box::new(one(arguments)?),
+        }),
         "not" => Ok(Value::Not(Box::new(one(arguments)?))),
         "and" if !arguments.is_empty() => Ok(Value::And(arguments)),
         "or" if !arguments.is_empty() => Ok(Value::Or(arguments)),
@@ -998,6 +1021,17 @@ mod tests {
     }
 
     #[test]
+    fn parses_quote_values_and_threading() {
+        assert!(parse("(print (s/dquote $1) (s/squote 42) (dq $2) (q true))").is_ok());
+        assert_eq!(parse("(print (dq $1))"), parse("(print (s/dquote $1))"));
+        assert_eq!(parse("(print (q $1))"), parse("(print (s/squote $1))"));
+        assert_eq!(
+            parse("(print (-> $1 (s/dquote) (s/upper)))"),
+            parse("(print (s/upper (s/dquote $1)))")
+        );
+    }
+
+    #[test]
     fn parses_binary_arithmetic_values() {
         assert!(parse("(print (+ $1 2.0) (- $1 $2) (* 3 4) (/ 10 2))").is_ok());
         assert!(parse("(print (+ (* $1 2) (/ $2 4)))").is_ok());
@@ -1134,6 +1168,14 @@ mod tests {
             r#"(print (s/part ":"))"#,
             r#"(print (s/part ":" 1))"#,
             r#"(print (s/part ":" 1 $1 $2))"#,
+            "(print (s/dquote))",
+            "(print (s/dquote $1 $2))",
+            "(print (s/squote))",
+            "(print (s/squote $1 $2))",
+            "(print (dq))",
+            "(print (dq $1 $2))",
+            "(print (q))",
+            "(print (q $1 $2))",
         ] {
             assert_eq!(parse(program), Err(ParseError::InvalidSyntax), "{program}");
         }

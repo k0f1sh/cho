@@ -183,6 +183,26 @@ fn escape_makes_tabs_and_backslashes_visible() {
 }
 
 #[test]
+fn quote_stringifies_values_and_escapes_the_enclosing_quote() {
+    assert_eq!(
+        output(
+            r#"(print (s/dquote $0)) (print (s/squote $0))"#,
+            "say \"it's\\ok\"\t2026\n",
+        ),
+        "\"say \\\"it's\\\\ok\\\"\\t2026\"\n'say \"it\\'s\\\\ok\"\\t2026'\n"
+    );
+    assert_eq!(
+        output(r#"(print (str "value=" (s/dquote (+ $1 1))))"#, "41\n",),
+        "value=\"42\"\n"
+    );
+    assert_eq!(output("(print (s/dquote $2))", "x\n"), "\"\"\n");
+    assert_eq!(
+        output("(print (dq $1) (q $1))", "Alice\n"),
+        "\"Alice\" 'Alice'\n"
+    );
+}
+
+#[test]
 fn if_selects_a_value_and_nests_with_other_values() {
     assert_eq!(
         output(

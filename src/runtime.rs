@@ -16,7 +16,8 @@ use semver::Version;
 
 use crate::ast::{
     ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
-    IpClass, NumberOperator, Predicate, Program, SemVerPart, UrlEncoding, UrlPart, Value,
+    IpClass, NumberOperator, Predicate, Program, SemVerPart, StringQuote, UrlEncoding, UrlPart,
+    Value,
 };
 use crate::parser::parse;
 
@@ -482,6 +483,10 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
         )),
         Value::Escape(value) => Ok(RuntimeValue::String(escape(
             &evaluate(value, record)?.render(),
+        ))),
+        Value::Quote { kind, value } => Ok(RuntimeValue::String(quote(
+            &evaluate(value, record)?.render(),
+            kind,
         ))),
         Value::If {
             condition,
@@ -1036,6 +1041,30 @@ fn escape(value: &str) -> String {
         .replace('\t', "\\t")
 }
 
+fn quote(value: &str, kind: &StringQuote) -> String {
+    let delimiter = match kind {
+        StringQuote::Double => '"',
+        StringQuote::Single => '\'',
+    };
+    let mut quoted = String::with_capacity(value.len() + 2);
+    quoted.push(delimiter);
+    for character in value.chars() {
+        match character {
+            '\\' => quoted.push_str("\\\\"),
+            '\n' => quoted.push_str("\\n"),
+            '\r' => quoted.push_str("\\r"),
+            '\t' => quoted.push_str("\\t"),
+            character if character == delimiter => {
+                quoted.push('\\');
+                quoted.push(character);
+            }
+            character => quoted.push(character),
+        }
+    }
+    quoted.push(delimiter);
+    quoted
+}
+
 fn is_private_ipv4(ip: std::net::Ipv4Addr) -> bool {
     let [first, second, ..] = ip.octets();
     first == 10 || (first == 172 && (16..=31).contains(&second)) || (first == 192 && second == 168)
@@ -1490,6 +1519,7 @@ fn validate_value(value: &Value) -> io::Result<()> {
         }
         Value::Count(value)
         | Value::Escape(value)
+        | Value::Quote { value, .. }
         | Value::Lower(value)
         | Value::Upper(value)
         | Value::IpVersion(value)
