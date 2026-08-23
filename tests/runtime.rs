@@ -222,6 +222,25 @@ fn lower_and_upper_apply_unicode_case_conversion() {
 }
 
 #[test]
+fn trim_operations_remove_unicode_whitespace_and_compose() {
+    assert_eq!(
+        output(
+            r#"(print (dq (s/trim $0))) (print (dq (s/ltrim $0))) (print (dq (s/rtrim $0)))"#,
+            "\u{2003}\t Alice \u{3000}\n",
+        ),
+        "\"Alice\"\n\"Alice 　\"\n\" \\t Alice\"\n"
+    );
+    assert_eq!(
+        output(
+            r#"(print (s/upper (s/trim $0))) (print (dq (s/trim $0)))"#,
+            "  alice  \n\u{3000}\t \n\n",
+        ),
+        "ALICE\n\"alice\"\n\n\"\"\n\n\"\"\n"
+    );
+    assert_eq!(output("(print (s/trim 42))", "x\n"), "42\n");
+}
+
+#[test]
 fn default_replaces_only_empty_values_and_can_be_nested() {
     assert_eq!(
         output(

@@ -77,6 +77,9 @@ Strings:
   (sq VALUE)                     short form of s/squote
   (s/lower VALUE)                lowercase
   (s/upper VALUE)                uppercase
+  (s/trim VALUE)                 remove Unicode whitespace from both ends
+  (s/ltrim VALUE)                remove Unicode whitespace from the left
+  (s/rtrim VALUE)                remove Unicode whitespace from the right
   (s/> STRING STRING)  (s/>= STRING STRING)
   (s/< STRING STRING)  (s/<= STRING STRING)
   (s/= STRING STRING)  (s/!= STRING STRING)
@@ -86,6 +89,7 @@ Strings:
   must not be empty.
   s/dquote and s/squote escape the enclosing quote, backslashes, tabs, and
   line breaks with a backslash.
+  Example: cho --no-input '(p (dq (s/trim "  hello  ")))'
 
 Selection and recovery:
   (if BOOLEAN VALUE VALUE)       select one value lazily

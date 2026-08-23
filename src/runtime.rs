@@ -16,8 +16,8 @@ use semver::Version;
 
 use crate::ast::{
     ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
-    IpClass, NumberOperator, Predicate, Program, SemVerPart, StringQuote, UrlEncoding, UrlPart,
-    Value,
+    IpClass, NumberOperator, Predicate, Program, SemVerPart, StringQuote, StringTrim, UrlEncoding,
+    UrlPart, Value,
 };
 use crate::parser::parse;
 
@@ -505,6 +505,15 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<R
         Value::Upper(value) => Ok(RuntimeValue::String(
             evaluate(value, record)?.render().to_uppercase(),
         )),
+        Value::Trim { kind, value } => {
+            let value = evaluate(value, record)?.render();
+            let trimmed = match kind {
+                StringTrim::Both => value.trim(),
+                StringTrim::Left => value.trim_start(),
+                StringTrim::Right => value.trim_end(),
+            };
+            Ok(RuntimeValue::String(trimmed.to_owned()))
+        }
         Value::Default { value, fallback } => match evaluate(value, record) {
             Ok(value) if !value.is_empty() => Ok(value),
             Ok(_) | Err(_) => evaluate(fallback, record),
@@ -1522,6 +1531,7 @@ fn validate_value(value: &Value) -> io::Result<()> {
         | Value::Quote { value, .. }
         | Value::Lower(value)
         | Value::Upper(value)
+        | Value::Trim { value, .. }
         | Value::IpVersion(value)
         | Value::CidrPart { value, .. }
         | Value::SemVerPart { value, .. }
