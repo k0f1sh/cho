@@ -107,6 +107,12 @@ pub enum UrlEncoding {
     Decode,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StringQuote {
+    Double,
+    Single,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum CidrPart {
     Network,
@@ -216,6 +222,10 @@ pub enum Value {
     },
     Count(Box<Value>),
     Escape(Box<Value>),
+    Quote {
+        kind: StringQuote,
+        value: Box<Value>,
+    },
     If {
         condition: Box<Value>,
         then_value: Box<Value>,

@@ -71,6 +71,10 @@ Strings:
   (s/part DELIMITER POSITION VALUE) take a 1-based literal-delimited part
   (s/count VALUE)                count Unicode characters
   (s/escape VALUE)               escape tabs, newlines, and backslashes
+  (s/dquote VALUE)               stringify and wrap in escaped double quotes
+  (s/squote VALUE)               stringify and wrap in escaped single quotes
+  (dq VALUE)                     short form of s/dquote
+  (q VALUE)                      short form of s/squote
   (s/lower VALUE)                lowercase
   (s/upper VALUE)                uppercase
   (s/> STRING STRING)  (s/>= STRING STRING)
@@ -80,6 +84,8 @@ Strings:
   s/part preserves empty parts. If no delimiter is found, position 1 returns
   the complete value; a missing position returns an empty string. DELIMITER
   must not be empty.
+  s/dquote and s/squote escape the enclosing quote, backslashes, tabs, and
+  line breaks with a backslash.
 
 Selection and recovery:
   (if BOOLEAN VALUE VALUE)       select one value lazily
