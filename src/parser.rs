@@ -309,7 +309,7 @@ impl Parser {
                     Ok(Value::Escape(Box::new(value)))
                 }
                 Some(Token::Atom(operator))
-                    if matches!(operator.as_str(), "s/dquote" | "dq" | "s/squote" | "q") =>
+                    if matches!(operator.as_str(), "s/dquote" | "dq" | "s/squote" | "sq") =>
                 {
                     let value = self.parse_value()?;
                     self.expect_right_paren()?;
@@ -621,7 +621,7 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
         }
         "s/count" => Ok(Value::Count(Box::new(one(arguments)?))),
         "s/escape" => Ok(Value::Escape(Box::new(one(arguments)?))),
-        "s/dquote" | "dq" | "s/squote" | "q" => Ok(Value::Quote {
+        "s/dquote" | "dq" | "s/squote" | "sq" => Ok(Value::Quote {
             kind: if matches!(operator, "s/dquote" | "dq") {
                 StringQuote::Double
             } else {
@@ -1022,9 +1022,9 @@ mod tests {
 
     #[test]
     fn parses_quote_values_and_threading() {
-        assert!(parse("(print (s/dquote $1) (s/squote 42) (dq $2) (q true))").is_ok());
+        assert!(parse("(print (s/dquote $1) (s/squote 42) (dq $2) (sq true))").is_ok());
         assert_eq!(parse("(print (dq $1))"), parse("(print (s/dquote $1))"));
-        assert_eq!(parse("(print (q $1))"), parse("(print (s/squote $1))"));
+        assert_eq!(parse("(print (sq $1))"), parse("(print (s/squote $1))"));
         assert_eq!(
             parse("(print (-> $1 (s/dquote) (s/upper)))"),
             parse("(print (s/upper (s/dquote $1)))")
@@ -1174,8 +1174,9 @@ mod tests {
             "(print (s/squote $1 $2))",
             "(print (dq))",
             "(print (dq $1 $2))",
-            "(print (q))",
-            "(print (q $1 $2))",
+            "(print (sq))",
+            "(print (sq $1 $2))",
+            "(print (q $1))",
         ] {
             assert_eq!(parse(program), Err(ParseError::InvalidSyntax), "{program}");
         }

@@ -74,7 +74,7 @@ Strings:
   (s/dquote VALUE)               stringify and wrap in escaped double quotes
   (s/squote VALUE)               stringify and wrap in escaped single quotes
   (dq VALUE)                     short form of s/dquote
-  (q VALUE)                      short form of s/squote
+  (sq VALUE)                     short form of s/squote
   (s/lower VALUE)                lowercase
   (s/upper VALUE)                uppercase
   (s/> STRING STRING)  (s/>= STRING STRING)
