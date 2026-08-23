@@ -140,10 +140,6 @@ pub enum SemVerPart {
 #[derive(Debug, PartialEq)]
 pub enum Value {
     Field(usize),
-    FieldRange {
-        start: usize,
-        end: Option<usize>,
-    },
     RecordNumber,
     FieldCount,
     String(String),
