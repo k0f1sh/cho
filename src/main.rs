@@ -73,6 +73,7 @@ Strings:
   (str VALUE ...)                concatenate values
   (s/join SEPARATOR VALUE ...)   join values
   (s/part DELIMITER POSITION VALUE) take a 1-based literal-delimited part
+  (s/slice START [LENGTH] VALUE) take Unicode characters from 1-based START
   (s/count VALUE)                count Unicode characters
   (s/escape VALUE)               escape tabs, newlines, and backslashes
   (s/dquote VALUE)               stringify and wrap in escaped double quotes
@@ -91,6 +92,9 @@ Strings:
   s/part preserves empty parts. If no delimiter is found, position 1 returns
   the complete value; a missing position returns an empty string. DELIMITER
   must not be empty.
+  s/slice without LENGTH returns through the end. An excessive LENGTH stops at
+  the end; an excessive START returns empty. START must be positive and LENGTH
+  must be non-negative. Both must be whole numbers.
   s/dquote and s/squote escape the enclosing quote, backslashes, tabs, and
   line breaks with a backslash.
   Example: cho --no-input '(p (dq (s/trim "  hello  ")))'

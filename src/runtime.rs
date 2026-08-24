@@ -488,6 +488,11 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_>) -> EvalResult<Runti
                     .to_owned(),
             ))
         }
+        Value::Slice {
+            start,
+            length,
+            value,
+        } => evaluate_string_slice(start, length.as_deref(), value, record),
         Value::Count(value) => Ok(RuntimeValue::Number(
             evaluate(value, record)?.render().chars().count() as f64,
         )),
@@ -669,6 +674,57 @@ fn expect_number(value: RuntimeValue, function: &'static str, argument: usize) -
         ));
     }
     Ok(number)
+}
+
+fn evaluate_string_slice(
+    start: &Value,
+    length: Option<&Value>,
+    value: &Value,
+    record: &EvalContext<'_, '_, '_>,
+) -> EvalResult<RuntimeValue> {
+    let start = expect_slice_index(start, "s/slice", 1, false, record)?;
+    let length = length
+        .map(|length| expect_slice_index(length, "s/slice", 2, true, record))
+        .transpose()?;
+    let value = evaluate(value, record)?.render();
+    let Some((start, _)) = value.char_indices().nth(start - 1) else {
+        return Ok(RuntimeValue::String(String::new()));
+    };
+    let end = length
+        .and_then(|length| {
+            value[start..]
+                .char_indices()
+                .nth(length)
+                .map(|(end, _)| start + end)
+        })
+        .unwrap_or(value.len());
+    Ok(RuntimeValue::String(value[start..end].to_owned()))
+}
+
+fn expect_slice_index(
+    value: &Value,
+    function: &'static str,
+    argument: usize,
+    allow_zero: bool,
+    record: &EvalContext<'_, '_, '_>,
+) -> EvalResult<usize> {
+    let number = expect_number(evaluate(value, record)?, function, argument)?;
+    let minimum = if allow_zero { 0.0 } else { 1.0 };
+    if number.fract() != 0.0 || number < minimum {
+        let expected = if allow_zero {
+            "Number (non-negative whole slice length)"
+        } else {
+            "Number (positive whole slice start)"
+        };
+        return Err(EvalError::conversion(
+            function,
+            argument,
+            expected,
+            number.to_string(),
+            "is outside the supported slice range",
+        ));
+    }
+    Ok(number as usize)
 }
 
 fn expect_boolean(
@@ -1573,6 +1629,17 @@ fn validate_value(value: &Value) -> io::Result<()> {
         } => {
             validate_value(delimiter)?;
             validate_value(position)?;
+            validate_value(value)
+        }
+        Value::Slice {
+            start,
+            length,
+            value,
+        } => {
+            validate_value(start)?;
+            if let Some(length) = length {
+                validate_value(length)?;
+            }
             validate_value(value)
         }
         Value::Count(value)
