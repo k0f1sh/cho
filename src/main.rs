@@ -47,12 +47,14 @@ Program expressions:
 
 Literals and fields:
   $0, $1, ...                    complete record or field
-  $-3, $3-, $2-4                field range, preserving original separators
+  $-3, $3-, $2-4                field ranges, preserving original separators
   NR, NF                         record number or field count
   "text", 12, 3.5                String or Number
   true, false                    Boolean
 
-  A range end beyond NF stops at NF. A range start beyond NF is empty.
+  An omitted range bound extends to that edge of the complete record, including
+  leading or trailing separators. An end beyond NF stops at NF. A start beyond
+  NF is empty.
   Field ranges are unavailable with --csv because CSV fields are decoded.
 
 Numbers:
