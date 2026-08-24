@@ -1815,3 +1815,18 @@ fn threading_runs_as_the_expanded_value_expression() {
         "date: 2026/08/18\n"
     );
 }
+
+#[test]
+fn threading_accepts_bare_names_for_unary_steps() {
+    assert_eq!(
+        output(
+            r#"(print (-> $1 s/trim (s/replace-all "-" "_") s/upper))"#,
+            "  api-log-prod  \n",
+        ),
+        "API_LOG_PROD\n"
+    );
+    assert_eq!(
+        output(r#"(print (->> $1 s/upper (str "value=")))"#, "hello\n"),
+        "value=HELLO\n"
+    );
+}

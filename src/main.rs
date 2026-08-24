@@ -229,8 +229,9 @@ Composition:
   Functions with one primary input put it first, followed by configuration.
   Variadic forms such as str and s/join have no single primary input.
 
-  (-> VALUE (FORM ...))   insert VALUE as each form's first argument
-  (->> VALUE (FORM ...))  insert VALUE as each form's last argument
+  (-> VALUE STEP ...)     insert VALUE as each step's first argument
+  (->> VALUE STEP ...)    insert VALUE as each step's last argument
+  STEP is NAME when there are no extra arguments, or (FORM ...) otherwise.
 
     (-> $1 (dt/add (du/s 10)))
       is (dt/add $1 (du/s 10))
@@ -238,7 +239,7 @@ Composition:
     (-> $1 (dt/fmt "%Y/%m/%d"))
       is (dt/fmt $1 "%Y/%m/%d")
 
-    (-> $1 (s/trim) (s/replace "-" "_") (s/upper))
+    (-> $1 s/trim (s/replace "-" "_") s/upper)
 
 More examples:
   Extract a log message while preserving its original whitespace:
