@@ -138,7 +138,9 @@ impl Record<'_> {
 
     fn field_range(&self, start: Option<usize>, end: Option<usize>) -> &str {
         let start = start.unwrap_or(1);
-        let end = end.unwrap_or(self.field_spans.len());
+        let end = end
+            .unwrap_or(self.field_spans.len())
+            .min(self.field_spans.len());
         let Some((start, _)) = self.field_spans.get(start - 1) else {
             return "";
         };

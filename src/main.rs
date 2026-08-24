@@ -51,6 +51,7 @@ Literals and fields:
   "text", 12, 3.5                String or Number
   true, false                    Boolean
 
+  A range end beyond NF stops at NF. A range start beyond NF is empty.
   Field ranges are unavailable with --csv because CSV fields are decoded.
 
 Numbers:

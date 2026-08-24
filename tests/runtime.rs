@@ -287,10 +287,17 @@ fn field_ranges_preserve_regex_separators_and_empty_fields() {
 }
 
 #[test]
-fn field_ranges_are_empty_when_a_required_endpoint_is_missing() {
+fn field_range_ends_are_clamped_and_missing_starts_are_empty() {
     assert_eq!(
         output("(print $3-) (print $-3) (print $2-4)", "one two\n\n"),
-        "\n\n\n\n\n\n"
+        "\none two\ntwo\n\n\n\n"
+    );
+    assert_eq!(
+        output(
+            "(print (dq $-4000) (dq $1-30) (dq $30-40))",
+            "  a b   c ddd    eeee  \n"
+        ),
+        "\"a b   c ddd    eeee\" \"a b   c ddd    eeee\" \"\"\n"
     );
 }
 
