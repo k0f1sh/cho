@@ -50,9 +50,9 @@ fn literal_replace_handles_first_all_empty_and_nested_values() {
     assert_eq!(
         output(
             concat!(
-                r#"(print (s/replace "a" "x" $1) (s/replace-all "a" "x" $1)) "#,
-                r#"(print (s/replace "" "-" $1) (s/replace-all "" "-" $1)) "#,
-                r#"(print (s/upper (s/replace-all (str "a") (+ 1 1) $1)))"#,
+                r#"(print (s/replace $1 "a" "x") (s/replace-all $1 "a" "x")) "#,
+                r#"(print (s/replace $1 "" "-") (s/replace-all $1 "" "-")) "#,
+                r#"(print (s/upper (s/replace-all $1 (str "a") (+ 1 1))))"#,
             ),
             "aba\n\n東京\n",
         ),
@@ -63,7 +63,7 @@ fn literal_replace_handles_first_all_empty_and_nested_values() {
         )
     );
     assert_eq!(
-        output(r#"(print (s/replace-all "" "-" $2))"#, "only-one-field\n"),
+        output(r#"(print (s/replace-all $2 "" "-"))"#, "only-one-field\n"),
         "-\n"
     );
 }
@@ -73,11 +73,11 @@ fn regex_replace_handles_captures_zero_width_and_threading() {
     assert_eq!(
         output(
             concat!(
-                r#"(print (re/replace /(?P<word>[a-z]+)-(\d+)/ "${word}:$2" $1) "#,
-                r#"(re/replace-all /(?P<word>[a-z]+)-(\d+)/ "${word}:$2" $1)) "#,
-                r#"(print (re/replace /(a)?b/ "<$1>" $2) (re/replace /a/ "$$" $3)) "#,
-                r#"(print (re/replace-all /^|$/ "-" $1) "#,
-                r#"(->> $1 (re/replace /[a-z]+/ (str "[" "$0" "]"))))"#,
+                r#"(print (re/replace $1 /(?P<word>[a-z]+)-(\d+)/ "${word}:$2") "#,
+                r#"(re/replace-all $1 /(?P<word>[a-z]+)-(\d+)/ "${word}:$2")) "#,
+                r#"(print (re/replace $2 /(a)?b/ "<$1>") (re/replace $3 /a/ "$$")) "#,
+                r#"(print (re/replace-all $1 /^|$/ "-") "#,
+                r#"(-> $1 (re/replace /[a-z]+/ (str "[" "$0" "]"))))"#,
             ),
             "item-12-other-34 b a\n",
         ),
@@ -88,11 +88,11 @@ fn regex_replace_handles_captures_zero_width_and_threading() {
         )
     );
     assert_eq!(
-        output(r#"(print (re/replace-all // "-" $1))"#, "abc\n\n"),
+        output(r#"(print (re/replace-all $1 // "-"))"#, "abc\n\n"),
         "-a-b-c-\n-\n"
     );
     assert_eq!(
-        output(r#"(print (re/replace-all "\\d+" "X" $1))"#, "a12b34\n"),
+        output(r#"(print (re/replace-all $1 "\\d+" "X"))"#, "a12b34\n"),
         "aXbX\n"
     );
 }
@@ -102,9 +102,9 @@ fn part_extracts_one_literal_delimited_part() {
     assert_eq!(
         output(
             concat!(
-                r#"(print (s/part ":" 1 $1) "#,
-                r#"(s/part "=" 2 $2) "#,
-                r#"(s/part "]:" 1 (s/part "[" 2 $3)))"#,
+                r#"(print (s/part $1 ":" 1) "#,
+                r#"(s/part $2 "=" 2) "#,
+                r#"(s/part (s/part $3 "[" 2) "]:" 1))"#,
             ),
             "192.168.10.20:39652 SRC=10.0.0.25 [fd00::1]:443\n",
         ),
@@ -118,13 +118,13 @@ fn part_preserves_empty_parts_and_returns_the_whole_unsplit_value() {
         output(
             concat!(
                 r#"(print (s/join "|" "#,
-                r#"(s/part ":" 1 ":a::") "#,
-                r#"(s/part ":" 2 ":a::") "#,
-                r#"(s/part ":" 3 ":a::") "#,
-                r#"(s/part ":" 4 ":a::"))) "#,
-                r#"(print (s/part ":" 1 "whole")) "#,
-                r#"(print (s/part "区切" 2 "左区切右") "#,
-                r#"(default (s/part ":" 1 "") "empty"))"#,
+                r#"(s/part ":a::" ":" 1) "#,
+                r#"(s/part ":a::" ":" 2) "#,
+                r#"(s/part ":a::" ":" 3) "#,
+                r#"(s/part ":a::" ":" 4))) "#,
+                r#"(print (s/part "whole" ":" 1)) "#,
+                r#"(print (s/part "左区切右" "区切" 2) "#,
+                r#"(default (s/part "" ":" 1) "empty"))"#,
             ),
             "x\n",
         ),
@@ -137,8 +137,8 @@ fn part_composes_with_values_threading_and_typed_predicates() {
     assert_eq!(
         output(
             concat!(
-                r#"(filter (ip/private? (->> $1 (s/part ":" 1)))) "#,
-                r#"(print (str "ip=" (s/upper (s/part (str ":") (s/count "x") $1))))"#,
+                r#"(filter (ip/private? (-> $1 (s/part ":" 1)))) "#,
+                r#"(print (str "ip=" (s/upper (s/part $1 (str ":") (s/count "x")))))"#,
             ),
             "10.1.2.3:443\n8.8.8.8:53\n",
         ),
@@ -151,9 +151,9 @@ fn part_returns_empty_for_a_missing_part_and_composes_with_other_values() {
     assert_eq!(
         output(
             concat!(
-                r#"(print (s/join "|" (s/part ":" 3 $1) (s/upper (s/part ":" 3 $1)))) "#,
-                r#"(print (default (s/part ":" 3 $1) "missing") "#,
-                r#"(default (s/part ":" 2 $2) "empty"))"#,
+                r#"(print (s/join "|" (s/part $1 ":" 3) (s/upper (s/part $1 ":" 3)))) "#,
+                r#"(print (default (s/part $1 ":" 3) "missing") "#,
+                r#"(default (s/part $2 ":" 2) "empty"))"#,
             ),
             "a:b x:\n",
         ),
@@ -165,28 +165,28 @@ fn part_returns_empty_for_a_missing_part_and_composes_with_other_values() {
 fn part_keeps_invalid_delimiters_and_positions_strict() {
     for (program, expected) in [
         (
-            r#"(print (s/part "" 1 $1))"#,
-            "record 1: s/part: argument 1 expects a non-empty delimiter",
+            r#"(print (s/part $1 "" 1))"#,
+            "record 1: s/part: argument 2 expects a non-empty delimiter",
         ),
         (
-            r#"(print (s/part ":" 0 $1))"#,
-            "record 1: s/part: argument 2 expects Number (positive whole part position)",
+            r#"(print (s/part $1 ":" 0))"#,
+            "record 1: s/part: argument 3 expects Number (positive whole part position)",
         ),
         (
-            r#"(print (s/part ":" -1 $1))"#,
-            "record 1: s/part: argument 2 expects Number (positive whole part position)",
+            r#"(print (s/part $1 ":" -1))"#,
+            "record 1: s/part: argument 3 expects Number (positive whole part position)",
         ),
         (
-            r#"(print (s/part ":" 1.5 $1))"#,
-            "record 1: s/part: argument 2 expects Number (positive whole part position)",
+            r#"(print (s/part $1 ":" 1.5))"#,
+            "record 1: s/part: argument 3 expects Number (positive whole part position)",
         ),
         (
-            r#"(print (s/part ":" NaN $1))"#,
-            "record 1: s/part: argument 2 expects finite Number",
+            r#"(print (s/part $1 ":" NaN))"#,
+            "record 1: s/part: argument 3 expects finite Number",
         ),
         (
-            r#"(print (s/part ":" 1e40 $1))"#,
-            "record 1: s/part: argument 2 expects Number (representable part position)",
+            r#"(print (s/part $1 ":" 1e40))"#,
+            "record 1: s/part: argument 3 expects Number (representable part position)",
         ),
     ] {
         let error = cho::run(program, Cursor::new("a:b\n"), Vec::new()).unwrap_err();
@@ -194,7 +194,7 @@ fn part_keeps_invalid_delimiters_and_positions_strict() {
     }
 
     let error = cho::run(
-        r#"(filter (> (s/part ":" 3 $1) 0))"#,
+        r#"(filter (> (s/part $1 ":" 3) 0))"#,
         Cursor::new("a:b\n"),
         Vec::new(),
     )
@@ -211,14 +211,14 @@ fn part_keeps_invalid_delimiters_and_positions_strict() {
 fn slice_extracts_unicode_characters_and_clamps_to_the_end() {
     assert_eq!(
         output(
-            r#"(print (s/slice 5 "washington") (s/slice 5 3 "washington")) (print (s/slice 2 3 "東京駅前")) (print (s/slice 20 3 "short") (dq (s/slice 2 0 "abc")))"#,
+            r#"(print (s/slice "washington" 5) (s/slice "washington" 5 3)) (print (s/slice "東京駅前" 2 3)) (print (s/slice "short" 20 3) (dq (s/slice "abc" 2 0)))"#,
             "x\n",
         ),
         "ington ing\n京駅前\n \"\"\n"
     );
     assert_eq!(
         output(
-            r#"(print (dq (s/slice 1 "")) (dq (s/slice 1 1e40 "abc")) (dq (s/slice 1e40 "abc")))"#,
+            r#"(print (dq (s/slice "" 1)) (dq (s/slice "abc" 1 1e40)) (dq (s/slice "abc" 1e40)))"#,
             "x\n",
         ),
         "\"\" \"abc\" \"\"\n"
@@ -229,7 +229,7 @@ fn slice_extracts_unicode_characters_and_clamps_to_the_end() {
 fn slice_composes_with_values_and_threading() {
     assert_eq!(
         output(
-            r#"(print (s/upper (s/slice (s/count "x") 3 $1)) (->> $1 (s/slice 2) (dq)))"#,
+            r#"(print (s/upper (s/slice $1 (s/count "x") 3)) (-> $1 (s/slice 2) (dq)))"#,
             "abcdef\n",
         ),
         "ABC \"bcdef\"\n"
@@ -239,11 +239,11 @@ fn slice_composes_with_values_and_threading() {
 #[test]
 fn slice_rejects_invalid_starts_and_lengths() {
     for (program, argument) in [
-        (r#"(print (s/slice 0 "abc"))"#, 1),
-        (r#"(print (s/slice -1 "abc"))"#, 1),
-        (r#"(print (s/slice 1.5 "abc"))"#, 1),
-        (r#"(print (s/slice 1 -1 "abc"))"#, 2),
-        (r#"(print (s/slice 1 1.5 "abc"))"#, 2),
+        (r#"(print (s/slice "abc" 0))"#, 2),
+        (r#"(print (s/slice "abc" -1))"#, 2),
+        (r#"(print (s/slice "abc" 1.5))"#, 2),
+        (r#"(print (s/slice "abc" 1 -1))"#, 3),
+        (r#"(print (s/slice "abc" 1 1.5))"#, 3),
     ] {
         let error = cho::run(program, Cursor::new("x\n"), Vec::new()).unwrap_err();
         assert!(
@@ -338,6 +338,50 @@ fn trim_operations_remove_unicode_whitespace_and_compose() {
         "ALICE\n\"alice\"\n\n\"\"\n\n\"\"\n"
     );
     assert_eq!(output("(print (s/trim 42))", "x\n"), "42\n");
+}
+
+#[test]
+fn string_tests_use_subject_first_and_compose_as_boolean_values() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (s/starts-with? $1 "api-") (s/ends-with? $1 ".log") "#,
+                r#"(s/contains? $1 "error")) "#,
+                r#"(filter (and (-> $1 (s/starts-with? "api-")) "#,
+                r#"(s/contains? $1 "error"))) (print $1)"#,
+            ),
+            "api-error.log\napi-info.log\nworker-error.log\n",
+        ),
+        concat!(
+            "true true true\napi-error.log\n",
+            "true true false\n",
+            "false true true\n",
+        )
+    );
+    assert_eq!(
+        output(
+            r#"(print (s/starts-with? $1 "") (s/ends-with? $1 "") (s/contains? $1 ""))"#,
+            "東京\n\n",
+        ),
+        "true true true\ntrue true true\n"
+    );
+}
+
+#[test]
+fn string_tests_require_string_arguments() {
+    for (program, argument) in [
+        (r#"(print (s/starts-with? 1 "1"))"#, 1),
+        (r#"(print (s/ends-with? $1 1))"#, 2),
+        (r#"(print (s/contains? true "true"))"#, 1),
+    ] {
+        let error = cho::run(program, Cursor::new("value\n"), Vec::new()).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains(&format!("argument {argument} expects String")),
+            "{error}"
+        );
+    }
 }
 
 #[test]
@@ -684,8 +728,8 @@ fn fixed_number_formatting_rounds_keeps_zeroes_and_composes_as_a_string() {
     assert_eq!(
         output(
             concat!(
-                r#"(print (n/fixed 2 $1) (n/fixed 3 $2) (n/fixed 0 $2) "#,
-                r#"(str "$" (n/fixed (+ 1 1) (* $1 2))))"#,
+                r#"(print (n/fixed $1 2) (n/fixed $2 3) (n/fixed $2 0) "#,
+                r#"(str "$" (n/fixed (* $1 2) (+ 1 1))))"#,
             ),
             "3 3.14159\n-2.5 1.25\n",
         ),
@@ -729,24 +773,24 @@ fn named_number_operations_reject_non_numbers_and_empty_values() {
 fn fixed_number_formatting_rejects_invalid_digits_and_values() {
     for (program, expected) in [
         (
-            "(print (n/fixed -1 $1))",
-            "record 1: n/fixed: argument 1 expects Number (whole digits from 0 to 100)",
+            "(print (n/fixed $1 -1))",
+            "record 1: n/fixed: argument 2 expects Number (whole digits from 0 to 100)",
         ),
         (
-            "(print (n/fixed 1.5 $1))",
-            "record 1: n/fixed: argument 1 expects Number (whole digits from 0 to 100)",
+            "(print (n/fixed $1 1.5))",
+            "record 1: n/fixed: argument 2 expects Number (whole digits from 0 to 100)",
         ),
         (
-            "(print (n/fixed 101 $1))",
-            "record 1: n/fixed: argument 1 expects Number (whole digits from 0 to 100)",
+            "(print (n/fixed $1 101))",
+            "record 1: n/fixed: argument 2 expects Number (whole digits from 0 to 100)",
         ),
         (
-            "(print (n/fixed 2 $2))",
-            "record 1: n/fixed: argument 2 expects Number",
-        ),
-        (
-            r#"(print (n/fixed "" $1))"#,
+            "(print (n/fixed $2 2))",
             "record 1: n/fixed: argument 1 expects Number",
+        ),
+        (
+            r#"(print (n/fixed $1 ""))"#,
+            "record 1: n/fixed: argument 2 expects Number",
         ),
     ] {
         let error = cho::run(program, Cursor::new("3\n"), Vec::new()).unwrap_err();
@@ -812,9 +856,9 @@ fn url_query_values_use_form_urlencoded_semantics() {
     assert_eq!(
         output(
             concat!(
-                r#"(print (s/join "|" (url/query-get "lang" $1) "#,
-                r#"(url/query-get "missing" $1) (url/query-get "empty" $1) "#,
-                r#"(url/query-get "a b" $1) (url/query-get "名前" $1)))"#,
+                r#"(print (s/join "|" (url/query-get $1 "lang") "#,
+                r#"(url/query-get $1 "missing") (url/query-get $1 "empty") "#,
+                r#"(url/query-get $1 "a b") (url/query-get $1 "名前")))"#,
             ),
             concat!(
                 "https://example.com/?lang=ja&empty=&a+b=hello+world&",
@@ -825,7 +869,7 @@ fn url_query_values_use_form_urlencoded_semantics() {
     );
     assert_eq!(
         output(
-            r#"(print (url/query-get "tag" $1) (url/query $1))"#,
+            r#"(print (url/query-get $1 "tag") (url/query $1))"#,
             "https://example.com/?tag=first&tag=second\n",
         ),
         "first tag=first&tag=second\n"
@@ -837,8 +881,8 @@ fn url_query_presence_is_boolean_and_distinguishes_missing_keys() {
     assert_eq!(
         output(
             concat!(
-                r#"(print (url/query-has? "foo" $1) (url/query-has? "bar" $1) "#,
-                r#"(if (url/query-has? "empty" $1) "present" "missing"))"#,
+                r#"(print (url/query-has? $1 "foo") (url/query-has? $1 "bar") "#,
+                r#"(if (url/query-has? $1 "empty") "present" "missing"))"#,
             ),
             "https://example.com/?foo&empty=\nhttps://example.com/\n",
         ),
@@ -846,14 +890,14 @@ fn url_query_presence_is_boolean_and_distinguishes_missing_keys() {
     );
     assert_eq!(
         output(
-            r#"(filter (url/query-has? "keep" $1)) (print $1)"#,
+            r#"(filter (url/query-has? $1 "keep")) (print $1)"#,
             "https://example.com/?keep=\nhttps://example.com/?drop=1\n",
         ),
         "https://example.com/?keep=\n"
     );
     assert_eq!(
         output(
-            r#"(print (s/join "|" (url/query-get "foo" $1) (url/query-has? "foo" $1)))"#,
+            r#"(print (s/join "|" (url/query-get $1 "foo") (url/query-has? $1 "foo")))"#,
             "https://example.com/?foo\nhttps://example.com/\n",
         ),
         "|true\n|false\n"
@@ -864,16 +908,16 @@ fn url_query_presence_is_boolean_and_distinguishes_missing_keys() {
 fn url_query_operations_report_argument_errors_and_default_can_recover() {
     for (program, expected) in [
         (
-            r#"(print (url/query-get "key" $1))"#,
-            "record 1: url/query-get: argument 2 expects Url (absolute URL)",
+            r#"(print (url/query-get $1 "key"))"#,
+            "record 1: url/query-get: argument 1 expects Url (absolute URL)",
         ),
         (
-            r#"(print (url/query-has? "key" $1))"#,
-            "record 1: url/query-has?: argument 2 expects Url (absolute URL)",
+            r#"(print (url/query-has? $1 "key"))"#,
+            "record 1: url/query-has?: argument 1 expects Url (absolute URL)",
         ),
         (
-            r#"(print (url/query-get 1 "https://example.com/"))"#,
-            "record 1: url/query-get: argument 1 expects String",
+            r#"(print (url/query-get "https://example.com/" 1))"#,
+            "record 1: url/query-get: argument 2 expects String",
         ),
     ] {
         let error = cho::run(program, Cursor::new("not-a-url\n"), Vec::new()).unwrap_err();
@@ -881,7 +925,7 @@ fn url_query_operations_report_argument_errors_and_default_can_recover() {
     }
     assert_eq!(
         output(
-            r#"(print (default (url/query-get "key" $1) "invalid"))"#,
+            r#"(print (default (url/query-get $1 "key") "invalid"))"#,
             "not-a-url\n"
         ),
         "invalid\n"
@@ -1104,7 +1148,7 @@ fn default_recovers_from_runtime_errors_and_is_lazy() {
         "positive\ninvalid\n"
     );
     assert_eq!(
-        output(r#"(print (default "ok" (dt/fmt "%Q" "invalid")))"#, "x\n"),
+        output(r#"(print (default "ok" (dt/fmt "invalid" "%Q")))"#, "x\n"),
         "ok\n"
     );
 }
@@ -1126,7 +1170,7 @@ fn output_before_a_runtime_error_is_preserved() {
 fn datetime_values_normalize_format_and_compare() {
     assert_eq!(
         output(
-            r#"(print (dt/fmt "%Y/%m/%d %H:%M:%S" $1) (dt/unix -1))"#,
+            r#"(print (dt/fmt $1 "%Y/%m/%d %H:%M:%S") (dt/unix -1))"#,
             "2026-08-18T12:34:56.120+09:00\n"
         ),
         "2026/08/18 03:34:56 1969-12-31T23:59:59Z\n"
@@ -1144,21 +1188,21 @@ fn datetime_values_normalize_format_and_compare() {
 fn datetime_format_accepts_iana_timezones_and_fixed_offsets() {
     assert_eq!(
         output(
-            r#"(print (dt/fmt "%Y-%m-%d %H:%M %z" "America/New_York" $1))"#,
+            r#"(print (dt/fmt $1 "%Y-%m-%d %H:%M %z" "America/New_York"))"#,
             "2026-01-15T12:00:00Z\n2026-07-15T12:00:00Z\n"
         ),
         "2026-01-15 07:00 -0500\n2026-07-15 08:00 -0400\n"
     );
     assert_eq!(
         output(
-            r#"(print (dt/fmt "%Y-%m-%d %H:%M %z" "+05:45" $1))"#,
+            r#"(print (dt/fmt $1 "%Y-%m-%d %H:%M %z" "+05:45"))"#,
             "2026-08-18T23:30:00Z\n"
         ),
         "2026-08-19 05:15 +0545\n"
     );
     assert_eq!(
         output(
-            r#"(print (dt/fmt "%H:%M %z" $2 $1))"#,
+            r#"(print (dt/fmt $1 "%H:%M %z" $2))"#,
             "2026-08-18T00:00:00Z Asia/Tokyo\n"
         ),
         "09:00 +0900\n"
@@ -1168,18 +1212,18 @@ fn datetime_format_accepts_iana_timezones_and_fixed_offsets() {
 #[test]
 fn datetime_format_reports_timezone_and_datetime_arguments() {
     let error = cho::run(
-        r#"(print (dt/fmt "%Y" $1 $2))"#,
+        r#"(print (dt/fmt $2 "%Y" $1))"#,
         Cursor::new("Unknown/Zone 2026-08-18T00:00:00Z\n"),
         Vec::new(),
     )
     .unwrap_err();
     assert_eq!(
         error.to_string(),
-        r#"record 1: dt/fmt: argument 2 expects String (IANA time zone or UTC offset ±HH:MM), but "Unknown/Zone" is not a recognized time zone"#
+        r#"record 1: dt/fmt: argument 3 expects String (IANA time zone or UTC offset ±HH:MM), but "Unknown/Zone" is not a recognized time zone"#
     );
 
     let error = cho::run(
-        r#"(print (dt/fmt "%Y" "Asia/Tokyo" $1))"#,
+        r#"(print (dt/fmt $1 "%Y" "Asia/Tokyo"))"#,
         Cursor::new("invalid\n"),
         Vec::new(),
     )
@@ -1187,12 +1231,12 @@ fn datetime_format_reports_timezone_and_datetime_arguments() {
     assert!(
         error
             .to_string()
-            .starts_with("record 1: dt/fmt: argument 3")
+            .starts_with("record 1: dt/fmt: argument 1")
     );
 
     assert!(
         cho::run(
-            r#"(print (dt/fmt "%Y" "" $1))"#,
+            r#"(print (dt/fmt $1 "%Y" ""))"#,
             Cursor::new("2026-08-18T00:00:00Z\n"),
             Vec::new(),
         )
@@ -1200,7 +1244,7 @@ fn datetime_format_reports_timezone_and_datetime_arguments() {
     );
     assert!(
         cho::run(
-            r#"(print (dt/fmt "%Y" 9 $1))"#,
+            r#"(print (dt/fmt $1 "%Y" 9))"#,
             Cursor::new("2026-08-18T00:00:00Z\n"),
             Vec::new(),
         )
@@ -1260,7 +1304,7 @@ fn datetime_values_floor_to_utc_boundaries() {
 fn datetime_values_floor_to_local_boundaries() {
     assert_eq!(
         output(
-            r#"(print (dt/floor-h "+05:45" $1) (dt/floor-d "Asia/Tokyo" $1))"#,
+            r#"(print (dt/floor-h $1 "+05:45") (dt/floor-d $1 "Asia/Tokyo"))"#,
             "2026-08-22T03:30:45Z\n"
         ),
         "2026-08-22T03:15:00Z 2026-08-21T15:00:00Z\n"
@@ -1271,14 +1315,14 @@ fn datetime_values_floor_to_local_boundaries() {
 fn datetime_floor_handles_dst_boundaries() {
     assert_eq!(
         output(
-            r#"(print (dt/floor-h "America/New_York" $1))"#,
+            r#"(print (dt/floor-h $1 "America/New_York"))"#,
             "2026-11-01T05:30:00Z\n2026-11-01T06:30:00Z\n"
         ),
         "2026-11-01T05:00:00Z\n2026-11-01T06:00:00Z\n"
     );
     assert_eq!(
         output(
-            r#"(print (dt/floor-d "America/Sao_Paulo" $1))"#,
+            r#"(print (dt/floor-d $1 "America/Sao_Paulo"))"#,
             "2018-11-04T03:30:00Z\n"
         ),
         "2018-11-04T03:00:00Z\n"
@@ -1300,7 +1344,7 @@ fn datetime_floor_reports_its_own_argument_error() {
     );
 
     let error = cho::run(
-        r#"(print (dt/floor-d "Unknown/Zone" $1))"#,
+        r#"(print (dt/floor-d $1 "Unknown/Zone"))"#,
         Cursor::new("2026-08-18T00:00:00Z\n"),
         Vec::new(),
     )
@@ -1308,21 +1352,21 @@ fn datetime_floor_reports_its_own_argument_error() {
     assert!(
         error
             .to_string()
-            .starts_with("record 1: dt/floor-d: argument 1")
+            .starts_with("record 1: dt/floor-d: argument 2")
     );
 }
 
 #[test]
 fn datetime_errors_identify_the_argument() {
     let error = cho::run(
-        r#"(print (dt/fmt "%Y" $1))"#,
+        r#"(print (dt/fmt $1 "%Y"))"#,
         Cursor::new("2026-08-18\n"),
         Vec::new(),
     )
     .unwrap_err();
     assert_eq!(
         error.to_string(),
-        r#"record 1: dt/fmt: argument 2 expects DateTime, but "2026-08-18" is not valid RFC 3339"#
+        r#"record 1: dt/fmt: argument 1 expects DateTime, but "2026-08-18" is not valid RFC 3339"#
     );
     assert!(cho::run("(print (dt/unix 1.5))", Cursor::new("x\n"), Vec::new()).is_err());
     assert!(
@@ -1765,7 +1809,7 @@ fn default_can_recover_from_an_invalid_ip() {
 fn threading_runs_as_the_expanded_value_expression() {
     assert_eq!(
         output(
-            r#"(print (->> $1 (dt/fmt "%Y/%m/%d") (str "date: ")))"#,
+            r#"(print (str "date: " (-> $1 (dt/fmt "%Y/%m/%d"))))"#,
             "2026-08-18T00:00:00Z\n"
         ),
         "date: 2026/08/18\n"

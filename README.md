@@ -66,7 +66,7 @@ accepts an optional length:
 
 ```console
 $ printf 'washington 東京駅前\n' |
-    cho '(p (s/slice 5 3 $1) (s/slice 2 $2))'
+    cho '(p (s/slice $1 5 3) (s/slice $2 2))'
 ing 京駅前
 ```
 
@@ -116,7 +116,7 @@ can be nested anywhere a value is accepted.
 
 ```console
 $ printf 'alice\nalice:admin\n' |
-    cho '(print (s/upper $1) (default (s/part ":" 2 $1) "member"))'
+    cho '(print (s/upper $1) (default (s/part $1 ":" 2) "member"))'
 ALICE member
 ALICE:ADMIN admin
 ```

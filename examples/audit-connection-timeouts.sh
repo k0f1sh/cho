@@ -7,5 +7,5 @@ cho --tsv --skip-header '
   (filter (s/= $2 "timeout"))
   (filter (cidr/contains? "192.168.0.0/16" $3))
   (filter (ip/private? $4))
-  (print (dt/fmt "%H:%M:%S" $1) (s/join " -> " $3 $4))
+  (print (dt/fmt $1 "%H:%M:%S") (s/join " -> " $3 $4))
 ' < "$example_dir/connection-events.tsv"

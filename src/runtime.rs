@@ -16,8 +16,8 @@ use semver::Version;
 
 use crate::ast::{
     ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
-    IpClass, NumberOperator, Predicate, Program, ReplaceMode, SemVerPart, StringQuote, StringTrim,
-    UrlEncoding, UrlPart, Value,
+    IpClass, NumberOperator, Predicate, Program, ReplaceMode, SemVerPart, StringQuote, StringTest,
+    StringTrim, UrlEncoding, UrlPart, Value,
 };
 use crate::parser::parse;
 
@@ -174,17 +174,17 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_>) -> EvalResult<Runti
             evaluate_number_operation(operator, value, record)
         }
         Value::FormatNumberFixed { digits, value } => {
-            let digits = expect_number(evaluate(digits, record)?, "n/fixed", 1)?;
+            let value = expect_number(evaluate(value, record)?, "n/fixed", 1)?;
+            let digits = expect_number(evaluate(digits, record)?, "n/fixed", 2)?;
             if digits.fract() != 0.0 || !(0.0..=100.0).contains(&digits) {
                 return Err(EvalError::conversion(
                     "n/fixed",
-                    1,
+                    2,
                     "Number (whole digits from 0 to 100)",
                     digits.to_string(),
                     "is outside the supported precision range",
                 ));
             }
-            let value = expect_number(evaluate(value, record)?, "n/fixed", 2)?;
             Ok(RuntimeValue::String(format!(
                 "{value:.digits$}",
                 digits = digits as usize
@@ -225,9 +225,9 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_>) -> EvalResult<Runti
             }
         }
         Value::UrlQueryGet { name, url } => {
-            let name = expect_string(evaluate(name, record)?, "url/query-get", 1)?;
-            let input = expect_string(evaluate(url, record)?, "url/query-get", 2)?;
-            let url = parse_absolute_url(&input, "url/query-get", 2)?;
+            let input = expect_string(evaluate(url, record)?, "url/query-get", 1)?;
+            let url = parse_absolute_url(&input, "url/query-get", 1)?;
+            let name = expect_string(evaluate(name, record)?, "url/query-get", 2)?;
             Ok(RuntimeValue::String(
                 url.query_pairs()
                     .find_map(|(key, value)| (key == name).then(|| value.into_owned()))
@@ -329,11 +329,12 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_>) -> EvalResult<Runti
             timezone,
             value,
         } => {
-            let format = expect_string(evaluate(format, record)?, "dt/fmt", 1)?;
+            let datetime = expect_datetime(evaluate(value, record)?, "dt/fmt", 1)?;
+            let format = expect_string(evaluate(format, record)?, "dt/fmt", 2)?;
             if StrftimeItems::new(&format).any(|item| item == Item::Error) {
                 return Err(EvalError::conversion(
                     "dt/fmt",
-                    1,
+                    2,
                     "String (valid strftime format)",
                     format,
                     "contains an invalid format specifier",
@@ -341,10 +342,8 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_>) -> EvalResult<Runti
             }
             let timezone = timezone
                 .as_ref()
-                .map(|timezone| expect_string(evaluate(timezone, record)?, "dt/fmt", 2))
+                .map(|timezone| expect_string(evaluate(timezone, record)?, "dt/fmt", 3))
                 .transpose()?;
-            let datetime_argument = if timezone.is_some() { 3 } else { 2 };
-            let datetime = expect_datetime(evaluate(value, record)?, "dt/fmt", datetime_argument)?;
             let formatted = match timezone {
                 Some(timezone) => format_datetime_in_timezone(datetime, &format, timezone)?,
                 None => datetime.format(&format).to_string(),
@@ -370,12 +369,11 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_>) -> EvalResult<Runti
             value,
         } => {
             let function = floor_name(unit);
+            let datetime = expect_datetime(evaluate(value, record)?, function, 1)?;
             let timezone = timezone
                 .as_ref()
-                .map(|timezone| expect_string(evaluate(timezone, record)?, function, 1))
+                .map(|timezone| expect_string(evaluate(timezone, record)?, function, 2))
                 .transpose()?;
-            let datetime_argument = if timezone.is_some() { 2 } else { 1 };
-            let datetime = expect_datetime(evaluate(value, record)?, function, datetime_argument)?;
             let floored = match timezone {
                 Some(timezone) => floor_datetime_in_timezone(datetime, unit, timezone)?,
                 None => floor_datetime(datetime, unit),
@@ -445,13 +443,13 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_>) -> EvalResult<Runti
         }
         Value::Replace {
             mode,
+            value,
             from,
             to,
-            value,
         } => {
+            let value = evaluate(value, record)?.render();
             let from = evaluate(from, record)?.render();
             let to = evaluate(to, record)?.render();
-            let value = evaluate(value, record)?.render();
             let replaced = match mode {
                 ReplaceMode::First => value.replacen(&from, &to, 1),
                 ReplaceMode::All => value.replace(&from, &to),
@@ -464,8 +462,8 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_>) -> EvalResult<Runti
             replacement,
             value,
         } => {
-            let replacement = evaluate(replacement, record)?.render();
             let value = evaluate(value, record)?.render();
+            let replacement = evaluate(replacement, record)?.render();
             let regex = &record.regexes[regex.0];
             let replaced = match mode {
                 ReplaceMode::First => regex.replace(&value, replacement.as_str()),
@@ -478,21 +476,22 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_>) -> EvalResult<Runti
             position,
             value,
         } => {
+            let value = evaluate(value, record)?.render();
             let delimiter = evaluate(delimiter, record)?.render();
             if delimiter.is_empty() {
                 return Err(EvalError::conversion(
                     "s/part",
-                    1,
+                    2,
                     "a non-empty delimiter",
                     delimiter,
                     "is empty",
                 ));
             }
-            let position = expect_number(evaluate(position, record)?, "s/part", 2)?;
+            let position = expect_number(evaluate(position, record)?, "s/part", 3)?;
             if position.fract() != 0.0 || position < 1.0 {
                 return Err(EvalError::conversion(
                     "s/part",
-                    2,
+                    3,
                     "Number (positive whole part position)",
                     position.to_string(),
                     "is not a positive whole number",
@@ -503,13 +502,12 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_>) -> EvalResult<Runti
             if position > usize::MAX as u128 {
                 return Err(EvalError::conversion(
                     "s/part",
-                    2,
+                    3,
                     "Number (representable part position)",
                     position_input,
                     "is outside the supported position range",
                 ));
             }
-            let value = evaluate(value, record)?.render();
             Ok(RuntimeValue::String(
                 value
                     .split(&delimiter)
@@ -712,11 +710,11 @@ fn evaluate_string_slice(
     value: &Value,
     record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
-    let start = expect_slice_index(start, "s/slice", 1, false, record)?;
-    let length = length
-        .map(|length| expect_slice_index(length, "s/slice", 2, true, record))
-        .transpose()?;
     let value = evaluate(value, record)?.render();
+    let start = expect_slice_index(start, "s/slice", 2, false, record)?;
+    let length = length
+        .map(|length| expect_slice_index(length, "s/slice", 3, true, record))
+        .transpose()?;
     let Some((start, _)) = value.char_indices().nth(start - 1) else {
         return Ok(RuntimeValue::String(String::new()));
     };
@@ -851,7 +849,7 @@ fn format_datetime_in_timezone(
     }
     Err(EvalError::conversion(
         "dt/fmt",
-        2,
+        3,
         "String (IANA time zone or UTC offset ±HH:MM)",
         timezone,
         "is not a recognized time zone",
@@ -1035,6 +1033,20 @@ fn matches(predicate: &Predicate, record: &EvalContext<'_, '_, '_>) -> EvalResul
             .get(regex.0)
             .expect("RegexId is assigned from this program's regex pool")
             .is_match(&evaluate(target, record)?.render())),
+        Predicate::StringTest {
+            kind,
+            value,
+            pattern,
+        } => {
+            let function = string_test_name(kind);
+            let value = expect_string(evaluate(value, record)?, function, 1)?;
+            let pattern = expect_string(evaluate(pattern, record)?, function, 2)?;
+            Ok(match kind {
+                StringTest::StartsWith => value.starts_with(&pattern),
+                StringTest::EndsWith => value.ends_with(&pattern),
+                StringTest::Contains => value.contains(&pattern),
+            })
+        }
         Predicate::IpClass { kind, value } => {
             let ip = expect_ip(evaluate(value, record)?, ip_class_name(kind), 1)?;
             Ok(matches_ip_class(ip, kind))
@@ -1045,11 +1057,19 @@ fn matches(predicate: &Predicate, record: &EvalContext<'_, '_, '_>) -> EvalResul
             Ok(cidr.contains(&ip))
         }
         Predicate::UrlQueryHas { name, url } => {
-            let name = expect_string(evaluate(name, record)?, "url/query-has?", 1)?;
-            let input = expect_string(evaluate(url, record)?, "url/query-has?", 2)?;
-            let url = parse_absolute_url(&input, "url/query-has?", 2)?;
+            let input = expect_string(evaluate(url, record)?, "url/query-has?", 1)?;
+            let url = parse_absolute_url(&input, "url/query-has?", 1)?;
+            let name = expect_string(evaluate(name, record)?, "url/query-has?", 2)?;
             Ok(url.query_pairs().any(|(key, _)| key == name))
         }
+    }
+}
+
+fn string_test_name(kind: &StringTest) -> &'static str {
+    match kind {
+        StringTest::StartsWith => "s/starts-with?",
+        StringTest::EndsWith => "s/ends-with?",
+        StringTest::Contains => "s/contains?",
     }
 }
 
@@ -1331,7 +1351,7 @@ fn floor_datetime_in_timezone(
     }
     Err(EvalError::conversion(
         floor_name(unit),
-        1,
+        2,
         "String (IANA time zone or UTC offset ±HH:MM)",
         timezone,
         "is not a recognized time zone",
@@ -1655,35 +1675,36 @@ fn validate_value(value: &Value) -> io::Result<()> {
         Value::Replace {
             from, to, value, ..
         } => {
+            validate_value(value)?;
             validate_value(from)?;
-            validate_value(to)?;
-            validate_value(value)
+            validate_value(to)
         }
         Value::RegexReplace {
             replacement, value, ..
         } => {
-            validate_value(replacement)?;
-            validate_value(value)
+            validate_value(value)?;
+            validate_value(replacement)
         }
         Value::Part {
             delimiter,
             position,
             value,
         } => {
+            validate_value(value)?;
             validate_value(delimiter)?;
-            validate_value(position)?;
-            validate_value(value)
+            validate_value(position)
         }
         Value::Slice {
             start,
             length,
             value,
         } => {
+            validate_value(value)?;
             validate_value(start)?;
             if let Some(length) = length {
                 validate_value(length)?;
             }
-            validate_value(value)
+            Ok(())
         }
         Value::Count(value)
         | Value::Escape(value)
@@ -1708,21 +1729,23 @@ fn validate_value(value: &Value) -> io::Result<()> {
         Value::FloorDateTime {
             timezone, value, ..
         } => {
+            validate_value(value)?;
             if let Some(timezone) = timezone {
                 validate_value(timezone)?;
             }
-            validate_value(value)
+            Ok(())
         }
         Value::FormatDateTime {
             format,
             timezone,
             value,
         } => {
+            validate_value(value)?;
             validate_value(format)?;
             if let Some(timezone) = timezone {
                 validate_value(timezone)?;
             }
-            validate_value(value)
+            Ok(())
         }
         Value::AddDateTime { datetime, duration }
         | Value::SubtractDateTime { datetime, duration } => {
@@ -1739,14 +1762,14 @@ fn validate_value(value: &Value) -> io::Result<()> {
         }
         Value::NumberOperation { value, .. } => validate_value(value),
         Value::FormatNumberFixed { digits, value } => {
-            validate_value(digits)?;
-            validate_value(value)
+            validate_value(value)?;
+            validate_value(digits)
         }
         Value::UrlPart { value, .. } => validate_value(value),
         Value::UrlEncoding { value, .. } => validate_value(value),
         Value::UrlQueryGet { name, url } => {
-            validate_value(name)?;
-            validate_value(url)
+            validate_value(url)?;
+            validate_value(name)
         }
         Value::Predicate(predicate) => validate_predicate(predicate),
         Value::Not(value) => validate_value(value),
@@ -1782,14 +1805,18 @@ fn validate_predicate(predicate: &Predicate) -> io::Result<()> {
             validate_value(right)
         }
         Predicate::Regex { target, .. } => validate_value(target),
+        Predicate::StringTest { value, pattern, .. } => {
+            validate_value(value)?;
+            validate_value(pattern)
+        }
         Predicate::IpClass { value, .. } => validate_value(value),
         Predicate::CidrContains { cidr, ip } => {
             validate_value(cidr)?;
             validate_value(ip)
         }
         Predicate::UrlQueryHas { name, url } => {
-            validate_value(name)?;
-            validate_value(url)
+            validate_value(url)?;
+            validate_value(name)
         }
     }
 }

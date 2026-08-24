@@ -7,5 +7,5 @@ example_dir=$(CDPATH= cd "$(dirname "$0")" && pwd)
 # and datetime formatting in one pipeline.
 cho --csv --skip-header '
   (filter (and (>= $2 20) (dt/>= $4 "2026-08-01T00:00:00Z")))
-  (print (dt/fmt "%Y-%m-%d" $4) $1 (default $3 "unknown"))
+  (print (dt/fmt $4 "%Y-%m-%d") $1 (default $3 "unknown"))
 ' < "$example_dir/people.csv"

@@ -14,7 +14,7 @@ Common recipes:
   Match a field           cho '(f (~ $1 /^api-/))'
   Match the whole record  cho '(f (~ /ERROR|WARN/))'
   Join values             cho '(p (s/join "," $1 $2))'
-  Replace text            cho '(p (s/replace-all "-" "_" $1))'
+  Replace text            cho '(p (s/replace-all $1 "-" "_"))'
   Use a fallback          cho '(p (default $3 "unknown"))'
   Read CSV with a header  cho --csv --skip-header '(p $1 $3)'
   Read TSV                cho --tsv '(p $1 $2)'
@@ -65,7 +65,7 @@ Numbers:
   (n/ceil NUMBER)                round up toward positive infinity
   (n/round NUMBER)               round to nearest, halves away from zero
   (n/abs NUMBER)                 absolute value
-  (n/fixed DIGITS NUMBER)        -> String with 0 to 100 fractional digits
+  (n/fixed NUMBER DIGITS)        -> String with 0 to 100 fractional digits
   (> NUMBER NUMBER)  (>= NUMBER NUMBER)
   (< NUMBER NUMBER)  (<= NUMBER NUMBER)
   (= NUMBER NUMBER)  (!= NUMBER NUMBER)
@@ -73,10 +73,10 @@ Numbers:
 Strings:
   (str VALUE ...)                concatenate values
   (s/join SEPARATOR VALUE ...)   join values
-  (s/replace FROM TO VALUE)      replace the first literal match
-  (s/replace-all FROM TO VALUE)  replace all literal matches
-  (s/part DELIMITER POSITION VALUE) take a 1-based literal-delimited part
-  (s/slice START [LENGTH] VALUE) take Unicode characters from 1-based START
+  (s/replace VALUE FROM TO)      replace the first literal match
+  (s/replace-all VALUE FROM TO)  replace all literal matches
+  (s/part VALUE DELIMITER POSITION) take a 1-based literal-delimited part
+  (s/slice VALUE START [LENGTH]) take Unicode characters from 1-based START
   (s/count VALUE)                count Unicode characters
   (s/escape VALUE)               escape tabs, newlines, and backslashes
   (s/dquote VALUE)               stringify and wrap in escaped double quotes
@@ -88,6 +88,9 @@ Strings:
   (s/trim VALUE)                 remove Unicode whitespace from both ends
   (s/ltrim VALUE)                remove Unicode whitespace from the left
   (s/rtrim VALUE)                remove Unicode whitespace from the right
+  (s/starts-with? STRING PREFIX) -> Boolean
+  (s/ends-with? STRING SUFFIX)   -> Boolean
+  (s/contains? STRING NEEDLE)    -> Boolean
   (s/> STRING STRING)  (s/>= STRING STRING)
   (s/< STRING STRING)  (s/<= STRING STRING)
   (s/= STRING STRING)  (s/!= STRING STRING)
@@ -102,6 +105,7 @@ Strings:
   line breaks with a backslash.
   An empty FROM inserts TO at the start with s/replace, or at every character
   boundary with s/replace-all, like awk sub("", ...) and gsub("", ...).
+  Empty prefixes, suffixes, and needles match every string, including empty.
   Example: cho --no-input '(p (dq (s/trim "  hello  ")))'
 
 Selection and recovery:
@@ -116,31 +120,31 @@ Regular expressions:
   (reg VALUE /PATTERN/)          match VALUE
   (~ /PATTERN/)                  short form of reg
   (~ VALUE /PATTERN/)
-  (re/replace /PATTERN/ REPLACEMENT VALUE) replace the first match -> String
-  (re/replace-all /PATTERN/ REPLACEMENT VALUE) replace all matches -> String
+  (re/replace VALUE /PATTERN/ REPLACEMENT) replace the first match -> String
+  (re/replace-all VALUE /PATTERN/ REPLACEMENT) replace all matches -> String
 
   Regex literals preserve backslashes; escape only a literal / as \/:
     (~ $1 /^\d+$/)     (~ $1 /^foo\/bar$/)
   Quoted patterns are also accepted and require doubled backslashes:
-    (reg $1 "^\\d+$")     (re/replace "\\d+" "X" $1)
+    (reg $1 "^\\d+$")     (re/replace $1 "\\d+" "X")
   Replacement expands $0, $1, and ${name}; write $$ for a literal dollar sign.
   Empty and zero-width matches insert text, following awk replacement behavior.
   The -F pattern is passed directly: cho -F '\s+' '(p $1)'
-  Example: cho --no-input '(p (re/replace /(?P<n>\d+)/ "[${n}]" "id=42"))'
+  Example: cho --no-input '(p (re/replace "id=42" /(?P<n>\d+)/ "[${n}]"))'
 
 DateTime and Duration:
   (dt/unix NUMBER)               Unix seconds -> DateTime
-  (dt/fmt STRING DATETIME)       format in UTC -> String
-  (dt/fmt STRING TIMEZONE DATETIME) -> String
+  (dt/fmt DATETIME STRING)       format in UTC -> String
+  (dt/fmt DATETIME STRING TIMEZONE) -> String
   (dt/now)                       current UTC time, second precision
   (dt/floor-s DATETIME)          floor to UTC second
-  (dt/floor-s TIMEZONE DATETIME) floor to local second -> DateTime
+  (dt/floor-s DATETIME TIMEZONE) floor to local second -> DateTime
   (dt/floor-m DATETIME)          floor to UTC minute
-  (dt/floor-m TIMEZONE DATETIME) floor to local minute -> DateTime
+  (dt/floor-m DATETIME TIMEZONE) floor to local minute -> DateTime
   (dt/floor-h DATETIME)          floor to UTC hour
-  (dt/floor-h TIMEZONE DATETIME) floor to local hour -> DateTime
+  (dt/floor-h DATETIME TIMEZONE) floor to local hour -> DateTime
   (dt/floor-d DATETIME)          floor to UTC calendar day
-  (dt/floor-d TIMEZONE DATETIME) floor to local calendar day -> DateTime
+  (dt/floor-d DATETIME TIMEZONE) floor to local calendar day -> DateTime
   (dt/add DATETIME DURATION)     -> DateTime
   (dt/sub DATETIME DURATION)     -> DateTime
   (dt/diff DATETIME DATETIME)    left minus right -> Duration
@@ -186,8 +190,8 @@ URLs:
   (url/path URL)                 -> String
   (url/query URL)                -> String
   (url/fragment URL)             -> String
-  (url/query-get STRING URL)     first decoded value or empty -> String
-  (url/query-has? STRING URL)    -> Boolean
+  (url/query-get URL STRING)     first decoded value or empty -> String
+  (url/query-has? URL STRING)    -> Boolean
   (url/encode STRING)            RFC 3986 component encoding -> String
   (url/decode STRING)            percent decoding -> String
 
@@ -222,6 +226,8 @@ Composition:
   left to right; a failed filter skips the rest of that record. Multiple filters
   therefore act like AND. If the program is empty or contains only filters,
   cho implicitly prints $0 after the filters pass.
+  Functions with one primary input put it first, followed by configuration.
+  Variadic forms such as str and s/join have no single primary input.
 
   (-> VALUE (FORM ...))   insert VALUE as each form's first argument
   (->> VALUE (FORM ...))  insert VALUE as each form's last argument
@@ -229,15 +235,17 @@ Composition:
     (-> $1 (dt/add (du/s 10)))
       is (dt/add $1 (du/s 10))
 
-    (->> $1 (dt/fmt "%Y/%m/%d") (str "date: "))
-      is (str "date: " (dt/fmt "%Y/%m/%d" $1))
+    (-> $1 (dt/fmt "%Y/%m/%d"))
+      is (dt/fmt $1 "%Y/%m/%d")
+
+    (-> $1 (s/trim) (s/replace "-" "_") (s/upper))
 
 More examples:
   Extract a log message while preserving its original whitespace:
     printf '2026-08-24 INFO service started successfully\n' | cho '(p $3-)'
 
   Format an RFC 3339 timestamp in Tokyo time:
-    cho '(p (dt/fmt "%Y-%m-%d %H:%M" "Asia/Tokyo" $1))'
+    cho '(p (dt/fmt $1 "%Y-%m-%d %H:%M" "Asia/Tokyo"))'
 
   Join transformed fields, with a fallback for a missing third field:
     cho '(p (s/join ":" (s/upper $1) (default $3 "UNKNOWN")))'"#;

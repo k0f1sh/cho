@@ -1,7 +1,7 @@
 use crate::ast::{
     ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
     IpClass, NumberOperator, Predicate, Program, RegexId, ReplaceMode, SemVerPart, StringQuote,
-    StringTrim, UrlEncoding, UrlPart, Value,
+    StringTest, StringTrim, UrlEncoding, UrlPart, Value,
 };
 use crate::lexer::{Token, tokenize};
 
@@ -110,12 +110,25 @@ impl Parser {
             })));
         }
         if operator == Some(Token::Atom("url/query-has?".into())) {
-            let name = self.parse_value()?;
             let url = self.parse_value()?;
+            let name = self.parse_value()?;
             self.expect_right_paren()?;
             return Ok(Value::Predicate(Box::new(Predicate::UrlQueryHas {
                 name,
                 url,
+            })));
+        }
+        if let Some(kind) = match operator {
+            Some(Token::Atom(ref operator)) => string_test(operator),
+            _ => None,
+        } {
+            let value = self.parse_value()?;
+            let pattern = self.parse_value()?;
+            self.expect_right_paren()?;
+            return Ok(Value::Predicate(Box::new(Predicate::StringTest {
+                kind,
+                value,
+                pattern,
             })));
         }
         let (kind, operator) = match operator {
@@ -244,8 +257,8 @@ impl Parser {
                     })
                 }
                 Some(Token::Atom(operator)) if operator == "n/fixed" => {
-                    let digits = self.parse_value()?;
                     let value = self.parse_value()?;
+                    let digits = self.parse_value()?;
                     self.expect_right_paren()?;
                     Ok(Value::FormatNumberFixed {
                         digits: Box::new(digits),
@@ -286,9 +299,9 @@ impl Parser {
                 Some(Token::Atom(operator))
                     if matches!(operator.as_str(), "s/replace" | "s/replace-all") =>
                 {
+                    let value = self.parse_value()?;
                     let from = self.parse_value()?;
                     let to = self.parse_value()?;
-                    let value = self.parse_value()?;
                     self.expect_right_paren()?;
                     Ok(Value::Replace {
                         mode: replace_mode(&operator).expect("operator was matched"),
@@ -300,9 +313,9 @@ impl Parser {
                 Some(Token::Atom(operator))
                     if matches!(operator.as_str(), "re/replace" | "re/replace-all") =>
                 {
+                    let value = self.parse_value()?;
                     let regex = self.parse_and_register_regex_pattern()?;
                     let replacement = self.parse_value()?;
-                    let value = self.parse_value()?;
                     self.expect_right_paren()?;
                     Ok(Value::RegexReplace {
                         mode: replace_mode(&operator).expect("operator was matched"),
@@ -312,9 +325,9 @@ impl Parser {
                     })
                 }
                 Some(Token::Atom(operator)) if operator == "s/part" => {
+                    let value = self.parse_value()?;
                     let delimiter = self.parse_value()?;
                     let position = self.parse_value()?;
-                    let value = self.parse_value()?;
                     self.expect_right_paren()?;
                     Ok(Value::Part {
                         delimiter: Box::new(delimiter),
@@ -403,8 +416,8 @@ impl Parser {
                     })
                 }
                 Some(Token::Atom(operator)) if operator == "url/query-get" => {
-                    let name = self.parse_value()?;
                     let url = self.parse_value()?;
+                    let name = self.parse_value()?;
                     self.expect_right_paren()?;
                     Ok(Value::UrlQueryGet {
                         name: Box::new(name),
@@ -438,14 +451,13 @@ impl Parser {
                     Ok(Value::DateTimeFromUnix(Box::new(value)))
                 }
                 Some(Token::Atom(operator)) if operator == "dt/fmt" => {
+                    let value = self.parse_value()?;
                     let format = self.parse_value()?;
-                    let second = self.parse_value()?;
-                    let (timezone, value) =
-                        if self.tokens.get(self.position) == Some(&Token::RightParen) {
-                            (None, second)
-                        } else {
-                            (Some(Box::new(second)), self.parse_value()?)
-                        };
+                    let timezone = if self.tokens.get(self.position) == Some(&Token::RightParen) {
+                        None
+                    } else {
+                        Some(Box::new(self.parse_value()?))
+                    };
                     self.expect_right_paren()?;
                     Ok(Value::FormatDateTime {
                         format: Box::new(format),
@@ -563,7 +575,7 @@ impl Parser {
                 return Err(ParseError::InvalidSyntax);
             };
             if matches!(operator.as_str(), "re/replace" | "re/replace-all") {
-                if first {
+                if !first {
                     return Err(ParseError::InvalidSyntax);
                 }
                 let regex = self.parse_and_register_regex_pattern()?;
@@ -599,11 +611,11 @@ impl Parser {
     }
 
     fn parse_datetime_floor(&mut self, unit: DateTimeFloorUnit) -> Result<Value, ParseError> {
-        let first = self.parse_value()?;
-        let (timezone, value) = if self.tokens.get(self.position) == Some(&Token::RightParen) {
-            (None, first)
+        let value = self.parse_value()?;
+        let timezone = if self.tokens.get(self.position) == Some(&Token::RightParen) {
+            None
         } else {
-            (Some(Box::new(first)), self.parse_value()?)
+            Some(Box::new(self.parse_value()?))
         };
         self.expect_right_paren()?;
         Ok(Value::FloorDateTime {
@@ -686,7 +698,7 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
             })
         }
         "n/fixed" => {
-            let (digits, value) = two(arguments)?;
+            let (value, digits) = two(arguments)?;
             Ok(Value::FormatNumberFixed {
                 digits: Box::new(digits),
                 value: Box::new(value),
@@ -712,7 +724,7 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
             })
         }
         "s/replace" | "s/replace-all" => {
-            let (from, to, value) = three(arguments)?;
+            let (value, from, to) = three(arguments)?;
             Ok(Value::Replace {
                 mode: replace_mode(operator).expect("operator was matched"),
                 from: Box::new(from),
@@ -721,7 +733,7 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
             })
         }
         "s/part" => {
-            let (delimiter, position, value) = three(arguments)?;
+            let (value, delimiter, position) = three(arguments)?;
             Ok(Value::Part {
                 delimiter: Box::new(delimiter),
                 position: Box::new(position),
@@ -764,7 +776,7 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
             })
         }
         "url/query-get" => {
-            let (name, url) = two(arguments)?;
+            let (url, name) = two(arguments)?;
             Ok(Value::UrlQueryGet {
                 name: Box::new(name),
                 url: Box::new(url),
@@ -786,16 +798,16 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
         "dt/floor-d" => build_datetime_floor(DateTimeFloorUnit::Day, arguments),
         "dt/fmt" => {
             let mut arguments = arguments.into_iter();
-            let (format, timezone, value) = match arguments.len() {
+            let (value, format, timezone) = match arguments.len() {
                 2 => (
                     arguments.next().expect("length was checked"),
-                    None,
                     arguments.next().expect("length was checked"),
+                    None,
                 ),
                 3 => (
                     arguments.next().expect("length was checked"),
-                    Some(arguments.next().expect("length was checked")),
                     arguments.next().expect("length was checked"),
+                    Some(arguments.next().expect("length was checked")),
                 ),
                 _ => return Err(ParseError::InvalidSyntax),
             };
@@ -853,6 +865,14 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
                 value: one(arguments)?,
             })))
         }
+        operator if string_test(operator).is_some() => {
+            let (value, pattern) = two(arguments)?;
+            Ok(Value::Predicate(Box::new(Predicate::StringTest {
+                kind: string_test(operator).expect("operator was matched"),
+                value,
+                pattern,
+            })))
+        }
         "cidr/contains?" => {
             let (cidr, ip) = two(arguments)?;
             Ok(Value::Predicate(Box::new(Predicate::CidrContains {
@@ -861,7 +881,7 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
             })))
         }
         "url/query-has?" => {
-            let (name, url) = two(arguments)?;
+            let (url, name) = two(arguments)?;
             Ok(Value::Predicate(Box::new(Predicate::UrlQueryHas {
                 name,
                 url,
@@ -881,16 +901,16 @@ fn replace_mode(operator: &str) -> Option<ReplaceMode> {
 
 fn build_string_slice(arguments: Vec<Value>) -> Result<Value, ParseError> {
     let mut arguments = arguments.into_iter();
-    let (start, length, value) = match arguments.len() {
+    let (value, start, length) = match arguments.len() {
         2 => (
             arguments.next().expect("length was checked"),
-            None,
             arguments.next().expect("length was checked"),
+            None,
         ),
         3 => (
             arguments.next().expect("length was checked"),
-            Some(arguments.next().expect("length was checked")),
             arguments.next().expect("length was checked"),
+            Some(arguments.next().expect("length was checked")),
         ),
         _ => return Err(ParseError::InvalidSyntax),
     };
@@ -906,11 +926,11 @@ fn build_datetime_floor(
     arguments: Vec<Value>,
 ) -> Result<Value, ParseError> {
     let mut arguments = arguments.into_iter();
-    let (timezone, value) = match arguments.len() {
-        1 => (None, arguments.next().expect("length was checked")),
+    let (value, timezone) = match arguments.len() {
+        1 => (arguments.next().expect("length was checked"), None),
         2 => (
-            Some(arguments.next().expect("length was checked")),
             arguments.next().expect("length was checked"),
+            Some(arguments.next().expect("length was checked")),
         ),
         _ => return Err(ParseError::InvalidSyntax),
     };
@@ -919,6 +939,15 @@ fn build_datetime_floor(
         timezone: timezone.map(Box::new),
         value: Box::new(value),
     })
+}
+
+fn string_test(value: &str) -> Option<StringTest> {
+    match value {
+        "s/starts-with?" => Some(StringTest::StartsWith),
+        "s/ends-with?" => Some(StringTest::EndsWith),
+        "s/contains?" => Some(StringTest::Contains),
+        _ => None,
+    }
 }
 
 fn arithmetic_operator(value: &str) -> Option<ArithmeticOperator> {
@@ -1139,6 +1168,12 @@ mod tests {
         assert!(parse("(filter true)").is_ok());
         assert!(parse("(filter (if (> $1 0) true false))").is_ok());
         assert!(parse("(print (not (if (> $1 0) true false)))").is_ok());
+        assert!(parse(r#"(filter (s/starts-with? $1 "api-"))"#).is_ok());
+        assert!(parse(r#"(print (s/ends-with? $1 ".log") (s/contains? $1 "error"))"#).is_ok());
+        assert_eq!(
+            parse(r#"(print (-> $1 (s/starts-with? "api-")))"#),
+            parse(r#"(print (s/starts-with? $1 "api-"))"#)
+        );
     }
 
     #[test]
@@ -1173,16 +1208,16 @@ mod tests {
     #[test]
     fn parses_literal_and_regex_replacements() {
         assert_eq!(
-            parse(r#"(print (->> $1 (s/replace-all "a" "b")))"#),
-            parse(r#"(print (s/replace-all "a" "b" $1))"#)
+            parse(r#"(print (-> $1 (s/replace-all "a" "b")))"#),
+            parse(r#"(print (s/replace-all $1 "a" "b"))"#)
         );
         assert_eq!(
-            parse(r#"(print (->> $1 (re/replace /a+/ "b")))"#),
-            parse(r#"(print (re/replace /a+/ "b" $1))"#)
+            parse(r#"(print (-> $1 (re/replace /a+/ "b")))"#),
+            parse(r#"(print (re/replace $1 /a+/ "b"))"#)
         );
 
         let program =
-            parse(r#"(print (s/replace "a" "b" $1) (re/replace-all "(?P<x>x)" "${x}" $2))"#)
+            parse(r#"(print (s/replace $1 "a" "b") (re/replace-all $2 "(?P<x>x)" "${x}"))"#)
                 .unwrap();
         assert_eq!(program.regex_patterns, vec!["(?P<x>x)"]);
         assert!(matches!(
@@ -1200,7 +1235,7 @@ mod tests {
     #[test]
     fn parses_part_values() {
         assert_eq!(
-            parse(r#"(print (s/part (str "]" ":") (s/count "x") $1))"#),
+            parse(r#"(print (s/part $1 (str "]" ":") (s/count "x")))"#),
             Ok(Program {
                 expressions: vec![Expr::Print(vec![Value::Part {
                     delimiter: Box::new(Value::Concat(vec![
@@ -1215,15 +1250,15 @@ mod tests {
             })
         );
         assert_eq!(
-            parse(r#"(print (->> $1 (s/part "=" 2)))"#),
-            parse(r#"(print (s/part "=" 2 $1))"#)
+            parse(r#"(print (-> $1 (s/part "=" 2)))"#),
+            parse(r#"(print (s/part $1 "=" 2))"#)
         );
     }
 
     #[test]
     fn parses_slice_with_an_optional_length() {
         assert_eq!(
-            parse(r#"(print (s/slice 2 $1) (s/slice 2 3 $1))"#),
+            parse(r#"(print (s/slice $1 2) (s/slice $1 2 3))"#),
             Ok(Program {
                 expressions: vec![Expr::Print(vec![
                     Value::Slice {
@@ -1279,8 +1314,8 @@ mod tests {
 
     #[test]
     fn parses_fixed_number_formatting() {
-        assert!(parse("(print (n/fixed 2 $1))").is_ok());
-        assert!(parse("(print (str \"$\" (n/fixed (+ 1 1) (* $1 $2))))").is_ok());
+        assert!(parse("(print (n/fixed $1 2))").is_ok());
+        assert!(parse("(print (str \"$\" (n/fixed (* $1 $2) (+ 1 1))))").is_ok());
     }
 
     #[test]
@@ -1312,17 +1347,17 @@ mod tests {
                 .is_ok()
         );
         assert!(parse(r#"(print (cidr/size $1))"#).is_ok());
-        assert!(parse(r#"(print (url/query-get "lang" $1) (url/query-has? "page" $1))"#).is_ok());
+        assert!(parse(r#"(print (url/query-get $1 "lang") (url/query-has? $1 "page"))"#).is_ok());
         assert!(
             parse(r#"(print (semver/major $1) (semver/minor $1) (semver/patch $1) (semver/prerelease $1))"#)
                 .is_ok()
         );
         assert!(parse(r#"(print (dt/add (dt/unix $1) (du/m 2)))"#).is_ok());
         assert!(parse(r#"(print (du/ms 250) (du/d -1.5))"#).is_ok());
-        assert!(parse(r#"(print (dt/fmt "%Y-%m-%d" $1))"#).is_ok());
-        assert!(parse(r#"(print (dt/fmt "%Y-%m-%d" "Asia/Tokyo" $1))"#).is_ok());
+        assert!(parse(r#"(print (dt/fmt $1 "%Y-%m-%d"))"#).is_ok());
+        assert!(parse(r#"(print (dt/fmt $1 "%Y-%m-%d" "Asia/Tokyo"))"#).is_ok());
         assert!(parse(r#"(print (dt/floor-m (dt/now)))"#).is_ok());
-        assert!(parse(r#"(print (dt/floor-d "Asia/Tokyo" (dt/now)))"#).is_ok());
+        assert!(parse(r#"(print (dt/floor-d (dt/now) "Asia/Tokyo"))"#).is_ok());
     }
 
     #[test]
@@ -1332,12 +1367,12 @@ mod tests {
             parse(r#"(print (dt/add $1 (du/s 10)))"#)
         );
         assert_eq!(
-            parse(r#"(print (->> $1 (dt/fmt "%Y/%m/%d") (str "date: ")))"#),
-            parse(r#"(print (str "date: " (dt/fmt "%Y/%m/%d" $1)))"#)
+            parse(r#"(print (-> $1 (n/fixed 2)))"#),
+            parse(r#"(print (n/fixed $1 2))"#)
         );
         assert_eq!(
-            parse(r#"(print (->> $1 (dt/fmt "%Y/%m/%d" "Asia/Tokyo")))"#),
-            parse(r#"(print (dt/fmt "%Y/%m/%d" "Asia/Tokyo" $1))"#)
+            parse(r#"(print (-> $1 (dt/fmt "%Y/%m/%d" "Asia/Tokyo")))"#),
+            parse(r#"(print (dt/fmt $1 "%Y/%m/%d" "Asia/Tokyo"))"#)
         );
         assert!(parse("(print (-> $1 (s/lower) (s/count)))").is_ok());
         assert_eq!(
@@ -1345,8 +1380,8 @@ mod tests {
             parse(r#"(print (dt/floor-h $1))"#)
         );
         assert_eq!(
-            parse(r#"(print (->> $1 (dt/floor-d "Asia/Tokyo")))"#),
-            parse(r#"(print (dt/floor-d "Asia/Tokyo" $1))"#)
+            parse(r#"(print (-> $1 (dt/floor-d "Asia/Tokyo")))"#),
+            parse(r#"(print (dt/floor-d $1 "Asia/Tokyo"))"#)
         );
         assert_eq!(
             parse(r#"(print (-> $1 (ip/version)))"#),
@@ -1357,8 +1392,12 @@ mod tests {
             parse(r#"(print (ip/version (cidr/network $1)))"#)
         );
         assert_eq!(
-            parse(r#"(print (->> $1 (url/query-get "lang")))"#),
-            parse(r#"(print (url/query-get "lang" $1))"#)
+            parse(r#"(print (-> $1 (url/query-get "lang")))"#),
+            parse(r#"(print (url/query-get $1 "lang"))"#)
+        );
+        assert_eq!(
+            parse(r#"(print (->> $1 (str "value=")))"#),
+            parse(r#"(print (str "value=" $1))"#)
         );
         assert_eq!(
             parse(r#"(print (-> $1 (semver/major)))"#),
@@ -1501,12 +1540,15 @@ mod tests {
             "(print (dt/floor-s))",
             "(print (dt/floor-m $1 $2 $3))",
             r#"(print (join "," $1))"#,
-            r#"(print (s/replace "a" "b"))"#,
-            r#"(print (s/replace "a" "b" $1 $2))"#,
-            r#"(print (re/replace /a/ "b"))"#,
-            r#"(print (re/replace /a/ "b" $1 $2))"#,
-            r#"(print (re/replace $1 "b" $2))"#,
-            r#"(print (-> $1 (re/replace /a/ "b")))"#,
+            r#"(print (s/replace $1 "a"))"#,
+            r#"(print (s/replace $1 "a" "b" $2))"#,
+            r#"(print (re/replace $1 /a/))"#,
+            r#"(print (re/replace $1 /a/ "b" $2))"#,
+            r#"(print (re/replace $1 $2 "b"))"#,
+            r#"(print (->> $1 (re/replace /a/ "b")))"#,
+            r#"(print (s/starts-with? $1))"#,
+            r#"(print (s/ends-with? $1 "x" "y"))"#,
+            r#"(print (s/contains?))"#,
             "(print (count $1))",
             "(print (escape $1))",
             "(print (lower $1))",

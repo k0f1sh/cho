@@ -36,7 +36,7 @@ fn runtime_errors_keep_prior_output_and_exit_nonzero() {
 #[test]
 fn default_recovery_finishes_successfully_without_a_diagnostic() {
     let output = run(
-        r#"(print (default (dt/fmt "%Y" $1) "invalid"))"#,
+        r#"(print (default (dt/fmt $1 "%Y") "invalid"))"#,
         "2026-08-18T00:00:00Z\nnot-a-date\n",
     );
     assert!(output.status.success());
@@ -63,20 +63,23 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("(if BOOLEAN VALUE VALUE)"));
     assert!(stdout.contains("--skip-header"));
     assert!(stdout.contains("--no-input"));
-    assert!(stdout.contains("(s/part DELIMITER POSITION VALUE)"));
-    assert!(stdout.contains("(s/slice START [LENGTH] VALUE)"));
-    assert!(stdout.contains("(s/replace FROM TO VALUE)"));
-    assert!(stdout.contains("(s/replace-all FROM TO VALUE)"));
-    assert!(stdout.contains("(re/replace /PATTERN/ REPLACEMENT VALUE)"));
-    assert!(stdout.contains("(re/replace-all /PATTERN/ REPLACEMENT VALUE)"));
+    assert!(stdout.contains("(s/part VALUE DELIMITER POSITION)"));
+    assert!(stdout.contains("(s/slice VALUE START [LENGTH])"));
+    assert!(stdout.contains("(s/replace VALUE FROM TO)"));
+    assert!(stdout.contains("(s/replace-all VALUE FROM TO)"));
+    assert!(stdout.contains("(s/starts-with? STRING PREFIX)"));
+    assert!(stdout.contains("(s/ends-with? STRING SUFFIX)"));
+    assert!(stdout.contains("(s/contains? STRING NEEDLE)"));
+    assert!(stdout.contains("(re/replace VALUE /PATTERN/ REPLACEMENT)"));
+    assert!(stdout.contains("(re/replace-all VALUE /PATTERN/ REPLACEMENT)"));
     assert!(stdout.contains("like awk sub(\"\", ...) and gsub(\"\", ...)"));
-    assert!(stdout.contains(r#"(re/replace "\\d+" "X" $1)"#));
-    assert!(stdout.contains("(dt/fmt STRING DATETIME)"));
-    assert!(stdout.contains("(dt/fmt STRING TIMEZONE DATETIME)"));
+    assert!(stdout.contains(r#"(re/replace $1 "\\d+" "X")"#));
+    assert!(stdout.contains("(dt/fmt DATETIME STRING)"));
+    assert!(stdout.contains("(dt/fmt DATETIME STRING TIMEZONE)"));
     assert!(stdout.contains("Asia/Tokyo"));
     assert!(stdout.contains("+09:00"));
     assert!(stdout.contains("(dt/floor-m DATETIME)"));
-    assert!(stdout.contains("(dt/floor-d TIMEZONE DATETIME)"));
+    assert!(stdout.contains("(dt/floor-d DATETIME TIMEZONE)"));
     assert!(stdout.contains("(du/m NUMBER)"));
     assert!(stdout.contains("(du/ms NUMBER)"));
     assert!(stdout.contains("(du/d NUMBER)"));
@@ -86,8 +89,8 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("(cidr/first CIDR)"));
     assert!(stdout.contains("(cidr/last CIDR)"));
     assert!(stdout.contains("(cidr/size CIDR)"));
-    assert!(stdout.contains("(url/query-get STRING URL)"));
-    assert!(stdout.contains("(url/query-has? STRING URL)"));
+    assert!(stdout.contains("(url/query-get URL STRING)"));
+    assert!(stdout.contains("(url/query-has? URL STRING)"));
     assert!(stdout.contains("(semver/major SEMVER)"));
     assert!(stdout.contains("(semver/prerelease SEMVER)"));
     assert!(stdout.contains("fc00::/7"));
