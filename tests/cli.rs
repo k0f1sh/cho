@@ -65,6 +65,12 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("--no-input"));
     assert!(stdout.contains("(s/part DELIMITER POSITION VALUE)"));
     assert!(stdout.contains("(s/slice START [LENGTH] VALUE)"));
+    assert!(stdout.contains("(s/replace FROM TO VALUE)"));
+    assert!(stdout.contains("(s/replace-all FROM TO VALUE)"));
+    assert!(stdout.contains("(re/replace /PATTERN/ REPLACEMENT VALUE)"));
+    assert!(stdout.contains("(re/replace-all /PATTERN/ REPLACEMENT VALUE)"));
+    assert!(stdout.contains("like awk sub(\"\", ...) and gsub(\"\", ...)"));
+    assert!(stdout.contains(r#"(re/replace "\\d+" "X" $1)"#));
     assert!(stdout.contains("(dt/fmt STRING DATETIME)"));
     assert!(stdout.contains("(dt/fmt STRING TIMEZONE DATETIME)"));
     assert!(stdout.contains("Asia/Tokyo"));

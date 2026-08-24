@@ -1,7 +1,7 @@
 use crate::ast::{
     ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
-    IpClass, NumberOperator, Predicate, Program, RegexId, SemVerPart, StringQuote, StringTrim,
-    UrlEncoding, UrlPart, Value,
+    IpClass, NumberOperator, Predicate, Program, RegexId, ReplaceMode, SemVerPart, StringQuote,
+    StringTrim, UrlEncoding, UrlPart, Value,
 };
 use crate::lexer::{Token, tokenize};
 
@@ -283,6 +283,34 @@ impl Parser {
                         values: self.parse_values_until_right_paren()?,
                     })
                 }
+                Some(Token::Atom(operator))
+                    if matches!(operator.as_str(), "s/replace" | "s/replace-all") =>
+                {
+                    let from = self.parse_value()?;
+                    let to = self.parse_value()?;
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::Replace {
+                        mode: replace_mode(&operator).expect("operator was matched"),
+                        from: Box::new(from),
+                        to: Box::new(to),
+                        value: Box::new(value),
+                    })
+                }
+                Some(Token::Atom(operator))
+                    if matches!(operator.as_str(), "re/replace" | "re/replace-all") =>
+                {
+                    let regex = self.parse_and_register_regex_pattern()?;
+                    let replacement = self.parse_value()?;
+                    let value = self.parse_value()?;
+                    self.expect_right_paren()?;
+                    Ok(Value::RegexReplace {
+                        mode: replace_mode(&operator).expect("operator was matched"),
+                        regex,
+                        replacement: Box::new(replacement),
+                        value: Box::new(value),
+                    })
+                }
                 Some(Token::Atom(operator)) if operator == "s/part" => {
                     let delimiter = self.parse_value()?;
                     let position = self.parse_value()?;
@@ -534,6 +562,21 @@ impl Parser {
             let Some(Token::Atom(operator)) = self.next() else {
                 return Err(ParseError::InvalidSyntax);
             };
+            if matches!(operator.as_str(), "re/replace" | "re/replace-all") {
+                if first {
+                    return Err(ParseError::InvalidSyntax);
+                }
+                let regex = self.parse_and_register_regex_pattern()?;
+                let replacement = self.parse_value()?;
+                self.expect_right_paren()?;
+                value = Value::RegexReplace {
+                    mode: replace_mode(&operator).expect("operator was matched"),
+                    regex,
+                    replacement: Box::new(replacement),
+                    value: Box::new(value),
+                };
+                continue;
+            }
             let mut arguments = self.parse_values_until_right_paren()?;
             if first {
                 arguments.insert(0, value);
@@ -544,6 +587,15 @@ impl Parser {
         }
         self.expect_right_paren()?;
         Ok(value)
+    }
+
+    fn parse_and_register_regex_pattern(&mut self) -> Result<RegexId, ParseError> {
+        match self.next() {
+            Some(Token::Regex(pattern) | Token::String(pattern)) => {
+                Ok(self.register_regex(pattern))
+            }
+            _ => Err(ParseError::InvalidSyntax),
+        }
     }
 
     fn parse_datetime_floor(&mut self, unit: DateTimeFloorUnit) -> Result<Value, ParseError> {
@@ -657,6 +709,15 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
             Ok(Value::Join {
                 separator: Box::new(separator),
                 values: arguments,
+            })
+        }
+        "s/replace" | "s/replace-all" => {
+            let (from, to, value) = three(arguments)?;
+            Ok(Value::Replace {
+                mode: replace_mode(operator).expect("operator was matched"),
+                from: Box::new(from),
+                to: Box::new(to),
+                value: Box::new(value),
             })
         }
         "s/part" => {
@@ -807,6 +868,14 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
             })))
         }
         _ => Err(ParseError::InvalidSyntax),
+    }
+}
+
+fn replace_mode(operator: &str) -> Option<ReplaceMode> {
+    match operator {
+        "s/replace" | "re/replace" => Some(ReplaceMode::First),
+        "s/replace-all" | "re/replace-all" => Some(ReplaceMode::All),
+        _ => None,
     }
 }
 
@@ -1099,6 +1168,33 @@ mod tests {
                 contains_field_range: false,
             })
         );
+    }
+
+    #[test]
+    fn parses_literal_and_regex_replacements() {
+        assert_eq!(
+            parse(r#"(print (->> $1 (s/replace-all "a" "b")))"#),
+            parse(r#"(print (s/replace-all "a" "b" $1))"#)
+        );
+        assert_eq!(
+            parse(r#"(print (->> $1 (re/replace /a+/ "b")))"#),
+            parse(r#"(print (re/replace /a+/ "b" $1))"#)
+        );
+
+        let program =
+            parse(r#"(print (s/replace "a" "b" $1) (re/replace-all "(?P<x>x)" "${x}" $2))"#)
+                .unwrap();
+        assert_eq!(program.regex_patterns, vec!["(?P<x>x)"]);
+        assert!(matches!(
+            &program.expressions[0],
+            Expr::Print(values)
+                if matches!(values[0], Value::Replace { mode: ReplaceMode::First, .. })
+                    && matches!(values[1], Value::RegexReplace {
+                        mode: ReplaceMode::All,
+                        regex: RegexId(0),
+                        ..
+                    })
+        ));
     }
 
     #[test]
@@ -1405,6 +1501,12 @@ mod tests {
             "(print (dt/floor-s))",
             "(print (dt/floor-m $1 $2 $3))",
             r#"(print (join "," $1))"#,
+            r#"(print (s/replace "a" "b"))"#,
+            r#"(print (s/replace "a" "b" $1 $2))"#,
+            r#"(print (re/replace /a/ "b"))"#,
+            r#"(print (re/replace /a/ "b" $1 $2))"#,
+            r#"(print (re/replace $1 "b" $2))"#,
+            r#"(print (-> $1 (re/replace /a/ "b")))"#,
             "(print (count $1))",
             "(print (escape $1))",
             "(print (lower $1))",

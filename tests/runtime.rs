@@ -46,6 +46,58 @@ fn joins_values_with_a_separator() {
 }
 
 #[test]
+fn literal_replace_handles_first_all_empty_and_nested_values() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (s/replace "a" "x" $1) (s/replace-all "a" "x" $1)) "#,
+                r#"(print (s/replace "" "-" $1) (s/replace-all "" "-" $1)) "#,
+                r#"(print (s/upper (s/replace-all (str "a") (+ 1 1) $1)))"#,
+            ),
+            "aba\n\n東京\n",
+        ),
+        concat!(
+            "xba xbx\n-aba -a-b-a-\n2B2\n",
+            " \n- -\n\n",
+            "東京 東京\n-東京 -東-京-\n東京\n",
+        )
+    );
+    assert_eq!(
+        output(r#"(print (s/replace-all "" "-" $2))"#, "only-one-field\n"),
+        "-\n"
+    );
+}
+
+#[test]
+fn regex_replace_handles_captures_zero_width_and_threading() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (re/replace /(?P<word>[a-z]+)-(\d+)/ "${word}:$2" $1) "#,
+                r#"(re/replace-all /(?P<word>[a-z]+)-(\d+)/ "${word}:$2" $1)) "#,
+                r#"(print (re/replace /(a)?b/ "<$1>" $2) (re/replace /a/ "$$" $3)) "#,
+                r#"(print (re/replace-all /^|$/ "-" $1) "#,
+                r#"(->> $1 (re/replace /[a-z]+/ (str "[" "$0" "]"))))"#,
+            ),
+            "item-12-other-34 b a\n",
+        ),
+        concat!(
+            "item:12-other-34 item:12-other:34\n",
+            "<> $\n",
+            "-item-12-other-34- [item]-12-other-34\n",
+        )
+    );
+    assert_eq!(
+        output(r#"(print (re/replace-all // "-" $1))"#, "abc\n\n"),
+        "-a-b-c-\n-\n"
+    );
+    assert_eq!(
+        output(r#"(print (re/replace-all "\\d+" "X" $1))"#, "a12b34\n"),
+        "aXbX\n"
+    );
+}
+
+#[test]
 fn part_extracts_one_literal_delimited_part() {
     assert_eq!(
         output(

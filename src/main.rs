@@ -14,6 +14,7 @@ Common recipes:
   Match a field           cho '(f (~ $1 /^api-/))'
   Match the whole record  cho '(f (~ /ERROR|WARN/))'
   Join values             cho '(p (s/join "," $1 $2))'
+  Replace text            cho '(p (s/replace-all "-" "_" $1))'
   Use a fallback          cho '(p (default $3 "unknown"))'
   Read CSV with a header  cho --csv --skip-header '(p $1 $3)'
   Read TSV                cho --tsv '(p $1 $2)'
@@ -72,6 +73,8 @@ Numbers:
 Strings:
   (str VALUE ...)                concatenate values
   (s/join SEPARATOR VALUE ...)   join values
+  (s/replace FROM TO VALUE)      replace the first literal match
+  (s/replace-all FROM TO VALUE)  replace all literal matches
   (s/part DELIMITER POSITION VALUE) take a 1-based literal-delimited part
   (s/slice START [LENGTH] VALUE) take Unicode characters from 1-based START
   (s/count VALUE)                count Unicode characters
@@ -97,6 +100,8 @@ Strings:
   must be non-negative. Both must be whole numbers.
   s/dquote and s/squote escape the enclosing quote, backslashes, tabs, and
   line breaks with a backslash.
+  An empty FROM inserts TO at the start with s/replace, or at every character
+  boundary with s/replace-all, like awk sub("", ...) and gsub("", ...).
   Example: cho --no-input '(p (dq (s/trim "  hello  ")))'
 
 Selection and recovery:
@@ -111,11 +116,17 @@ Regular expressions:
   (reg VALUE /PATTERN/)          match VALUE
   (~ /PATTERN/)                  short form of reg
   (~ VALUE /PATTERN/)
+  (re/replace /PATTERN/ REPLACEMENT VALUE) replace the first match -> String
+  (re/replace-all /PATTERN/ REPLACEMENT VALUE) replace all matches -> String
 
   Regex literals preserve backslashes; escape only a literal / as \/:
     (~ $1 /^\d+$/)     (~ $1 /^foo\/bar$/)
-  String patterns require doubled backslashes: (reg $1 "^\\d+$")
+  Quoted patterns are also accepted and require doubled backslashes:
+    (reg $1 "^\\d+$")     (re/replace "\\d+" "X" $1)
+  Replacement expands $0, $1, and ${name}; write $$ for a literal dollar sign.
+  Empty and zero-width matches insert text, following awk replacement behavior.
   The -F pattern is passed directly: cho -F '\s+' '(p $1)'
+  Example: cho --no-input '(p (re/replace /(?P<n>\d+)/ "[${n}]" "id=42"))'
 
 DateTime and Duration:
   (dt/unix NUMBER)               Unix seconds -> DateTime
