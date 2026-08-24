@@ -16,8 +16,8 @@ use semver::Version;
 
 use crate::ast::{
     ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
-    IpClass, NumberOperator, Predicate, Program, SemVerPart, StringQuote, StringTrim, UrlEncoding,
-    UrlPart, Value,
+    IpClass, NumberOperator, Predicate, Program, ReplaceMode, SemVerPart, StringQuote, StringTrim,
+    UrlEncoding, UrlPart, Value,
 };
 use crate::parser::parse;
 
@@ -442,6 +442,36 @@ fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_>) -> EvalResult<Runti
                 .map(|value| evaluate(value, record).map(|value| value.render()))
                 .collect::<EvalResult<Vec<_>>>()?;
             Ok(RuntimeValue::String(values.join(&separator)))
+        }
+        Value::Replace {
+            mode,
+            from,
+            to,
+            value,
+        } => {
+            let from = evaluate(from, record)?.render();
+            let to = evaluate(to, record)?.render();
+            let value = evaluate(value, record)?.render();
+            let replaced = match mode {
+                ReplaceMode::First => value.replacen(&from, &to, 1),
+                ReplaceMode::All => value.replace(&from, &to),
+            };
+            Ok(RuntimeValue::String(replaced))
+        }
+        Value::RegexReplace {
+            mode,
+            regex,
+            replacement,
+            value,
+        } => {
+            let replacement = evaluate(replacement, record)?.render();
+            let value = evaluate(value, record)?.render();
+            let regex = &record.regexes[regex.0];
+            let replaced = match mode {
+                ReplaceMode::First => regex.replace(&value, replacement.as_str()),
+                ReplaceMode::All => regex.replace_all(&value, replacement.as_str()),
+            };
+            Ok(RuntimeValue::String(replaced.into_owned()))
         }
         Value::Part {
             delimiter,
@@ -1621,6 +1651,19 @@ fn validate_value(value: &Value) -> io::Result<()> {
         Value::Join { separator, values } => {
             validate_value(separator)?;
             values.iter().try_for_each(validate_value)
+        }
+        Value::Replace {
+            from, to, value, ..
+        } => {
+            validate_value(from)?;
+            validate_value(to)?;
+            validate_value(value)
+        }
+        Value::RegexReplace {
+            replacement, value, ..
+        } => {
+            validate_value(replacement)?;
+            validate_value(value)
         }
         Value::Part {
             delimiter,

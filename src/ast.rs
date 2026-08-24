@@ -121,6 +121,12 @@ pub enum StringTrim {
     Right,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReplaceMode {
+    First,
+    All,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum CidrPart {
     Network,
@@ -226,6 +232,18 @@ pub enum Value {
     Join {
         separator: Box<Value>,
         values: Vec<Value>,
+    },
+    Replace {
+        mode: ReplaceMode,
+        from: Box<Value>,
+        to: Box<Value>,
+        value: Box<Value>,
+    },
+    RegexReplace {
+        mode: ReplaceMode,
+        regex: RegexId,
+        replacement: Box<Value>,
+        value: Box<Value>,
     },
     Part {
         delimiter: Box<Value>,
