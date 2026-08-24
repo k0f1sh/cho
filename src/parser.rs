@@ -568,28 +568,35 @@ impl Parser {
     fn parse_threading(&mut self, first: bool) -> Result<Value, ParseError> {
         let mut value = self.parse_value()?;
         while self.tokens.get(self.position) != Some(&Token::RightParen) {
-            if self.next() != Some(Token::LeftParen) {
-                return Err(ParseError::InvalidSyntax);
-            }
-            let Some(Token::Atom(operator)) = self.next() else {
-                return Err(ParseError::InvalidSyntax);
+            let (operator, mut arguments, parenthesized) = match self.next() {
+                Some(Token::Atom(operator)) => (operator, Vec::new(), false),
+                Some(Token::LeftParen) => {
+                    let Some(Token::Atom(operator)) = self.next() else {
+                        return Err(ParseError::InvalidSyntax);
+                    };
+                    if matches!(operator.as_str(), "re/replace" | "re/replace-all") {
+                        if !first {
+                            return Err(ParseError::InvalidSyntax);
+                        }
+                        let regex = self.parse_and_register_regex_pattern()?;
+                        let replacement = self.parse_value()?;
+                        self.expect_right_paren()?;
+                        value = Value::RegexReplace {
+                            mode: replace_mode(&operator).expect("operator was matched"),
+                            regex,
+                            replacement: Box::new(replacement),
+                            value: Box::new(value),
+                        };
+                        continue;
+                    }
+                    (operator, self.parse_values_until_right_paren()?, true)
+                }
+                _ => return Err(ParseError::InvalidSyntax),
             };
             if matches!(operator.as_str(), "re/replace" | "re/replace-all") {
-                if !first {
-                    return Err(ParseError::InvalidSyntax);
-                }
-                let regex = self.parse_and_register_regex_pattern()?;
-                let replacement = self.parse_value()?;
-                self.expect_right_paren()?;
-                value = Value::RegexReplace {
-                    mode: replace_mode(&operator).expect("operator was matched"),
-                    regex,
-                    replacement: Box::new(replacement),
-                    value: Box::new(value),
-                };
-                continue;
+                debug_assert!(!parenthesized);
+                return Err(ParseError::InvalidSyntax);
             }
-            let mut arguments = self.parse_values_until_right_paren()?;
             if first {
                 arguments.insert(0, value);
             } else {
@@ -1403,6 +1410,18 @@ mod tests {
             parse(r#"(print (-> $1 (semver/major)))"#),
             parse(r#"(print (semver/major $1))"#)
         );
+        assert_eq!(
+            parse(r#"(print (-> $1 s/trim s/upper s/count))"#),
+            parse(r#"(print (s/count (s/upper (s/trim $1))))"#)
+        );
+        assert_eq!(
+            parse(r#"(print (->> $1 s/upper (str "value=")))"#),
+            parse(r#"(print (str "value=" (s/upper $1)))"#)
+        );
+        assert_eq!(
+            parse(r#"(print (-> $1 s/trim (s/replace "-" "_") s/upper))"#),
+            parse(r#"(print (s/upper (s/replace (s/trim $1) "-" "_")))"#)
+        );
     }
 
     #[test]
@@ -1546,6 +1565,8 @@ mod tests {
             r#"(print (re/replace $1 /a/ "b" $2))"#,
             r#"(print (re/replace $1 $2 "b"))"#,
             r#"(print (->> $1 (re/replace /a/ "b")))"#,
+            r#"(print (-> $1 n/fixed))"#,
+            r#"(print (-> $1 unknown))"#,
             r#"(print (s/starts-with? $1))"#,
             r#"(print (s/ends-with? $1 "x" "y"))"#,
             r#"(print (s/contains?))"#,
