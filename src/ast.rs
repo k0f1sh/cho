@@ -2,6 +2,7 @@
 pub struct Program {
     pub expressions: Vec<Expr>,
     pub regex_patterns: Vec<String>,
+    pub contains_field_range: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -140,6 +141,10 @@ pub enum SemVerPart {
 #[derive(Debug, PartialEq)]
 pub enum Value {
     Field(usize),
+    FieldRange {
+        start: Option<usize>,
+        end: Option<usize>,
+    },
     RecordNumber,
     FieldCount,
     String(String),

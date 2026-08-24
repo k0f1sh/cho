@@ -264,6 +264,37 @@ fn field_zero_preserves_the_line_and_missing_fields_are_empty() {
 }
 
 #[test]
+fn field_ranges_preserve_original_whitespace_and_compose_as_values() {
+    assert_eq!(
+        output(
+            "(print $-2) (print $3-) (print (s/upper $2-4))",
+            "  one\t two   three four  five  \n",
+        ),
+        "one\t two\nthree four  five\nTWO   THREE FOUR\n"
+    );
+}
+
+#[test]
+fn field_ranges_preserve_regex_separators_and_empty_fields() {
+    assert_eq!(
+        output_with_separator(
+            "(print $-2) (print $2-) (print $2-3)",
+            "[,;]",
+            ",Alice;Tokyo"
+        ),
+        ",Alice\nAlice;Tokyo\nAlice;Tokyo\n"
+    );
+}
+
+#[test]
+fn field_ranges_are_empty_when_a_required_endpoint_is_missing() {
+    assert_eq!(
+        output("(print $3-) (print $-3) (print $2-4)", "one two\n\n"),
+        "\n\n\n\n\n\n"
+    );
+}
+
+#[test]
 fn nr_and_nf_describe_the_record() {
     assert_eq!(
         output("(print NR NF)", "Alice 20\nBob\t30 Osaka\n\n"),
@@ -901,6 +932,21 @@ fn csv_mode_decodes_quoted_fields() {
     assert_eq!(
         String::from_utf8(result).unwrap(),
         "3 Alice Bob, Jr. said \"hello\"\n"
+    );
+}
+
+#[test]
+fn csv_mode_rejects_field_ranges_before_reading_input() {
+    let error = cho::run_csv(
+        "(print (s/upper $2-))",
+        Cursor::new("not,csv,\""),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+    assert_eq!(
+        error.to_string(),
+        "field ranges are not supported with --csv"
     );
 }
 

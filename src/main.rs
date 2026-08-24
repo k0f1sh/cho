@@ -46,9 +46,12 @@ Program expressions:
 
 Literals and fields:
   $0, $1, ...                    complete record or field
+  $-3, $3-, $2-4                field range, preserving original separators
   NR, NF                         record number or field count
   "text", 12, 3.5                String or Number
   true, false                    Boolean
+
+  Field ranges are unavailable with --csv because CSV fields are decoded.
 
 Numbers:
   (+ NUMBER NUMBER)              add
@@ -214,6 +217,9 @@ Composition:
       is (str "date: " (dt/fmt "%Y/%m/%d" $1))
 
 More examples:
+  Extract a log message while preserving its original whitespace:
+    printf '2026-08-24 INFO service started successfully\n' | cho '(p $3-)'
+
   Format an RFC 3339 timestamp in Tokyo time:
     cho '(p (dt/fmt "%Y-%m-%d %H:%M" "Asia/Tokyo" $1))'
 

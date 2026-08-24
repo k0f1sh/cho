@@ -17,6 +17,7 @@ struct Parser {
     tokens: Vec<Token>,
     position: usize,
     regex_patterns: Vec<String>,
+    contains_field_range: bool,
 }
 
 impl Parser {
@@ -25,6 +26,7 @@ impl Parser {
             tokens,
             position: 0,
             regex_patterns: Vec::new(),
+            contains_field_range: false,
         }
     }
 
@@ -42,6 +44,7 @@ impl Parser {
         Ok(Program {
             expressions,
             regex_patterns: std::mem::take(&mut self.regex_patterns),
+            contains_field_range: self.contains_field_range,
         })
     }
 
@@ -217,12 +220,9 @@ impl Parser {
             Some(Token::Atom(value)) if value == "true" => Ok(Value::Boolean(true)),
             Some(Token::Atom(value)) if value == "false" => Ok(Value::Boolean(false)),
             Some(Token::Atom(field)) => {
-                let number = field
-                    .strip_prefix('$')
-                    .ok_or(ParseError::InvalidSyntax)?
-                    .parse::<usize>()
-                    .map_err(|_| ParseError::InvalidField)?;
-                Ok(Value::Field(number))
+                let field = parse_field(&field)?;
+                self.contains_field_range |= matches!(field, Value::FieldRange { .. });
+                Ok(field)
             }
             Some(Token::String(value)) => Ok(Value::String(value)),
             Some(Token::LeftParen) => match self.next() {
@@ -555,6 +555,40 @@ impl Parser {
             timezone,
             value: Box::new(value),
         })
+    }
+}
+
+fn parse_field(field: &str) -> Result<Value, ParseError> {
+    let field = field.strip_prefix('$').ok_or(ParseError::InvalidSyntax)?;
+    if !field.contains('-') {
+        return field
+            .parse::<usize>()
+            .map(Value::Field)
+            .map_err(|_| ParseError::InvalidField);
+    }
+
+    let mut bounds = field.split('-');
+    let start = parse_range_bound(bounds.next().expect("split always yields one item"))?;
+    let end = parse_range_bound(bounds.next().ok_or(ParseError::InvalidField)?)?;
+    if bounds.next().is_some()
+        || start.is_none() && end.is_none()
+        || start == Some(0)
+        || end == Some(0)
+        || matches!((start, end), (Some(start), Some(end)) if start > end)
+    {
+        return Err(ParseError::InvalidField);
+    }
+    Ok(Value::FieldRange { start, end })
+}
+
+fn parse_range_bound(bound: &str) -> Result<Option<usize>, ParseError> {
+    if bound.is_empty() {
+        Ok(None)
+    } else {
+        bound
+            .parse::<usize>()
+            .map(Some)
+            .map_err(|_| ParseError::InvalidField)
     }
 }
 
@@ -931,6 +965,32 @@ mod tests {
                     ])]),
                 ],
                 regex_patterns: vec![],
+                contains_field_range: false,
+            })
+        );
+    }
+
+    #[test]
+    fn parses_field_ranges_with_explicit_bounds() {
+        assert_eq!(
+            parse("(print $-3 $3- $2-4)"),
+            Ok(Program {
+                expressions: vec![Expr::Print(vec![
+                    Value::FieldRange {
+                        start: None,
+                        end: Some(3),
+                    },
+                    Value::FieldRange {
+                        start: Some(3),
+                        end: None,
+                    },
+                    Value::FieldRange {
+                        start: Some(2),
+                        end: Some(4),
+                    },
+                ])],
+                regex_patterns: vec![],
+                contains_field_range: true,
             })
         );
     }
@@ -1009,6 +1069,7 @@ mod tests {
                     values: vec![Value::Field(1), Value::Field(2)],
                 }])],
                 regex_patterns: vec![],
+                contains_field_range: false,
             })
         );
     }
@@ -1027,6 +1088,7 @@ mod tests {
                     value: Box::new(Value::Field(1)),
                 }])],
                 regex_patterns: vec![],
+                contains_field_range: false,
             })
         );
         assert_eq!(
@@ -1161,6 +1223,12 @@ mod tests {
     #[test]
     fn rejects_invalid_programs() {
         assert_eq!(parse("(print $x)"), Err(ParseError::InvalidField));
+        for field in ["$-", "$0-", "$-0", "$2-1", "$1-2-3", "$a-2", "$1-b"] {
+            assert_eq!(
+                parse(&format!("(print {field})")),
+                Err(ParseError::InvalidField)
+            );
+        }
         assert_eq!(parse("print $1"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(filter (> $1))"), Err(ParseError::InvalidSyntax));
         assert_eq!(parse("(f)"), Err(ParseError::InvalidSyntax));

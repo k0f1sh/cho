@@ -21,21 +21,21 @@ use crate::ast::{
 };
 use crate::parser::parse;
 
-struct Record<'line, 'separator> {
+struct Record<'line> {
     line: &'line str,
     number: usize,
-    field_separator: Option<&'separator Regex>,
+    field_spans: Vec<(usize, usize)>,
     csv_fields: Option<&'line [String]>,
     now: DateTime<Utc>,
 }
 
-struct EvalContext<'record, 'line, 'separator, 'program> {
-    record: &'record Record<'line, 'separator>,
+struct EvalContext<'record, 'line, 'program> {
+    record: &'record Record<'line>,
     regexes: &'program [Regex],
 }
 
-impl<'line, 'separator> Deref for EvalContext<'_, 'line, 'separator, '_> {
-    type Target = Record<'line, 'separator>;
+impl<'line> Deref for EvalContext<'_, 'line, '_> {
+    type Target = Record<'line>;
 
     fn deref(&self) -> &Self::Target {
         self.record
@@ -119,36 +119,44 @@ impl fmt::Display for EvalError {
 
 type EvalResult<T> = Result<T, EvalError>;
 
-impl Record<'_, '_> {
+impl Record<'_> {
     fn field(&self, number: usize) -> Option<&str> {
         if let Some(fields) = self.csv_fields {
             return fields.get(number - 1).map(String::as_str);
         }
-        match self.field_separator {
-            Some(separator) => separator.split(self.line).nth(number - 1),
-            None => self.line.split_whitespace().nth(number - 1),
-        }
+        self.field_spans
+            .get(number - 1)
+            .map(|(start, end)| &self.line[*start..*end])
     }
 
     fn field_count(&self) -> usize {
         if let Some(fields) = self.csv_fields {
             return fields.len();
         }
-        if self.line.is_empty() {
-            return 0;
-        }
-        match self.field_separator {
-            Some(separator) => separator.split(self.line).count(),
-            None => self.line.split_whitespace().count(),
-        }
+        self.field_spans.len()
+    }
+
+    fn field_range(&self, start: Option<usize>, end: Option<usize>) -> &str {
+        let start = start.unwrap_or(1);
+        let end = end.unwrap_or(self.field_spans.len());
+        let Some((start, _)) = self.field_spans.get(start - 1) else {
+            return "";
+        };
+        let Some((_, end)) = self.field_spans.get(end - 1) else {
+            return "";
+        };
+        &self.line[*start..*end]
     }
 }
 
-fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<RuntimeValue> {
+fn evaluate(value: &Value, record: &EvalContext<'_, '_, '_>) -> EvalResult<RuntimeValue> {
     match value {
         Value::Field(0) => Ok(RuntimeValue::String(record.line.to_owned())),
         Value::Field(number) => Ok(RuntimeValue::String(
             record.field(*number).unwrap_or("").to_owned(),
+        )),
+        Value::FieldRange { start, end } => Ok(RuntimeValue::String(
+            record.field_range(*start, *end).to_owned(),
         )),
         Value::RecordNumber => Ok(RuntimeValue::Number(record.number as f64)),
         Value::FieldCount => Ok(RuntimeValue::Number(record.field_count() as f64)),
@@ -525,7 +533,7 @@ fn evaluate_arithmetic(
     operator: &ArithmeticOperator,
     left: &Value,
     right: &Value,
-    record: &EvalContext<'_, '_, '_, '_>,
+    record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let function = match operator {
         ArithmeticOperator::Add => "+",
@@ -565,7 +573,7 @@ fn evaluate_arithmetic(
 fn evaluate_number_operation(
     operator: &NumberOperator,
     value: &Value,
-    record: &EvalContext<'_, '_, '_, '_>,
+    record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let function = match operator {
         NumberOperator::Truncate => "n/trunc",
@@ -593,7 +601,7 @@ fn duration_from_value(
     value: &Value,
     multiplier: f64,
     function: &'static str,
-    record: &EvalContext<'_, '_, '_, '_>,
+    record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let number = expect_number(evaluate(value, record)?, function, 1)?;
     let nanoseconds = number * multiplier * 1_000_000_000.0;
@@ -615,7 +623,7 @@ fn duration_as_number(
     value: &Value,
     divisor: f64,
     function: &'static str,
-    record: &EvalContext<'_, '_, '_, '_>,
+    record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let duration = expect_duration(evaluate(value, record)?, function, 1)?;
     let nanoseconds = duration
@@ -926,7 +934,7 @@ fn parse_absolute_url(
     })
 }
 
-fn matches(predicate: &Predicate, record: &EvalContext<'_, '_, '_, '_>) -> EvalResult<bool> {
+fn matches(predicate: &Predicate, record: &EvalContext<'_, '_, '_>) -> EvalResult<bool> {
     match predicate {
         Predicate::Compare {
             kind,
@@ -962,7 +970,7 @@ fn compare(
     operator: &ComparisonOperator,
     left: &Value,
     right: &Value,
-    record: &EvalContext<'_, '_, '_, '_>,
+    record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<bool> {
     let function = comparison_name(kind, operator);
     match kind {
@@ -1303,7 +1311,7 @@ pub fn run_no_input<W: Write>(program: &str, mut output: W) -> io::Result<()> {
     let record = Record {
         line: "",
         number: 1,
-        field_separator: None,
+        field_spans: Vec::new(),
         csv_fields: None,
         now: current_datetime(),
     };
@@ -1316,6 +1324,12 @@ pub fn run_no_input<W: Write>(program: &str, mut output: W) -> io::Result<()> {
 
 pub fn run_csv<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::Result<()> {
     let program = compile_program(program)?;
+    if program.program.contains_field_range {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "field ranges are not supported with --csv",
+        ));
+    }
     let mut input = input;
     let mut raw = Vec::new();
     let mut number = 0;
@@ -1329,7 +1343,7 @@ pub fn run_csv<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> 
         let record = Record {
             line,
             number,
-            field_separator: None,
+            field_spans: Vec::new(),
             csv_fields: Some(&fields),
             now,
         };
@@ -1354,10 +1368,11 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
 
     for (index, line) in input.lines().enumerate() {
         let line = line?;
+        let field_spans = split_field_spans(&line, field_separator.as_ref());
         let record = Record {
             line: &line,
             number: index + 1,
-            field_separator: field_separator.as_ref(),
+            field_spans,
             csv_fields: None,
             now,
         };
@@ -1370,6 +1385,38 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
     Ok(())
 }
 
+fn split_field_spans(line: &str, separator: Option<&Regex>) -> Vec<(usize, usize)> {
+    if line.is_empty() {
+        return Vec::new();
+    }
+    if let Some(separator) = separator {
+        let mut spans = Vec::new();
+        let mut start = 0;
+        for delimiter in separator.find_iter(line) {
+            spans.push((start, delimiter.start()));
+            start = delimiter.end();
+        }
+        spans.push((start, line.len()));
+        return spans;
+    }
+
+    let mut spans = Vec::new();
+    let mut start = None;
+    for (index, character) in line.char_indices() {
+        if character.is_whitespace() {
+            if let Some(start) = start.take() {
+                spans.push((start, index));
+            }
+        } else if start.is_none() {
+            start = Some(index);
+        }
+    }
+    if let Some(start) = start {
+        spans.push((start, line.len()));
+    }
+    spans
+}
+
 fn current_datetime() -> DateTime<Utc> {
     DateTime::<Utc>::from(SystemTime::now())
         .with_nanosecond(0)
@@ -1378,7 +1425,7 @@ fn current_datetime() -> DateTime<Utc> {
 
 fn execute<W: Write>(
     expressions: &[Expr],
-    record: &EvalContext<'_, '_, '_, '_>,
+    record: &EvalContext<'_, '_, '_>,
     output: &mut W,
 ) -> io::Result<()> {
     for expression in expressions {
@@ -1606,6 +1653,7 @@ fn validate_value(value: &Value) -> io::Result<()> {
             validate_value(fallback)
         }
         Value::Field(_)
+        | Value::FieldRange { .. }
         | Value::RecordNumber
         | Value::FieldCount
         | Value::String(_)

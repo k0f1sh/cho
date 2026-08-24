@@ -40,6 +40,19 @@ Carol,25
 fields by default. `print` and `filter` also have the short forms `p` and `f` for
 interactive use.
 
+Field ranges select consecutive fields while preserving the separators that
+appeared in the input. `$-3` selects through the third field, `$3-` selects from
+the third field to the end, and `$2-4` selects the second through fourth fields:
+
+```console
+$ printf '2026-08-24 INFO service   started successfully\n' | cho '(p $3-)'
+service   started successfully
+```
+
+Field ranges work with whitespace, TSV, and `-F REGEX` input. They are not
+available with `--csv`, because CSV fields are decoded rather than raw slices of
+the input record.
+
 Run `cho --help` for the complete syntax and more examples.
 
 ## Typed values and composition
