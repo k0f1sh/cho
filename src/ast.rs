@@ -26,6 +26,11 @@ pub enum Predicate {
         target: Value,
         regex: RegexId,
     },
+    StringTest {
+        kind: StringTest,
+        value: Value,
+        pattern: Value,
+    },
     IpClass {
         kind: IpClass,
         value: Value,
@@ -35,9 +40,16 @@ pub enum Predicate {
         ip: Value,
     },
     UrlQueryHas {
-        name: Value,
         url: Value,
+        name: Value,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StringTest {
+    StartsWith,
+    EndsWith,
+    Contains,
 }
 
 #[derive(Debug, PartialEq)]
@@ -166,8 +178,8 @@ pub enum Value {
         value: Box<Value>,
     },
     FormatNumberFixed {
-        digits: Box<Value>,
         value: Box<Value>,
+        digits: Box<Value>,
     },
     UrlPart {
         part: UrlPart,
@@ -178,8 +190,8 @@ pub enum Value {
         value: Box<Value>,
     },
     UrlQueryGet {
-        name: Box<Value>,
         url: Box<Value>,
+        name: Box<Value>,
     },
     IpVersion(Box<Value>),
     CidrPart {
@@ -196,9 +208,9 @@ pub enum Value {
     Or(Vec<Value>),
     DateTimeFromUnix(Box<Value>),
     FormatDateTime {
+        value: Box<Value>,
         format: Box<Value>,
         timezone: Option<Box<Value>>,
-        value: Box<Value>,
     },
     DurationSeconds(Box<Value>),
     DurationMilliseconds(Box<Value>),
@@ -213,8 +225,8 @@ pub enum Value {
     DateTimeNow,
     FloorDateTime {
         unit: DateTimeFloorUnit,
-        timezone: Option<Box<Value>>,
         value: Box<Value>,
+        timezone: Option<Box<Value>>,
     },
     AddDateTime {
         datetime: Box<Value>,
@@ -235,25 +247,25 @@ pub enum Value {
     },
     Replace {
         mode: ReplaceMode,
+        value: Box<Value>,
         from: Box<Value>,
         to: Box<Value>,
-        value: Box<Value>,
     },
     RegexReplace {
         mode: ReplaceMode,
+        value: Box<Value>,
         regex: RegexId,
         replacement: Box<Value>,
-        value: Box<Value>,
     },
     Part {
+        value: Box<Value>,
         delimiter: Box<Value>,
         position: Box<Value>,
-        value: Box<Value>,
     },
     Slice {
+        value: Box<Value>,
         start: Box<Value>,
         length: Option<Box<Value>>,
-        value: Box<Value>,
     },
     Count(Box<Value>),
     Escape(Box<Value>),
