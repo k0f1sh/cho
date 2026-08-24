@@ -51,7 +51,7 @@ Carol
 ## Examples
 
 Extract a log message with field ranges — `$3-` keeps everything from the
-third field onward, preserving the original spacing:
+third field through the end of the record, preserving the original spacing:
 
 ```console
 $ echo '2026-08-24 INFO service   started successfully' | cho '(p $3-)'

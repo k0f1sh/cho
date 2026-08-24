@@ -414,7 +414,18 @@ fn field_ranges_preserve_original_whitespace_and_compose_as_values() {
             "(print $-2) (print $3-) (print (s/upper $2-4))",
             "  one\t two   three four  five  \n",
         ),
-        "one\t two\nthree four  five\nTWO   THREE FOUR\n"
+        "  one\t two\nthree four  five  \nTWO   THREE FOUR\n"
+    );
+}
+
+#[test]
+fn open_field_ranges_extend_to_record_edges() {
+    assert_eq!(
+        output(
+            "(print (dq $-2) (dq $2-) (dq $1-))",
+            "  one  two  three  \n"
+        ),
+        "\"  one  two\" \"two  three  \" \"one  two  three  \"\n"
     );
 }
 
@@ -424,9 +435,9 @@ fn field_ranges_preserve_regex_separators_and_empty_fields() {
         output_with_separator(
             "(print $-2) (print $2-) (print $2-3)",
             "[,;]",
-            ",Alice;Tokyo"
+            ",Alice;Tokyo;"
         ),
-        ",Alice\nAlice;Tokyo\nAlice;Tokyo\n"
+        ",Alice\nAlice;Tokyo;\nAlice;Tokyo\n"
     );
 }
 
@@ -441,7 +452,7 @@ fn field_range_ends_are_clamped_and_missing_starts_are_empty() {
             "(print (dq $-4000) (dq $1-30) (dq $30-40))",
             "  a b   c ddd    eeee  \n"
         ),
-        "\"a b   c ddd    eeee\" \"a b   c ddd    eeee\" \"\"\n"
+        "\"  a b   c ddd    eeee\" \"a b   c ddd    eeee\" \"\"\n"
     );
 }
 

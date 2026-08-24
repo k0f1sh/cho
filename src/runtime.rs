@@ -137,17 +137,29 @@ impl Record<'_> {
     }
 
     fn field_range(&self, start: Option<usize>, end: Option<usize>) -> &str {
-        let start = start.unwrap_or(1);
-        let end = end
-            .unwrap_or(self.field_spans.len())
-            .min(self.field_spans.len());
-        let Some((start, _)) = self.field_spans.get(start - 1) else {
+        if self.field_spans.is_empty() {
             return "";
+        }
+        let start = match start {
+            Some(start) => {
+                let Some((start, _)) = self.field_spans.get(start - 1) else {
+                    return "";
+                };
+                *start
+            }
+            None => 0,
         };
-        let Some((_, end)) = self.field_spans.get(end - 1) else {
-            return "";
+        let end = match end {
+            Some(end) => {
+                let end = end.min(self.field_spans.len());
+                let Some((_, end)) = self.field_spans.get(end - 1) else {
+                    return "";
+                };
+                *end
+            }
+            None => self.line.len(),
         };
-        &self.line[*start..*end]
+        &self.line[start..end]
     }
 }
 
