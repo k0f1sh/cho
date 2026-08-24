@@ -232,6 +232,11 @@ pub enum Value {
         position: Box<Value>,
         value: Box<Value>,
     },
+    Slice {
+        start: Box<Value>,
+        length: Option<Box<Value>>,
+        value: Box<Value>,
+    },
     Count(Box<Value>),
     Escape(Box<Value>),
     Quote {

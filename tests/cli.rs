@@ -64,6 +64,7 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("--skip-header"));
     assert!(stdout.contains("--no-input"));
     assert!(stdout.contains("(s/part DELIMITER POSITION VALUE)"));
+    assert!(stdout.contains("(s/slice START [LENGTH] VALUE)"));
     assert!(stdout.contains("(dt/fmt STRING DATETIME)"));
     assert!(stdout.contains("(dt/fmt STRING TIMEZONE DATETIME)"));
     assert!(stdout.contains("Asia/Tokyo"));

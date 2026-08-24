@@ -156,6 +156,54 @@ fn part_keeps_invalid_delimiters_and_positions_strict() {
 }
 
 #[test]
+fn slice_extracts_unicode_characters_and_clamps_to_the_end() {
+    assert_eq!(
+        output(
+            r#"(print (s/slice 5 "washington") (s/slice 5 3 "washington")) (print (s/slice 2 3 "東京駅前")) (print (s/slice 20 3 "short") (dq (s/slice 2 0 "abc")))"#,
+            "x\n",
+        ),
+        "ington ing\n京駅前\n \"\"\n"
+    );
+    assert_eq!(
+        output(
+            r#"(print (dq (s/slice 1 "")) (dq (s/slice 1 1e40 "abc")) (dq (s/slice 1e40 "abc")))"#,
+            "x\n",
+        ),
+        "\"\" \"abc\" \"\"\n"
+    );
+}
+
+#[test]
+fn slice_composes_with_values_and_threading() {
+    assert_eq!(
+        output(
+            r#"(print (s/upper (s/slice (s/count "x") 3 $1)) (->> $1 (s/slice 2) (dq)))"#,
+            "abcdef\n",
+        ),
+        "ABC \"bcdef\"\n"
+    );
+}
+
+#[test]
+fn slice_rejects_invalid_starts_and_lengths() {
+    for (program, argument) in [
+        (r#"(print (s/slice 0 "abc"))"#, 1),
+        (r#"(print (s/slice -1 "abc"))"#, 1),
+        (r#"(print (s/slice 1.5 "abc"))"#, 1),
+        (r#"(print (s/slice 1 -1 "abc"))"#, 2),
+        (r#"(print (s/slice 1 1.5 "abc"))"#, 2),
+    ] {
+        let error = cho::run(program, Cursor::new("x\n"), Vec::new()).unwrap_err();
+        assert!(
+            error.to_string().starts_with(&format!(
+                "record 1: s/slice: argument {argument} expects Number"
+            )),
+            "{error}"
+        );
+    }
+}
+
+#[test]
 fn count_counts_unicode_characters() {
     assert_eq!(
         output("(print (s/count $1))", "Alice\n東京\n🦀\n"),

@@ -60,6 +60,16 @@ Run `cho --help` for the complete syntax and more examples.
 Expressions compose the same way whether selecting fields, parsing dates,
 comparing typed values, or applying other transformations.
 
+Parameterized transformations put their settings first and the value being
+transformed last. For example, `s/slice` uses 1-based character positions and
+accepts an optional length:
+
+```console
+$ printf 'washington 東京駅前\n' |
+    cho '(p (s/slice 5 3 $1) (s/slice 2 $2))'
+ing 京駅前
+```
+
 For example, this keeps records on or after a timestamp and inside a CIDR:
 
 ```console

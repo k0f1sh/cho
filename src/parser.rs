@@ -294,6 +294,10 @@ impl Parser {
                         value: Box::new(value),
                     })
                 }
+                Some(Token::Atom(operator)) if operator == "s/slice" => {
+                    let arguments = self.parse_values_until_right_paren()?;
+                    build_string_slice(arguments)
+                }
                 Some(Token::Atom(operator)) if operator == "s/count" => {
                     let value = self.parse_value()?;
                     if self.next() != Some(Token::RightParen) {
@@ -663,6 +667,7 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
                 value: Box::new(value),
             })
         }
+        "s/slice" => build_string_slice(arguments),
         "s/count" => Ok(Value::Count(Box::new(one(arguments)?))),
         "s/escape" => Ok(Value::Escape(Box::new(one(arguments)?))),
         "s/dquote" | "dq" | "s/squote" | "sq" => Ok(Value::Quote {
@@ -803,6 +808,28 @@ fn build_value_application(operator: &str, mut arguments: Vec<Value>) -> Result<
         }
         _ => Err(ParseError::InvalidSyntax),
     }
+}
+
+fn build_string_slice(arguments: Vec<Value>) -> Result<Value, ParseError> {
+    let mut arguments = arguments.into_iter();
+    let (start, length, value) = match arguments.len() {
+        2 => (
+            arguments.next().expect("length was checked"),
+            None,
+            arguments.next().expect("length was checked"),
+        ),
+        3 => (
+            arguments.next().expect("length was checked"),
+            Some(arguments.next().expect("length was checked")),
+            arguments.next().expect("length was checked"),
+        ),
+        _ => return Err(ParseError::InvalidSyntax),
+    };
+    Ok(Value::Slice {
+        start: Box::new(start),
+        length: length.map(Box::new),
+        value: Box::new(value),
+    })
 }
 
 fn build_datetime_floor(
@@ -1098,6 +1125,29 @@ mod tests {
     }
 
     #[test]
+    fn parses_slice_with_an_optional_length() {
+        assert_eq!(
+            parse(r#"(print (s/slice 2 $1) (s/slice 2 3 $1))"#),
+            Ok(Program {
+                expressions: vec![Expr::Print(vec![
+                    Value::Slice {
+                        start: Box::new(Value::Number(2.0)),
+                        length: None,
+                        value: Box::new(Value::Field(1)),
+                    },
+                    Value::Slice {
+                        start: Box::new(Value::Number(2.0)),
+                        length: Some(Box::new(Value::Number(3.0))),
+                        value: Box::new(Value::Field(1)),
+                    },
+                ])],
+                regex_patterns: vec![],
+                contains_field_range: false,
+            })
+        );
+    }
+
+    #[test]
     fn parses_conditional_and_string_values() {
         assert!(
             parse(r#"(print (if (s/= (s/lower $1) "alice") (s/upper $2) (default $3 "unknown")))"#)
@@ -1268,6 +1318,9 @@ mod tests {
             r#"(print (s/part ":"))"#,
             r#"(print (s/part ":" 1))"#,
             r#"(print (s/part ":" 1 $1 $2))"#,
+            "(print (s/slice))",
+            "(print (s/slice 1))",
+            "(print (s/slice 1 2 3 4))",
             "(print (s/dquote))",
             "(print (s/dquote $1 $2))",
             "(print (s/squote))",
