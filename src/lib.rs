@@ -3,6 +3,6 @@ mod lexer;
 mod parser;
 mod runtime;
 
-pub use ast::{ComparisonOperator, Expr, Predicate, Program, Value};
+pub use ast::{ComparisonOperator, Form, Predicate, Program, Value};
 pub use parser::{ParseError, parse};
 pub use runtime::{run, run_csv, run_no_input, run_with_field_separator};

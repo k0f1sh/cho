@@ -4,7 +4,7 @@ A small, type-aware text processor for the command line.
 
 Inspired by awk, `cho` processes input one record at a time. It fills the gap
 between shell one-liners and small standalone scripts with typed values and
-composable Lisp-like expressions.
+composable Lisp-like functions and forms.
 
 > [!WARNING]
 > `cho` is experimental. Its syntax and behavior may change.
@@ -79,10 +79,10 @@ Alice -> Tokyo, Japan
 Bob -> Osaka
 ```
 
-Fields are plain strings, but cho knows about types. When an expression
+Fields are plain strings, but cho knows about types. When a function
 expects a DateTime, IP address, CIDR, URL, or SemVer, the string is converted
 automatically — no annotations or casts needed. If the value doesn't match the
-expected format, cho stops with an error that pinpoints the record, expression,
+expected format, cho stops with an error that pinpoints the record, function,
 and argument:
 
 ```console
@@ -110,7 +110,7 @@ HELLO_WORLD
 ```
 
 cho handles text, numbers, datetime, duration, IP/CIDR, URLs, and semver.
-Run `cho --help` for the complete syntax and all value expressions.
+Run `cho --help` for the complete syntax, functions, and special forms.
 
 ## Documentation
 
