@@ -45,8 +45,10 @@ Bob
 Carol
 ```
 
-`$1`, `$2`, ... are whitespace-separated fields. `p` is short for `print`,
-`f` for `filter`. Filters without an explicit `print` output the whole record.
+By default, cho treats each input line as a record and its whitespace-separated
+parts as fields. Use `-F`, `--csv`, or `--tsv` to change how fields are parsed.
+`$1`, `$2`, ... refer to those fields. `p` is short for `print`, `f` for
+`filter`. Filters without an explicit `print` output the whole record.
 
 ## Examples
 
