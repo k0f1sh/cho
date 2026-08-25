@@ -1,0 +1,162 @@
+use super::support::{output, output_with_separator};
+use std::io::{self, Cursor};
+
+#[test]
+fn field_zero_preserves_the_line_and_missing_fields_are_empty() {
+    assert_eq!(
+        output("(print $0 $3)", "  Alice   20  \n"),
+        "  Alice   20   \n"
+    );
+}
+
+#[test]
+fn field_ranges_preserve_original_whitespace_and_compose_as_values() {
+    assert_eq!(
+        output(
+            "(print $-2) (print $3-) (print (s/upper $2-4))",
+            "  one\t two   three four  five  \n",
+        ),
+        "  one\t two\nthree four  five  \nTWO   THREE FOUR\n"
+    );
+}
+
+#[test]
+fn open_field_ranges_extend_to_record_edges() {
+    assert_eq!(
+        output(
+            "(print (dq $-2) (dq $2-) (dq $1-))",
+            "  one  two  three  \n"
+        ),
+        "\"  one  two\" \"two  three  \" \"one  two  three  \"\n"
+    );
+}
+
+#[test]
+fn field_range_ends_are_clamped_and_missing_starts_are_empty() {
+    assert_eq!(
+        output("(print $3-) (print $-3) (print $2-4)", "one two\n\n"),
+        "\none two\ntwo\n\n\n\n"
+    );
+    assert_eq!(
+        output(
+            "(print (dq $-4000) (dq $1-30) (dq $30-40))",
+            "  a b   c ddd    eeee  \n"
+        ),
+        "\"  a b   c ddd    eeee\" \"a b   c ddd    eeee\" \"\"\n"
+    );
+}
+
+#[test]
+fn nr_and_nf_describe_the_record() {
+    assert_eq!(
+        output("(print NR NF)", "Alice 20\nBob\t30 Osaka\n\n"),
+        "1 2\n2 3\n3 0\n"
+    );
+}
+
+#[test]
+fn an_empty_print_prints_an_empty_line() {
+    assert_eq!(output("(print)", "Alice\nBob\n"), "\n\n");
+}
+
+#[test]
+fn multiple_filters_form_an_and_condition() {
+    assert_eq!(
+        output(
+            "(filter (> $2 20)) (filter (< $2 40)) (print $1)",
+            "Alice 18\nBob 30\nCarol 45\n"
+        ),
+        "Bob\n"
+    );
+}
+
+#[test]
+fn empty_program_passes_records_through_unchanged() {
+    assert_eq!(
+        output("", "  Alice 20  \n\nBob\t30\n"),
+        "  Alice 20  \n\nBob\t30\n"
+    );
+}
+
+#[test]
+fn supports_all_comparison_operators() {
+    let input = "low 10\nequal 20\nhigh 30\n";
+    assert_eq!(output("(filter (> $2 20)) (print $1)", input), "high\n");
+    assert_eq!(
+        output("(filter (>= $2 20)) (print $1)", input),
+        "equal\nhigh\n"
+    );
+    assert_eq!(output("(filter (< $2 20)) (print $1)", input), "low\n");
+    assert_eq!(
+        output("(filter (<= $2 20)) (print $1)", input),
+        "low\nequal\n"
+    );
+    assert_eq!(output("(filter (= $2 20)) (print $1)", input), "equal\n");
+    assert_eq!(
+        output("(filter (!= $2 20)) (print $1)", input),
+        "low\nhigh\n"
+    );
+}
+
+#[test]
+fn custom_separators_control_fields_and_nf() {
+    assert_eq!(
+        output_with_separator("(print NF $1 $3 $0)", ",", "Alice,20,Tokyo\nBob,30,Osaka\n"),
+        "3 Alice Tokyo Alice,20,Tokyo\n3 Bob Osaka Bob,30,Osaka\n"
+    );
+}
+
+#[test]
+fn empty_records_have_no_fields() {
+    assert_eq!(output_with_separator("(print NF)", ",", "\n"), "0\n");
+}
+
+#[test]
+fn csv_mode_rejects_field_ranges_before_reading_input() {
+    let error = cho::run_csv(
+        "(print (s/upper $2-))",
+        Cursor::new("not,csv,\""),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+    assert_eq!(
+        error.to_string(),
+        "field ranges are not supported with --csv"
+    );
+}
+
+#[test]
+fn csv_mode_streams_logical_records_with_embedded_newlines() {
+    let mut result = Vec::new();
+    cho::run_csv(
+        "(print NR $2 $0)",
+        Cursor::new("Alice,\"Tokyo\nJapan\"\r\nBob,Osaka\r\n"),
+        &mut result,
+    )
+    .unwrap();
+    assert_eq!(
+        String::from_utf8(result).unwrap(),
+        "1 Tokyo\nJapan Alice,\"Tokyo\nJapan\"\n2 Osaka Bob,Osaka\n"
+    );
+}
+
+#[test]
+fn csv_mode_preserves_a_final_record_without_a_newline() {
+    let mut result = Vec::new();
+    cho::run_csv("(print $0 $2)", Cursor::new("Alice,Tokyo"), &mut result).unwrap();
+    assert_eq!(String::from_utf8(result).unwrap(), "Alice,Tokyo Tokyo\n");
+}
+
+#[test]
+fn output_before_a_runtime_error_is_preserved() {
+    let mut result = Vec::new();
+    let error = cho::run(
+        "(filter (> $2 20)) (print $1)",
+        Cursor::new("Alice 30\nBob unknown\n"),
+        &mut result,
+    )
+    .unwrap_err();
+    assert_eq!(String::from_utf8(result).unwrap(), "Alice\n");
+    assert!(error.to_string().starts_with("record 2: >: argument 1"));
+}
