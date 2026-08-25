@@ -58,6 +58,14 @@ $ echo '2026-08-24 INFO service   started successfully' | cho '(p $3-)'
 service   started successfully
 ```
 
+`$2-4` picks a bounded range — here, fields 2 through 4, preserving the
+separators between them:
+
+```console
+$ echo 'one  two   three four five' | cho '(p $2-4)'
+two   three four
+```
+
 Process CSV:
 
 ```console
@@ -69,7 +77,11 @@ Alice -> Tokyo, Japan
 Bob -> Osaka
 ```
 
-Filter by timestamp and CIDR — no type annotations needed:
+Fields are plain strings, but cho knows about types. When an expression
+expects a DateTime, IP address, CIDR, URL, or SemVer, the string is converted
+automatically — no annotations or casts needed. If the value doesn't match the
+expected format, cho stops with an error that pinpoints the record, expression,
+and argument:
 
 ```console
 $ printf '%s\n' \
@@ -78,6 +90,14 @@ $ printf '%s\n' \
     '2026-08-03T12:00:00Z 8.8.8.8 external' |
     cho '(f (dt/>= $1 "2026-08-01T00:00:00Z")) (f (cidr/contains? "10.0.0.0/8" $2))'
 2026-08-02T09:00:00Z 10.1.2.3 deploy
+```
+
+`dt/>=` parses `$1` as a DateTime, while `cidr/contains?` parses `$2` as an IP
+address. Invalid values fail with a precise error:
+
+```console
+$ echo 'not-a-date' | cho '(f (dt/>= $1 "2026-08-01T00:00:00Z"))'
+cho: record 1: dt/>=: argument 1 expects DateTime, but "not-a-date" is not valid RFC 3339
 ```
 
 Chain transformations with the threading macro:
