@@ -470,7 +470,7 @@ fn an_empty_print_prints_an_empty_line() {
 }
 
 #[test]
-fn filter_skips_remaining_expressions_for_a_record() {
+fn filter_skips_remaining_forms_for_a_record() {
     assert_eq!(
         output(
             r#"(print "checking" $1) (filter (> $2 20)) (print "passed" $1)"#,
@@ -555,7 +555,7 @@ fn boolean_predicates_can_be_nested_with_regexes() {
 }
 
 #[test]
-fn boolean_values_compose_in_filter_if_and_logical_expressions() {
+fn boolean_values_compose_in_filter_if_and_logical_functions() {
     assert_eq!(
         output(
             concat!(
@@ -1545,7 +1545,7 @@ fn cidr_extractors_return_ipv4_and_ipv6_boundaries() {
 }
 
 #[test]
-fn cidr_ip_results_remain_typed_and_compose_with_ip_expressions() {
+fn cidr_ip_results_remain_typed_and_compose_with_ip_functions() {
     assert_eq!(
         output(
             concat!(
@@ -1817,7 +1817,7 @@ fn default_can_recover_from_an_invalid_ip() {
 }
 
 #[test]
-fn threading_runs_as_the_expanded_value_expression() {
+fn threading_runs_as_the_expanded_function_call() {
     assert_eq!(
         output(
             r#"(print (str "date: " (-> $1 (dt/fmt "%Y/%m/%d"))))"#,

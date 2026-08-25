@@ -15,7 +15,7 @@ use regex::Regex;
 use semver::Version;
 
 use crate::ast::{
-    ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
+    ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Form,
     IpClass, NumberOperator, Predicate, Program, ReplaceMode, SemVerPart, StringQuote, StringTest,
     StringTrim, UrlEncoding, UrlPart, Value,
 };
@@ -1439,7 +1439,7 @@ pub fn run_no_input<W: Write>(program: &str, mut output: W) -> io::Result<()> {
         record: &record,
         regexes: &program.regexes,
     };
-    execute(&program.program.expressions, &context, &mut output)
+    execute(&program.program.forms, &context, &mut output)
 }
 
 pub fn run_csv<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::Result<()> {
@@ -1471,7 +1471,7 @@ pub fn run_csv<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> 
             record: &record,
             regexes: &program.regexes,
         };
-        execute(&program.program.expressions, &context, &mut output)?;
+        execute(&program.program.forms, &context, &mut output)?;
     }
     Ok(())
 }
@@ -1500,7 +1500,7 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
             record: &record,
             regexes: &program.regexes,
         };
-        execute(&program.program.expressions, &context, &mut output)?;
+        execute(&program.program.forms, &context, &mut output)?;
     }
     Ok(())
 }
@@ -1544,13 +1544,13 @@ fn current_datetime() -> DateTime<Utc> {
 }
 
 fn execute<W: Write>(
-    expressions: &[Expr],
+    forms: &[Form],
     record: &EvalContext<'_, '_, '_>,
     output: &mut W,
 ) -> io::Result<()> {
-    for expression in expressions {
-        let result = match expression {
-            Expr::Print(values) => {
+    for form in forms {
+        let result = match form {
+            Form::Print(values) => {
                 let rendered = values
                     .iter()
                     .map(|value| evaluate(value, record).map(|value| value.render()))
@@ -1564,7 +1564,7 @@ fn execute<W: Write>(
                     Err(error) => Err(error),
                 }
             }
-            Expr::Filter(condition) => {
+            Form::Filter(condition) => {
                 evaluate(condition, record).and_then(|value| expect_boolean(value, "filter", 1))
             }
         };
@@ -1656,16 +1656,16 @@ fn compile_program(source: &str) -> io::Result<CompiledProgram> {
     let mut program = parse(source)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid program"))?;
     if program
-        .expressions
+        .forms
         .iter()
-        .all(|expression| matches!(expression, Expr::Filter(_)))
+        .all(|form| matches!(form, Form::Filter(_)))
     {
-        program.expressions.push(Expr::Print(vec![Value::Field(0)]));
+        program.forms.push(Form::Print(vec![Value::Field(0)]));
     }
-    for expression in &program.expressions {
-        match expression {
-            Expr::Print(values) => values.iter().try_for_each(validate_value)?,
-            Expr::Filter(condition) => validate_value(condition)?,
+    for form in &program.forms {
+        match form {
+            Form::Print(values) => values.iter().try_for_each(validate_value)?,
+            Form::Filter(condition) => validate_value(condition)?,
         }
     }
     let regexes = program

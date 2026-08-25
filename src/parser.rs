@@ -1,5 +1,5 @@
 use crate::ast::{
-    ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Expr,
+    ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Form,
     IpClass, NumberOperator, Predicate, Program, RegexId, ReplaceMode, SemVerPart, StringQuote,
     StringTest, StringTrim, UrlEncoding, UrlPart, Value,
 };
@@ -37,31 +37,31 @@ impl Parser {
     }
 
     fn parse_program(&mut self) -> Result<Program, ParseError> {
-        let mut expressions = Vec::new();
+        let mut forms = Vec::new();
         while self.position < self.tokens.len() {
-            expressions.push(self.parse_expression()?);
+            forms.push(self.parse_form()?);
         }
         Ok(Program {
-            expressions,
+            forms,
             regex_patterns: std::mem::take(&mut self.regex_patterns),
             contains_field_range: self.contains_field_range,
         })
     }
 
-    fn parse_expression(&mut self) -> Result<Expr, ParseError> {
+    fn parse_form(&mut self) -> Result<Form, ParseError> {
         if self.next() != Some(Token::LeftParen) {
             return Err(ParseError::InvalidSyntax);
         }
         match self.next() {
             Some(Token::Atom(operator)) if operator == "print" || operator == "p" => {
-                Ok(Expr::Print(self.parse_values_until_right_paren()?))
+                Ok(Form::Print(self.parse_values_until_right_paren()?))
             }
             Some(Token::Atom(operator)) if operator == "filter" || operator == "f" => {
                 let condition = self.parse_value()?;
                 if self.next() != Some(Token::RightParen) {
                     return Err(ParseError::InvalidSyntax);
                 }
-                Ok(Expr::Filter(condition))
+                Ok(Form::Filter(condition))
             }
             _ => Err(ParseError::InvalidSyntax),
         }
@@ -1083,14 +1083,14 @@ mod tests {
         assert_eq!(
             parse(r#"(filter (> (s/count $1) 3)) (print (str NR ":" $1))"#),
             Ok(Program {
-                expressions: vec![
-                    Expr::Filter(Value::Predicate(Box::new(Predicate::Compare {
+                forms: vec![
+                    Form::Filter(Value::Predicate(Box::new(Predicate::Compare {
                         kind: ComparisonType::Number,
                         operator: ComparisonOperator::GreaterThan,
                         left: Value::Count(Box::new(Value::Field(1))),
                         right: Value::Number(3.0),
                     }))),
-                    Expr::Print(vec![Value::Concat(vec![
+                    Form::Print(vec![Value::Concat(vec![
                         Value::RecordNumber,
                         Value::String(":".into()),
                         Value::Field(1),
@@ -1107,7 +1107,7 @@ mod tests {
         assert_eq!(
             parse("(print $-3 $3- $2-4)"),
             Ok(Program {
-                expressions: vec![Expr::Print(vec![
+                forms: vec![Form::Print(vec![
                     Value::FieldRange {
                         start: None,
                         end: Some(3),
@@ -1148,7 +1148,7 @@ mod tests {
     fn assigns_regex_ids_in_source_order() {
         let program = parse(r#"(filter (and (reg /error/) (~ $1 "^warn")))"#).unwrap();
         assert_eq!(program.regex_patterns, vec!["error", "^warn"]);
-        let Expr::Filter(Value::And(predicates)) = &program.expressions[0] else {
+        let Form::Filter(Value::And(predicates)) = &program.forms[0] else {
             panic!("expected an and filter");
         };
         assert!(matches!(
@@ -1202,7 +1202,7 @@ mod tests {
         assert_eq!(
             parse(r#"(print (s/join "," $1 $2))"#),
             Ok(Program {
-                expressions: vec![Expr::Print(vec![Value::Join {
+                forms: vec![Form::Print(vec![Value::Join {
                     separator: Box::new(Value::String(",".into())),
                     values: vec![Value::Field(1), Value::Field(2)],
                 }])],
@@ -1228,8 +1228,8 @@ mod tests {
                 .unwrap();
         assert_eq!(program.regex_patterns, vec!["(?P<x>x)"]);
         assert!(matches!(
-            &program.expressions[0],
-            Expr::Print(values)
+            &program.forms[0],
+            Form::Print(values)
                 if matches!(values[0], Value::Replace { mode: ReplaceMode::First, .. })
                     && matches!(values[1], Value::RegexReplace {
                         mode: ReplaceMode::All,
@@ -1244,7 +1244,7 @@ mod tests {
         assert_eq!(
             parse(r#"(print (s/part $1 (str "]" ":") (s/count "x")))"#),
             Ok(Program {
-                expressions: vec![Expr::Print(vec![Value::Part {
+                forms: vec![Form::Print(vec![Value::Part {
                     delimiter: Box::new(Value::Concat(vec![
                         Value::String("]".into()),
                         Value::String(":".into()),
@@ -1267,7 +1267,7 @@ mod tests {
         assert_eq!(
             parse(r#"(print (s/slice $1 2) (s/slice $1 2 3))"#),
             Ok(Program {
-                expressions: vec![Expr::Print(vec![
+                forms: vec![Form::Print(vec![
                     Value::Slice {
                         start: Box::new(Value::Number(2.0)),
                         length: None,

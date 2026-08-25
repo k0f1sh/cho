@@ -36,7 +36,7 @@ Input and options:
   the first data record keeps its input position and therefore has NR 2.
   With --no-input, $0 is empty, NR is 1, and NF is 0.
 
-Program expressions:
+Program forms:
   (print VALUE ...)              print values separated by spaces
   (p VALUE ...)                  short form of print
   (filter BOOLEAN)               continue only when true
@@ -110,12 +110,14 @@ Strings:
   Empty prefixes, suffixes, and needles match every string, including empty.
   Example: cho --no-input '(p (dq (s/trim "  hello  ")))'
 
-Selection and recovery:
+Boolean functions:
+  (not BOOLEAN)                  negate
+
+Special forms (evaluate only the values they need):
   (if BOOLEAN VALUE VALUE)       select one value lazily
   (default VALUE FALLBACK)       use FALLBACK when VALUE is empty or errors
-  (not BOOLEAN)                  negate
-  (and BOOLEAN ...)              true when every value is true
-  (or BOOLEAN ...)               true when any value is true
+  (and BOOLEAN ...)              stop at the first false value
+  (or BOOLEAN ...)               stop at the first true value
 
 Regular expressions:
   (reg /PATTERN/)                match $0
@@ -218,22 +220,23 @@ Types and errors:
   Cidr        IPv4 or IPv6 networks          Url       absolute URLs
   SemVer      MAJOR.MINOR.PATCH versions
 
-  Expressions convert Strings when they require another type. Failed conversion
-  reports the record, expression, and argument number. Boolean values never
+  Functions convert Strings when they require another type. Failed conversion
+  reports the record, function, and argument number. Boolean values never
   convert implicitly from strings or numbers. Numeric arithmetic is binary;
   division by zero and non-finite results are errors.
 
 Composition:
-  Values nest anywhere a VALUE is accepted. Multiple program expressions run
-  left to right; a failed filter skips the rest of that record. Multiple filters
-  therefore act like AND. If the program is empty or contains only filters,
+  A VALUE can be a literal, field, function call, or special form. Values nest
+  anywhere a VALUE is accepted. Multiple program forms run left to right; a
+  failed filter skips the rest of that record. Multiple filters therefore act
+  like AND. If the program is empty or contains only filters,
   cho implicitly prints $0 after the filters pass.
   Functions with one primary input put it first, followed by configuration.
-  Variadic forms such as str and s/join have no single primary input.
+  Variadic functions such as str and s/join have no single primary input.
 
   (-> VALUE STEP ...)     insert VALUE as each step's first argument
   (->> VALUE STEP ...)    insert VALUE as each step's last argument
-  STEP is NAME when there are no extra arguments, or (FORM ...) otherwise.
+  STEP is NAME when there are no extra arguments, or (CALL ...) otherwise.
 
     (-> $1 (dt/add (du/s 10)))
       is (dt/add $1 (du/s 10))

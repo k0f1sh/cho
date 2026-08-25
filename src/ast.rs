@@ -1,6 +1,6 @@
 #[derive(Debug, PartialEq)]
 pub struct Program {
-    pub expressions: Vec<Expr>,
+    pub forms: Vec<Form>,
     pub regex_patterns: Vec<String>,
     pub contains_field_range: bool,
 }
@@ -9,7 +9,7 @@ pub struct Program {
 pub struct RegexId(pub usize);
 
 #[derive(Debug, PartialEq)]
-pub enum Expr {
+pub enum Form {
     Print(Vec<Value>),
     Filter(Value),
 }
