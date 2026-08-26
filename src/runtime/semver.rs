@@ -1,6 +1,10 @@
 use ::semver::Version;
 
-use super::*;
+use crate::ast::{ComparisonOperator, SemVerPart, Value};
+
+use super::eval::{EvalContext, evaluate};
+use super::predicate::apply_ordering;
+use super::value::{EvalError, EvalResult, RuntimeValue, exact_u64_number};
 
 pub(super) fn evaluate_part(
     part: &SemVerPart,

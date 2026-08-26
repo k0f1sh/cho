@@ -1,4 +1,12 @@
-use super::*;
+use crate::ast::{ComparisonOperator, ComparisonType, Predicate, StringTest, Value};
+
+use super::datetime::expect_datetime;
+use super::eval::{EvalContext, evaluate};
+use super::network::{expect_cidr, expect_ip, ip_class_name, matches_ip_class};
+use super::semver;
+use super::string::string_test_name;
+use super::url::parse_absolute_url;
+use super::value::{EvalResult, expect_number, expect_string};
 
 pub(super) fn matches(predicate: &Predicate, record: &EvalContext<'_, '_, '_>) -> EvalResult<bool> {
     match predicate {

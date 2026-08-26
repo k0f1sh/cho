@@ -1,4 +1,9 @@
-use super::*;
+use std::io;
+
+use regex::Regex;
+
+use crate::ast::{Form, Predicate, Program, Value};
+use crate::parser::parse;
 
 pub(super) struct CompiledProgram {
     pub(super) program: Program,

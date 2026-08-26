@@ -1,4 +1,10 @@
-use super::*;
+use std::net::IpAddr;
+
+use ipnet::IpNet;
+
+use crate::ast::{CidrPart, IpClass};
+
+use super::value::{EvalError, EvalResult, RuntimeValue};
 
 pub(super) fn expect_ip(
     value: RuntimeValue,
