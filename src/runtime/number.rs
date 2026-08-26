@@ -1,4 +1,7 @@
-use super::*;
+use crate::ast::{ArithmeticOperator, NumberOperator, Value};
+
+use super::eval::{EvalContext, evaluate};
+use super::value::{EvalError, EvalResult, RuntimeValue, expect_number};
 
 pub(super) fn evaluate_arithmetic(
     operator: &ArithmeticOperator,
