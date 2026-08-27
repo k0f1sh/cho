@@ -413,6 +413,8 @@ registry!(
 );
 
 pub(crate) fn lookup(name: &str) -> Option<&'static dyn ToAst> {
+    // Programs are compiled once before records are evaluated, so this simple linear scan is not
+    // part of the per-record hot path.
     CALLABLES.iter().copied().find(|callable| {
         let definition = callable.definition();
         definition.name == name || definition.aliases.contains(&name)
