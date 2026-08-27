@@ -159,6 +159,7 @@ pub enum SemVerPart {
 #[derive(Debug, PartialEq)]
 pub enum Value {
     Field(usize),
+    DynamicField(Box<Value>),
     FieldRange {
         start: Option<usize>,
         end: Option<usize>,

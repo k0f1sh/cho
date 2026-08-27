@@ -146,6 +146,7 @@ pub(crate) trait ToAst: Sync {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum DocumentationCategory {
     Program,
+    Field,
     Number,
     String,
     Boolean,
@@ -280,6 +281,7 @@ pub(crate) fn form(form: Form) -> Result<CompiledExpression, ParseError> {
 mod boolean;
 mod composition;
 mod datetime;
+mod field;
 mod network;
 mod number;
 mod program;
@@ -300,6 +302,7 @@ macro_rules! registry {
 registry!(
     program::Print,
     program::Filter,
+    field::Field,
     number::Add,
     number::Subtract,
     number::Multiply,
