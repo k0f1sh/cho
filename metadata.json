@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.5.2",
+  "cho_version": "0.6.0",
   "callables": [
     {
       "name": "print",
@@ -779,6 +779,28 @@
           "returns": "String",
           "summary": null,
           "example": "(s/upper $1)"
+        }
+      ]
+    },
+    {
+      "name": "s/reverse",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "reverse Unicode characters",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/reverse $1)"
         }
       ]
     },

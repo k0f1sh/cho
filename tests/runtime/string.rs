@@ -290,6 +290,18 @@ fn lower_and_upper_apply_unicode_case_conversion() {
 }
 
 #[test]
+fn reverse_reverses_unicode_characters_and_composes_as_a_value() {
+    assert_eq!(
+        output(
+            r#"(print (s/reverse $1) (s/reverse "東京駅")) (print (-> $2 s/reverse s/upper))"#,
+            "abc xyz\n",
+        ),
+        "cba 駅京東\nZYX\n"
+    );
+    assert_eq!(output(r#"(print (dq (s/reverse "")))"#, "x\n"), "\"\"\n");
+}
+
+#[test]
 fn trim_operations_remove_unicode_whitespace_and_compose() {
     assert_eq!(
         output(
