@@ -84,6 +84,7 @@ Strings:
   (sq VALUE) -> STRING                      short form of s/squote
   (s/lower VALUE) -> STRING                 lowercase
   (s/upper VALUE) -> STRING                 uppercase
+  (s/reverse VALUE) -> STRING               reverse Unicode characters
   (s/trim VALUE) -> STRING                  remove Unicode whitespace from both ends
   (s/ltrim VALUE) -> STRING                 remove Unicode whitespace from the left
   (s/rtrim VALUE) -> STRING                 remove Unicode whitespace from the right
