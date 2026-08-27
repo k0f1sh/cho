@@ -1,10 +1,10 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::language::{
-    CALLABLES, CallableKind as LanguageCallableKind, Cardinality as LanguageCardinality,
-    ValueType as LanguageValueType,
+    CallableKind as LanguageCallableKind, Cardinality as LanguageCardinality, DOCUMENTED_CALLABLES,
+    DocumentationCategory, ValueType as LanguageValueType,
 };
 
 #[derive(Debug, Serialize)]
@@ -14,7 +14,7 @@ pub struct Metadata {
     pub callables: Vec<Callable>,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Category {
     Program,
@@ -142,57 +142,24 @@ pub struct Parameter {
     pub cardinality: Cardinality,
 }
 
-#[derive(Debug, Deserialize)]
-struct Documentation {
-    callables: Vec<CallableDocumentation>,
-}
-
-#[derive(Debug, Deserialize)]
-struct CallableDocumentation {
-    name: String,
-    category: Category,
-    summary: String,
-    notes: Vec<String>,
-    signatures: Vec<SignatureDocumentation>,
-}
-
-#[derive(Debug, Deserialize)]
-struct SignatureDocumentation {
-    summary: Option<String>,
-    example: String,
-}
-
 pub fn metadata(version: &str) -> Result<Metadata, String> {
-    let documentation: Documentation = serde_json::from_str(include_str!("documentation.json"))
-        .map_err(|error| format!("invalid documentation.json: {error}"))?;
-    let mut documentation_by_name = BTreeMap::new();
-    for callable in documentation.callables {
-        let name = callable.name.clone();
-        if documentation_by_name
-            .insert(name.clone(), callable)
-            .is_some()
-        {
-            return Err(format!("duplicate documentation for {name}"));
-        }
-    }
-    let mut callables = Vec::with_capacity(CALLABLES.len());
+    let mut callables = Vec::with_capacity(DOCUMENTED_CALLABLES.len());
 
-    for callable in CALLABLES {
-        let docs = documentation_by_name
-            .remove(callable.name)
-            .ok_or_else(|| format!("missing documentation for {}", callable.name))?;
-        if docs.signatures.len() != callable.signatures.len() {
+    for callable in DOCUMENTED_CALLABLES {
+        let definition = callable.definition();
+        let docs = callable.to_doc();
+        if docs.signatures.len() != definition.signatures.len() {
             return Err(format!(
                 "{} has {} signatures but {} documented examples",
-                callable.name,
-                callable.signatures.len(),
+                definition.name,
+                definition.signatures.len(),
                 docs.signatures.len()
             ));
         }
-        let signatures = callable
+        let signatures = definition
             .signatures
             .iter()
-            .zip(docs.signatures)
+            .zip(docs.signatures.iter())
             .map(|(signature, docs)| Signature {
                 parameters: signature
                     .parameters
@@ -204,22 +171,19 @@ pub fn metadata(version: &str) -> Result<Metadata, String> {
                     })
                     .collect(),
                 returns: signature.returns.map(Into::into),
-                summary: docs.summary,
-                example: docs.example,
+                summary: docs.summary.map(str::to_owned),
+                example: docs.example.to_owned(),
             })
             .collect();
         callables.push(Callable {
-            name: callable.name,
-            aliases: callable.aliases,
-            kind: callable.kind.into(),
-            category: docs.category,
-            summary: docs.summary,
-            notes: docs.notes,
+            name: definition.name,
+            aliases: definition.aliases,
+            kind: definition.kind.into(),
+            category: docs.category.into(),
+            summary: docs.summary.to_owned(),
+            notes: docs.notes.iter().map(|note| (*note).to_owned()).collect(),
             signatures,
         });
-    }
-    if let Some(name) = documentation_by_name.keys().next() {
-        return Err(format!("documentation exists for unknown callable: {name}"));
     }
 
     Ok(Metadata {
@@ -227,6 +191,24 @@ pub fn metadata(version: &str) -> Result<Metadata, String> {
         cho_version: version.to_owned(),
         callables,
     })
+}
+
+impl From<DocumentationCategory> for Category {
+    fn from(value: DocumentationCategory) -> Self {
+        match value {
+            DocumentationCategory::Program => Self::Program,
+            DocumentationCategory::Number => Self::Number,
+            DocumentationCategory::String => Self::String,
+            DocumentationCategory::Boolean => Self::Boolean,
+            DocumentationCategory::SpecialForm => Self::SpecialForm,
+            DocumentationCategory::RegularExpression => Self::RegularExpression,
+            DocumentationCategory::DateTime => Self::DateTime,
+            DocumentationCategory::Network => Self::Network,
+            DocumentationCategory::Url => Self::Url,
+            DocumentationCategory::SemanticVersion => Self::SemanticVersion,
+            DocumentationCategory::Composition => Self::Composition,
+        }
+    }
 }
 
 pub fn render_help(template: &str, metadata: &Metadata) -> Result<String, String> {
@@ -367,6 +349,60 @@ impl From<LanguageCardinality> for Cardinality {
             LanguageCardinality::Optional => Self::Optional,
             LanguageCardinality::ZeroOrMore => Self::ZeroOrMore,
             LanguageCardinality::OneOrMore => Self::OneOrMore,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn generated_metadata() -> String {
+        let metadata = metadata(env!("CARGO_PKG_VERSION")).unwrap();
+        validate(&metadata).unwrap();
+        format!("{}\n", serde_json::to_string_pretty(&metadata).unwrap())
+    }
+
+    #[test]
+    fn checked_in_documentation_matches_the_callable_types() {
+        let metadata = metadata(env!("CARGO_PKG_VERSION")).unwrap();
+        let help = render_help(include_str!("help.txt.in"), &metadata).unwrap();
+        assert_eq!(include_str!("../metadata.json"), generated_metadata());
+        assert_eq!(include_str!("help.txt"), help.trim_end());
+    }
+
+    #[test]
+    fn every_documented_signature_and_alias_parses() {
+        let metadata = metadata(env!("CARGO_PKG_VERSION")).unwrap();
+        for callable in &metadata.callables {
+            for signature in &callable.signatures {
+                for name in std::iter::once(callable.name).chain(callable.aliases.iter().copied()) {
+                    let invocation = signature.example.replacen(
+                        &format!("({}", callable.name),
+                        &format!("({name}"),
+                        1,
+                    );
+                    let program = if callable.kind == CallableKind::ProgramForm {
+                        invocation
+                    } else {
+                        format!("(print {invocation})")
+                    };
+                    crate::parse(&program).unwrap_or_else(|error| {
+                        panic!("documented example for {name} does not parse: {program}: {error:?}")
+                    });
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn help_lists_every_registered_name() {
+        let metadata = metadata(env!("CARGO_PKG_VERSION")).unwrap();
+        let help = render_help(include_str!("help.txt.in"), &metadata).unwrap();
+        for name in metadata.callables.iter().flat_map(|callable| {
+            std::iter::once(callable.name).chain(callable.aliases.iter().copied())
+        }) {
+            assert!(help.contains(&format!("({name}")), "help omits {name}");
         }
     }
 }

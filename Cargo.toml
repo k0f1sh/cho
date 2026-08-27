@@ -6,6 +6,9 @@ description = "A small, type-aware text processor for the command line"
 license = "MIT"
 repository = "https://github.com/k0f1sh/cho"
 
+[features]
+documentation = ["dep:serde"]
+
 [dependencies]
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 chrono-tz = "0.10.4"
@@ -14,7 +17,12 @@ ipnet = "2.11"
 regex = "1.11"
 semver = "1.0"
 url = "2.5"
+serde = { version = "1.0", features = ["derive"], optional = true }
 
 [dev-dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+[[example]]
+name = "generate-documentation"
+required-features = ["documentation"]
