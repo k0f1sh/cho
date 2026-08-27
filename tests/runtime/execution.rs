@@ -55,6 +55,54 @@ fn nr_and_nf_describe_the_record() {
 }
 
 #[test]
+fn computed_field_numbers_compose_with_nf_and_other_values() {
+    assert_eq!(
+        output(
+            "(print (field NF) (s/upper (field (- NF 1))) (field (+ NF 1)))",
+            "one two three four\nsolo\n",
+        ),
+        "four THREE \nsolo SOLO \n"
+    );
+}
+
+#[test]
+fn computed_field_zero_is_the_complete_record() {
+    assert_eq!(
+        output("(print (dq (field 0)))", "  one two  \n"),
+        "\"  one two  \"\n"
+    );
+}
+
+#[test]
+fn computed_field_numbers_must_be_non_negative_whole_numbers() {
+    for number in ["-1", "1.5"] {
+        let error = cho::run(
+            &format!("(print (field {number}))"),
+            Cursor::new("one two\n"),
+            Vec::new(),
+        )
+        .unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("is not a non-negative whole number")
+        );
+    }
+}
+
+#[test]
+fn computed_fields_are_available_for_decoded_csv_fields() {
+    let mut result = Vec::new();
+    cho::run_csv(
+        "(print (field (- NF 1)))",
+        Cursor::new("Alice,\"Tokyo, Japan\",active\n"),
+        &mut result,
+    )
+    .unwrap();
+    assert_eq!(String::from_utf8(result).unwrap(), "Tokyo, Japan\n");
+}
+
+#[test]
 fn an_empty_print_prints_an_empty_line() {
     assert_eq!(output("(print)", "Alice\nBob\n"), "\n\n");
 }

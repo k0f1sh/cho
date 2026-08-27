@@ -99,6 +99,26 @@ pub(super) fn evaluate(
         Value::Field(number) => Ok(RuntimeValue::String(
             record.field(*number).unwrap_or("").to_owned(),
         )),
+        Value::DynamicField(number) => {
+            let input = evaluate(number, record)?;
+            let rendered = input.render();
+            let number = expect_number(input, "field", 1)?;
+            if number < 0.0 || number.fract() != 0.0 || number > usize::MAX as f64 {
+                return Err(EvalError::conversion(
+                    "field",
+                    1,
+                    "Number (non-negative whole field number)",
+                    rendered,
+                    "is not a non-negative whole number",
+                ));
+            }
+            let number = number as usize;
+            Ok(RuntimeValue::String(if number == 0 {
+                record.line.to_owned()
+            } else {
+                record.field(number).unwrap_or("").to_owned()
+            }))
+        }
         Value::FieldRange { start, end } => Ok(RuntimeValue::String(
             record.field_range(*start, *end).to_owned(),
         )),

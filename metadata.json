@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.6.0",
+  "cho_version": "0.7.0",
   "callables": [
     {
       "name": "print",
@@ -47,6 +47,30 @@
           "returns": null,
           "summary": null,
           "example": "(filter (> $2 20))"
+        }
+      ]
+    },
+    {
+      "name": "field",
+      "aliases": [],
+      "kind": "function",
+      "category": "field",
+      "summary": "get a field by its computed number",
+      "notes": [
+        "NUMBER must be a non-negative whole number. Field 0 is the complete record; a missing field is an empty string."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "number",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(field (- NF 1))"
         }
       ]
     },

@@ -18,6 +18,7 @@ pub struct Metadata {
 #[serde(rename_all = "snake_case")]
 pub enum Category {
     Program,
+    Field,
     Number,
     String,
     Boolean,
@@ -31,8 +32,9 @@ pub enum Category {
 }
 
 impl Category {
-    const ALL: [Self; 11] = [
+    const ALL: [Self; 12] = [
         Self::Program,
+        Self::Field,
         Self::Number,
         Self::String,
         Self::Boolean,
@@ -48,6 +50,7 @@ impl Category {
     fn marker(self) -> &'static str {
         match self {
             Self::Program => "program",
+            Self::Field => "field",
             Self::Number => "number",
             Self::String => "string",
             Self::Boolean => "boolean",
@@ -197,6 +200,7 @@ impl From<DocumentationCategory> for Category {
     fn from(value: DocumentationCategory) -> Self {
         match value {
             DocumentationCategory::Program => Self::Program,
+            DocumentationCategory::Field => Self::Field,
             DocumentationCategory::Number => Self::Number,
             DocumentationCategory::String => Self::String,
             DocumentationCategory::Boolean => Self::Boolean,

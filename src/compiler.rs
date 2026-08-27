@@ -504,6 +504,13 @@ mod tests {
     }
 
     #[test]
+    fn parses_computed_fields_and_rejects_invalid_arities() {
+        assert!(parse("(print (field (- NF 2)))").is_ok());
+        assert_eq!(parse("(print (field))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(print (field 1 2))"), Err(ParseError::InvalidSyntax));
+    }
+
+    #[test]
     fn parses_fixed_number_formatting() {
         assert!(parse("(print (n/fixed $1 2))").is_ok());
         assert!(parse("(print (str \"$\" (n/fixed (* $1 $2) (+ 1 1))))").is_ok());
