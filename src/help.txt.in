@@ -1,0 +1,150 @@
+cho — a small, type-aware text processor for the command line
+
+Usage: cho [--no-input | -F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'
+
+Common recipes:
+  Pick fields             cho '(p $1 $3)'
+  Filter numbers          cho '(f (> $2 20))'
+  Match a field           cho '(f (~ $1 /^api-/))'
+  Match the whole record  cho '(f (~ /ERROR|WARN/))'
+  Join values             cho '(p (s/join "," $1 $2))'
+  Replace text            cho '(p (s/replace-all $1 "-" "_"))'
+  Use a fallback          cho '(p (default $3 "unknown"))'
+  Read CSV with a header  cho --csv --skip-header '(p $1 $3)'
+  Read TSV                cho --tsv '(p $1 $2)'
+  Run without input       cho --no-input '(p (dt/now))'
+
+Input and options:
+  -F SEPARATOR       split fields using this regular expression
+  -FSEPARATOR        short form of -F SEPARATOR
+  --csv              parse CSV records, including quoted values
+  --tsv              split fields on tabs
+  --skip-header      skip the first CSV or TSV record
+  --no-input         do not read input; run once with an empty record
+  -h, --help         print help
+  -V, --version      print version
+
+  PROGRAM runs once per input record. Whitespace splits fields by default.
+  $0 is the complete record; $1, $2, ... are fields. NR is the record number;
+  NF is the field count. Missing fields are empty strings. With --skip-header,
+  the first data record keeps its input position and therefore has NR 2.
+  With --no-input, $0 is empty, NR is 1, and NF is 0.
+
+Program forms:
+{{callables:program}}
+
+  A program containing only filters implicitly prints $0 after they pass.
+  An empty program also prints $0. Any explicit print disables implicit output.
+
+Literals and fields:
+  $0, $1, ...                    complete record or field
+  $-3, $3-, $2-4                field ranges, preserving original separators
+  NR, NF                         record number or field count
+  "text", 12, 3.5                String or Number
+  true, false                    Boolean
+
+  An omitted range bound extends to that edge of the complete record, including
+  leading or trailing separators. An end beyond NF stops at NF. A start beyond
+  NF is empty.
+  Field ranges are unavailable with --csv because CSV fields are decoded.
+
+Numbers:
+{{callables:number}}
+
+Strings:
+{{callables:string}}
+
+  s/part preserves empty parts. If no delimiter is found, position 1 returns
+  the complete value; a missing position returns an empty string. DELIMITER
+  must not be empty.
+  s/slice without LENGTH returns through the end. An excessive LENGTH stops at
+  the end; an excessive START returns empty. START must be positive and LENGTH
+  must be non-negative. Both must be whole numbers.
+  s/dquote and s/squote escape the enclosing quote, backslashes, tabs, and
+  line breaks with a backslash.
+  An empty FROM inserts TO at the start with s/replace, or at every character
+  boundary with s/replace-all, like awk sub("", ...) and gsub("", ...).
+  Empty prefixes, suffixes, and needles match every string, including empty.
+  Example: cho --no-input '(p (dq (s/trim "  hello  ")))'
+
+Boolean functions:
+{{callables:boolean}}
+
+Special forms (evaluate only the values they need):
+{{callables:special_form}}
+
+Regular expressions:
+{{callables:regular_expression}}
+
+  Regex literals preserve backslashes; escape only a literal / as \/:
+    (~ $1 /^\d+$/)     (~ $1 /^foo\/bar$/)
+  Quoted patterns are also accepted and require doubled backslashes:
+    (reg $1 "^\\d+$")     (re/replace $1 "\\d+" "X")
+  Replacement expands $0, $1, and ${name}; write $$ for a literal dollar sign.
+  Empty and zero-width matches insert text, following awk replacement behavior.
+  The -F pattern is passed directly: cho -F '\s+' '(p $1)'
+  Example: cho --no-input '(p (re/replace "id=42" /(?P<n>\d+)/ "[${n}]"))'
+
+DateTime and Duration:
+{{callables:date_time}}
+
+  DateTime input must be RFC 3339 with an offset or Z. DateTime renders in UTC;
+  Duration renders as seconds. TIMEZONE is an IANA name such as Asia/Tokyo or a
+  fixed offset such as +09:00. Without TIMEZONE, dt/floor-* uses UTC boundaries.
+  At DST changes, floor chooses the latest matching boundary not after the input;
+  if that local boundary does not exist, it uses the first local time after it.
+
+IP and CIDR:
+{{callables:network}}
+
+URLs:
+{{callables:url}}
+
+  Extracted components preserve percent encoding. Query operations use form
+  semantics (+ is space), decode names and values, and use the first duplicate.
+  url/encode uses uppercase escapes. url/decode decodes only %XX and leaves +
+  unchanged. Invalid URLs, escapes, or UTF-8 are errors.
+
+Semantic versions:
+{{callables:semantic_version}}
+
+Types and errors:
+  String      fields and quoted literals    DateTime  RFC 3339 timestamps
+  Number      numeric literals, NR, NF       Duration  signed seconds
+  Boolean     true, false, predicates        IpAddr    IPv4 or IPv6
+  Cidr        IPv4 or IPv6 networks          Url       absolute URLs
+  SemVer      MAJOR.MINOR.PATCH versions
+
+  Functions convert Strings when they require another type. Failed conversion
+  reports the record, function, and argument number. Boolean values never
+  convert implicitly from strings or numbers. Numeric arithmetic is binary;
+  division by zero and non-finite results are errors.
+
+Composition:
+  A VALUE can be a literal, field, function call, or special form. Values nest
+  anywhere a VALUE is accepted. Multiple program forms run left to right; a
+  failed filter skips the rest of that record. Multiple filters therefore act
+  like AND. If the program is empty or contains only filters,
+  cho implicitly prints $0 after the filters pass.
+  Functions with one primary input put it first, followed by configuration.
+  Variadic functions such as str and s/join have no single primary input.
+
+{{callables:composition}}
+
+    (-> $1 (dt/add (du/s 10)))
+      is (dt/add $1 (du/s 10))
+
+    (-> $1 (dt/fmt "%Y/%m/%d"))
+      is (dt/fmt $1 "%Y/%m/%d")
+
+    (-> $1 s/trim (s/replace "-" "_") s/upper)
+
+More examples:
+  Extract a log message while preserving its original whitespace:
+    printf '2026-08-24 INFO service started successfully\n' | cho '(p $3-)'
+
+  Format an RFC 3339 timestamp in Tokyo time:
+    cho '(p (dt/fmt $1 "%Y-%m-%d %H:%M" "Asia/Tokyo"))'
+
+  Join transformed fields, with a fallback for a missing third field:
+    cho '(p (s/join ":" (s/upper $1) (default $3 "UNKNOWN")))'

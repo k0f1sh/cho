@@ -1,0 +1,2868 @@
+{
+  "schema_version": 1,
+  "cho_version": "0.5.2",
+  "callables": [
+    {
+      "name": "print",
+      "aliases": [
+        "p"
+      ],
+      "kind": "program_form",
+      "category": "program",
+      "summary": "print values separated by spaces",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "zero_or_more"
+            }
+          ],
+          "returns": null,
+          "summary": null,
+          "example": "(print $1 $3)"
+        }
+      ]
+    },
+    {
+      "name": "filter",
+      "aliases": [
+        "f"
+      ],
+      "kind": "program_form",
+      "category": "program",
+      "summary": "continue only when true",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "condition",
+              "type": "Boolean",
+              "cardinality": "required"
+            }
+          ],
+          "returns": null,
+          "summary": null,
+          "example": "(filter (> $2 20))"
+        }
+      ]
+    },
+    {
+      "name": "+",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "add",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(+ $1 2)"
+        }
+      ]
+    },
+    {
+      "name": "-",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "subtract",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(- $1 2)"
+        }
+      ]
+    },
+    {
+      "name": "*",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "multiply",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(* $1 2)"
+        }
+      ]
+    },
+    {
+      "name": "/",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "divide",
+      "notes": [
+        "Division by zero and non-finite results are errors."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(/ $1 2)"
+        }
+      ]
+    },
+    {
+      "name": "n/trunc",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "discard fractional digits toward zero",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(n/trunc -2.7)"
+        }
+      ]
+    },
+    {
+      "name": "n/floor",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "round down toward negative infinity",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(n/floor -2.7)"
+        }
+      ]
+    },
+    {
+      "name": "n/ceil",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "round up toward positive infinity",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(n/ceil 2.1)"
+        }
+      ]
+    },
+    {
+      "name": "n/round",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "round to nearest, halves away from zero",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(n/round 2.5)"
+        }
+      ]
+    },
+    {
+      "name": "n/abs",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "absolute value",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(n/abs -2.5)"
+        }
+      ]
+    },
+    {
+      "name": "n/fixed",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "format with 0 to 100 fractional digits",
+      "notes": [
+        "DIGITS must be a whole number from 0 through 100."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "digits",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(n/fixed 12.5 2)"
+        }
+      ]
+    },
+    {
+      "name": ">",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "greater than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(> 12 3)"
+        }
+      ]
+    },
+    {
+      "name": ">=",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "greater than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(>= 12 3)"
+        }
+      ]
+    },
+    {
+      "name": "<",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "less than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(< 12 3)"
+        }
+      ]
+    },
+    {
+      "name": "<=",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "less than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(<= 12 3)"
+        }
+      ]
+    },
+    {
+      "name": "=",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(= 12 3)"
+        }
+      ]
+    },
+    {
+      "name": "!=",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "not equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(!= 12 3)"
+        }
+      ]
+    },
+    {
+      "name": "str",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "concatenate values",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "zero_or_more"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(str $1 \":\" $2)"
+        }
+      ]
+    },
+    {
+      "name": "s/join",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "join values",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "separator",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "zero_or_more"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/join \",\" $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "s/replace",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "replace the first literal match",
+      "notes": [
+        "An empty FROM inserts TO at the start."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "from",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "to",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/replace $1 \"-\" \"_\")"
+        }
+      ]
+    },
+    {
+      "name": "s/replace-all",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "replace all literal matches",
+      "notes": [
+        "An empty FROM inserts TO at every character boundary."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "from",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "to",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/replace-all $1 \"-\" \"_\")"
+        }
+      ]
+    },
+    {
+      "name": "s/part",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "take a 1-based literal-delimited part",
+      "notes": [
+        "DELIMITER must not be empty; POSITION must be a positive whole number. Missing parts are empty strings."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "delimiter",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "position",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/part $1 \":\" 2)"
+        }
+      ]
+    },
+    {
+      "name": "s/slice",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "take Unicode characters from a 1-based start",
+      "notes": [
+        "START must be positive; LENGTH must be a non-negative whole number."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "start",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "length",
+              "type": "Number",
+              "cardinality": "optional"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/slice $1 3 5)"
+        }
+      ]
+    },
+    {
+      "name": "s/count",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "count Unicode characters",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(s/count $1)"
+        }
+      ]
+    },
+    {
+      "name": "s/escape",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "escape tabs, newlines, and backslashes",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/escape $1)"
+        }
+      ]
+    },
+    {
+      "name": "s/dquote",
+      "aliases": [
+        "dq"
+      ],
+      "kind": "function",
+      "category": "string",
+      "summary": "stringify and wrap in escaped double quotes",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/dquote $1)"
+        }
+      ]
+    },
+    {
+      "name": "s/squote",
+      "aliases": [
+        "sq"
+      ],
+      "kind": "function",
+      "category": "string",
+      "summary": "stringify and wrap in escaped single quotes",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/squote $1)"
+        }
+      ]
+    },
+    {
+      "name": "s/lower",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "lowercase",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/lower $1)"
+        }
+      ]
+    },
+    {
+      "name": "s/upper",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "uppercase",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/upper $1)"
+        }
+      ]
+    },
+    {
+      "name": "s/trim",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "remove Unicode whitespace from both ends",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/trim $1)"
+        }
+      ]
+    },
+    {
+      "name": "s/ltrim",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "remove Unicode whitespace from the left",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/ltrim $1)"
+        }
+      ]
+    },
+    {
+      "name": "s/rtrim",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "remove Unicode whitespace from the right",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/rtrim $1)"
+        }
+      ]
+    },
+    {
+      "name": "s/starts-with?",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "test a prefix",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "string",
+              "type": "String",
+              "cardinality": "required"
+            },
+            {
+              "name": "prefix",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(s/starts-with? $1 \"api-\")"
+        }
+      ]
+    },
+    {
+      "name": "s/ends-with?",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "test a suffix",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "string",
+              "type": "String",
+              "cardinality": "required"
+            },
+            {
+              "name": "suffix",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(s/ends-with? $1 \".log\")"
+        }
+      ]
+    },
+    {
+      "name": "s/contains?",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "test a substring",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "string",
+              "type": "String",
+              "cardinality": "required"
+            },
+            {
+              "name": "needle",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(s/contains? $1 \"error\")"
+        }
+      ]
+    },
+    {
+      "name": "s/>",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "greater than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "String",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(s/> \"b\" \"a\")"
+        }
+      ]
+    },
+    {
+      "name": "s/>=",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "greater than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "String",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(s/>= \"b\" \"a\")"
+        }
+      ]
+    },
+    {
+      "name": "s/<",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "less than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "String",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(s/< \"b\" \"a\")"
+        }
+      ]
+    },
+    {
+      "name": "s/<=",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "less than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "String",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(s/<= \"b\" \"a\")"
+        }
+      ]
+    },
+    {
+      "name": "s/=",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "String",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(s/= \"b\" \"a\")"
+        }
+      ]
+    },
+    {
+      "name": "s/!=",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "not equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "String",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(s/!= \"b\" \"a\")"
+        }
+      ]
+    },
+    {
+      "name": "not",
+      "aliases": [],
+      "kind": "function",
+      "category": "boolean",
+      "summary": "negate",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Boolean",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(not true)"
+        }
+      ]
+    },
+    {
+      "name": "if",
+      "aliases": [],
+      "kind": "special_form",
+      "category": "special_form",
+      "summary": "select one value lazily",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "condition",
+              "type": "Boolean",
+              "cardinality": "required"
+            },
+            {
+              "name": "then",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "else",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Value",
+          "summary": null,
+          "example": "(if (> $1 0) \"positive\" \"other\")"
+        }
+      ]
+    },
+    {
+      "name": "default",
+      "aliases": [],
+      "kind": "special_form",
+      "category": "special_form",
+      "summary": "use a fallback when the value is empty or errors",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "fallback",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Value",
+          "summary": null,
+          "example": "(default $3 \"unknown\")"
+        }
+      ]
+    },
+    {
+      "name": "and",
+      "aliases": [],
+      "kind": "special_form",
+      "category": "special_form",
+      "summary": "stop at the first false value",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Boolean",
+              "cardinality": "one_or_more"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(and (> $1 0) (< $1 10))"
+        }
+      ]
+    },
+    {
+      "name": "or",
+      "aliases": [],
+      "kind": "special_form",
+      "category": "special_form",
+      "summary": "stop at the first true value",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Boolean",
+              "cardinality": "one_or_more"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(or (= $1 0) (= $1 1))"
+        }
+      ]
+    },
+    {
+      "name": "reg",
+      "aliases": [
+        "~"
+      ],
+      "kind": "function",
+      "category": "regular_expression",
+      "summary": "match a regular expression",
+      "notes": [
+        "Regex literals preserve backslashes; quoted patterns require string escaping."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "pattern",
+              "type": "Regex",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(reg /ERROR|WARN/)"
+        },
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "pattern",
+              "type": "Regex",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(reg $1 /^api-/)"
+        }
+      ]
+    },
+    {
+      "name": "re/replace",
+      "aliases": [],
+      "kind": "function",
+      "category": "regular_expression",
+      "summary": "replace the first regular-expression match",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "pattern",
+              "type": "Regex",
+              "cardinality": "required"
+            },
+            {
+              "name": "replacement",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(re/replace $1 /[0-9]+/ \"N\")"
+        }
+      ]
+    },
+    {
+      "name": "re/replace-all",
+      "aliases": [],
+      "kind": "function",
+      "category": "regular_expression",
+      "summary": "replace all regular-expression matches",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "pattern",
+              "type": "Regex",
+              "cardinality": "required"
+            },
+            {
+              "name": "replacement",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(re/replace-all $1 /[0-9]+/ \"N\")"
+        }
+      ]
+    },
+    {
+      "name": "dt/unix",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "convert Unix seconds",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "DateTime",
+          "summary": null,
+          "example": "(dt/unix 0)"
+        }
+      ]
+    },
+    {
+      "name": "dt/fmt",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "format a datetime",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "datetime",
+              "type": "DateTime",
+              "cardinality": "required"
+            },
+            {
+              "name": "format",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": "format in UTC",
+          "example": "(dt/fmt $1 \"%Y-%m-%d\")"
+        },
+        {
+          "parameters": [
+            {
+              "name": "datetime",
+              "type": "DateTime",
+              "cardinality": "required"
+            },
+            {
+              "name": "format",
+              "type": "String",
+              "cardinality": "required"
+            },
+            {
+              "name": "timezone",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": "format in the specified timezone",
+          "example": "(dt/fmt $1 \"%H:%M\" \"Asia/Tokyo\")"
+        }
+      ]
+    },
+    {
+      "name": "dt/now",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "current UTC time at second precision",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [],
+          "returns": "DateTime",
+          "summary": null,
+          "example": "(dt/now)"
+        }
+      ]
+    },
+    {
+      "name": "dt/floor-s",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "floor to a local or UTC second",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "datetime",
+              "type": "DateTime",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "DateTime",
+          "summary": null,
+          "example": "(dt/floor-s $1)"
+        },
+        {
+          "parameters": [
+            {
+              "name": "datetime",
+              "type": "DateTime",
+              "cardinality": "required"
+            },
+            {
+              "name": "timezone",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "DateTime",
+          "summary": null,
+          "example": "(dt/floor-s $1 \"Asia/Tokyo\")"
+        }
+      ]
+    },
+    {
+      "name": "dt/floor-m",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "floor to a local or UTC minute",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "datetime",
+              "type": "DateTime",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "DateTime",
+          "summary": null,
+          "example": "(dt/floor-m $1)"
+        },
+        {
+          "parameters": [
+            {
+              "name": "datetime",
+              "type": "DateTime",
+              "cardinality": "required"
+            },
+            {
+              "name": "timezone",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "DateTime",
+          "summary": null,
+          "example": "(dt/floor-m $1 \"Asia/Tokyo\")"
+        }
+      ]
+    },
+    {
+      "name": "dt/floor-h",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "floor to a local or UTC hour",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "datetime",
+              "type": "DateTime",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "DateTime",
+          "summary": null,
+          "example": "(dt/floor-h $1)"
+        },
+        {
+          "parameters": [
+            {
+              "name": "datetime",
+              "type": "DateTime",
+              "cardinality": "required"
+            },
+            {
+              "name": "timezone",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "DateTime",
+          "summary": null,
+          "example": "(dt/floor-h $1 \"Asia/Tokyo\")"
+        }
+      ]
+    },
+    {
+      "name": "dt/floor-d",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "floor to a local or UTC calendar day",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "datetime",
+              "type": "DateTime",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "DateTime",
+          "summary": null,
+          "example": "(dt/floor-d $1)"
+        },
+        {
+          "parameters": [
+            {
+              "name": "datetime",
+              "type": "DateTime",
+              "cardinality": "required"
+            },
+            {
+              "name": "timezone",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "DateTime",
+          "summary": null,
+          "example": "(dt/floor-d $1 \"Asia/Tokyo\")"
+        }
+      ]
+    },
+    {
+      "name": "dt/add",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "add a duration",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "datetime",
+              "type": "DateTime",
+              "cardinality": "required"
+            },
+            {
+              "name": "duration",
+              "type": "Duration",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "DateTime",
+          "summary": null,
+          "example": "(dt/add $1 (du/s 10))"
+        }
+      ]
+    },
+    {
+      "name": "dt/sub",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "subtract a duration",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "datetime",
+              "type": "DateTime",
+              "cardinality": "required"
+            },
+            {
+              "name": "duration",
+              "type": "Duration",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "DateTime",
+          "summary": null,
+          "example": "(dt/sub $1 (du/s 10))"
+        }
+      ]
+    },
+    {
+      "name": "dt/diff",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "subtract the right datetime from the left",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "DateTime",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "DateTime",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Duration",
+          "summary": null,
+          "example": "(dt/diff $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "du/s",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "convert seconds to a duration",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Duration",
+          "summary": null,
+          "example": "(du/s 10)"
+        }
+      ]
+    },
+    {
+      "name": "du/ms",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "convert milliseconds to a duration",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Duration",
+          "summary": null,
+          "example": "(du/ms 250)"
+        }
+      ]
+    },
+    {
+      "name": "du/m",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "convert minutes to a duration",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Duration",
+          "summary": null,
+          "example": "(du/m 5)"
+        }
+      ]
+    },
+    {
+      "name": "du/h",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "convert hours to a duration",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Duration",
+          "summary": null,
+          "example": "(du/h 2)"
+        }
+      ]
+    },
+    {
+      "name": "du/d",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "convert fixed 24-hour days to a duration",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Duration",
+          "summary": null,
+          "example": "(du/d 1)"
+        }
+      ]
+    },
+    {
+      "name": "du/to-ms",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "convert a duration to milliseconds",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Duration",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(du/to-ms (du/s 1))"
+        }
+      ]
+    },
+    {
+      "name": "du/to-s",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "convert a duration to seconds",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Duration",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(du/to-s (du/m 1))"
+        }
+      ]
+    },
+    {
+      "name": "du/to-m",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "convert a duration to minutes",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Duration",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(du/to-m (du/h 1))"
+        }
+      ]
+    },
+    {
+      "name": "du/to-h",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "convert a duration to hours",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Duration",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(du/to-h (du/d 1))"
+        }
+      ]
+    },
+    {
+      "name": "du/to-d",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "convert a duration to fixed 24-hour days",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Duration",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(du/to-d (du/h 24))"
+        }
+      ]
+    },
+    {
+      "name": "dt/>",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "greater than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "DateTime",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "DateTime",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(dt/> $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "dt/>=",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "greater than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "DateTime",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "DateTime",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(dt/>= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "dt/<",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "less than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "DateTime",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "DateTime",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(dt/< $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "dt/<=",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "less than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "DateTime",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "DateTime",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(dt/<= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "dt/=",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "DateTime",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "DateTime",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(dt/= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "dt/!=",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "not equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "DateTime",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "DateTime",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(dt/!= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "ip/version",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "return 4 or 6",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "IpAddr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(ip/version $1)"
+        }
+      ]
+    },
+    {
+      "name": "ip/=",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "test IP address equality",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "IpAddr",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "IpAddr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(ip/= $1 \"127.0.0.1\")"
+        }
+      ]
+    },
+    {
+      "name": "ip/!=",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "test IP address inequality",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "IpAddr",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "IpAddr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(ip/!= $1 \"127.0.0.1\")"
+        }
+      ]
+    },
+    {
+      "name": "ip/private?",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "test RFC 1918 IPv4 or fc00::/7 IPv6 ULA",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "IpAddr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(ip/private? $1)"
+        }
+      ]
+    },
+    {
+      "name": "ip/loopback?",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "test a loopback address",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "IpAddr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(ip/loopback? $1)"
+        }
+      ]
+    },
+    {
+      "name": "ip/link-local?",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "test a link-local address",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "IpAddr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(ip/link-local? $1)"
+        }
+      ]
+    },
+    {
+      "name": "ip/multicast?",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "test a multicast address",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "IpAddr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(ip/multicast? $1)"
+        }
+      ]
+    },
+    {
+      "name": "cidr/contains?",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "test CIDR membership",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "cidr",
+              "type": "Cidr",
+              "cardinality": "required"
+            },
+            {
+              "name": "ip",
+              "type": "IpAddr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(cidr/contains? \"10.0.0.0/8\" $1)"
+        }
+      ]
+    },
+    {
+      "name": "cidr/network",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "return the network address",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Cidr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "IpAddr",
+          "summary": null,
+          "example": "(cidr/network $1)"
+        }
+      ]
+    },
+    {
+      "name": "cidr/prefix",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "return the prefix length",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Cidr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(cidr/prefix $1)"
+        }
+      ]
+    },
+    {
+      "name": "cidr/first",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "return the lowest address",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Cidr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "IpAddr",
+          "summary": null,
+          "example": "(cidr/first $1)"
+        }
+      ]
+    },
+    {
+      "name": "cidr/last",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "return the highest address",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Cidr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "IpAddr",
+          "summary": null,
+          "example": "(cidr/last $1)"
+        }
+      ]
+    },
+    {
+      "name": "cidr/size",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "return the address count up to 2^53 - 1",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Cidr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(cidr/size $1)"
+        }
+      ]
+    },
+    {
+      "name": "url/scheme",
+      "aliases": [],
+      "kind": "function",
+      "category": "url",
+      "summary": "extract the scheme",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Url",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(url/scheme $1)"
+        }
+      ]
+    },
+    {
+      "name": "url/host",
+      "aliases": [],
+      "kind": "function",
+      "category": "url",
+      "summary": "extract the host",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Url",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(url/host $1)"
+        }
+      ]
+    },
+    {
+      "name": "url/port",
+      "aliases": [],
+      "kind": "function",
+      "category": "url",
+      "summary": "extract the port or an empty string",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Url",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(url/port $1)"
+        }
+      ]
+    },
+    {
+      "name": "url/path",
+      "aliases": [],
+      "kind": "function",
+      "category": "url",
+      "summary": "extract the path",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Url",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(url/path $1)"
+        }
+      ]
+    },
+    {
+      "name": "url/query",
+      "aliases": [],
+      "kind": "function",
+      "category": "url",
+      "summary": "extract the query or an empty string",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Url",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(url/query $1)"
+        }
+      ]
+    },
+    {
+      "name": "url/fragment",
+      "aliases": [],
+      "kind": "function",
+      "category": "url",
+      "summary": "extract the fragment or an empty string",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Url",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(url/fragment $1)"
+        }
+      ]
+    },
+    {
+      "name": "url/query-get",
+      "aliases": [],
+      "kind": "function",
+      "category": "url",
+      "summary": "return the first decoded value or an empty string",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "url",
+              "type": "Url",
+              "cardinality": "required"
+            },
+            {
+              "name": "name",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(url/query-get $1 \"page\")"
+        }
+      ]
+    },
+    {
+      "name": "url/query-has?",
+      "aliases": [],
+      "kind": "function",
+      "category": "url",
+      "summary": "test whether a decoded query name exists",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "url",
+              "type": "Url",
+              "cardinality": "required"
+            },
+            {
+              "name": "name",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(url/query-has? $1 \"page\")"
+        }
+      ]
+    },
+    {
+      "name": "url/encode",
+      "aliases": [],
+      "kind": "function",
+      "category": "url",
+      "summary": "encode an RFC 3986 component",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(url/encode $1)"
+        }
+      ]
+    },
+    {
+      "name": "url/decode",
+      "aliases": [],
+      "kind": "function",
+      "category": "url",
+      "summary": "percent-decode a component",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(url/decode $1)"
+        }
+      ]
+    },
+    {
+      "name": "semver/>",
+      "aliases": [],
+      "kind": "function",
+      "category": "semantic_version",
+      "summary": "greater than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "SemVer",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "SemVer",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(semver/> $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "semver/>=",
+      "aliases": [],
+      "kind": "function",
+      "category": "semantic_version",
+      "summary": "greater than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "SemVer",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "SemVer",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(semver/>= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "semver/<",
+      "aliases": [],
+      "kind": "function",
+      "category": "semantic_version",
+      "summary": "less than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "SemVer",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "SemVer",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(semver/< $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "semver/<=",
+      "aliases": [],
+      "kind": "function",
+      "category": "semantic_version",
+      "summary": "less than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "SemVer",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "SemVer",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(semver/<= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "semver/=",
+      "aliases": [],
+      "kind": "function",
+      "category": "semantic_version",
+      "summary": "equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "SemVer",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "SemVer",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(semver/= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "semver/!=",
+      "aliases": [],
+      "kind": "function",
+      "category": "semantic_version",
+      "summary": "not equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "SemVer",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "SemVer",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(semver/!= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "semver/major",
+      "aliases": [],
+      "kind": "function",
+      "category": "semantic_version",
+      "summary": "return the major version",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "SemVer",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(semver/major $1)"
+        }
+      ]
+    },
+    {
+      "name": "semver/minor",
+      "aliases": [],
+      "kind": "function",
+      "category": "semantic_version",
+      "summary": "return the minor version",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "SemVer",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(semver/minor $1)"
+        }
+      ]
+    },
+    {
+      "name": "semver/patch",
+      "aliases": [],
+      "kind": "function",
+      "category": "semantic_version",
+      "summary": "return the patch version",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "SemVer",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(semver/patch $1)"
+        }
+      ]
+    },
+    {
+      "name": "semver/prerelease",
+      "aliases": [],
+      "kind": "function",
+      "category": "semantic_version",
+      "summary": "return prerelease text or an empty string",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "SemVer",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(semver/prerelease $1)"
+        }
+      ]
+    },
+    {
+      "name": "->",
+      "aliases": [],
+      "kind": "threading_form",
+      "category": "composition",
+      "summary": "insert a value as each step's first argument",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "step",
+              "type": "Step",
+              "cardinality": "zero_or_more"
+            }
+          ],
+          "returns": "Value",
+          "summary": null,
+          "example": "(-> $1 s/trim s/upper)"
+        }
+      ]
+    },
+    {
+      "name": "->>",
+      "aliases": [],
+      "kind": "threading_form",
+      "category": "composition",
+      "summary": "insert a value as each step's last argument",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "step",
+              "type": "Step",
+              "cardinality": "zero_or_more"
+            }
+          ],
+          "returns": "Value",
+          "summary": null,
+          "example": "(->> $1 (str \"value=\"))"
+        }
+      ]
+    }
+  ]
+}
