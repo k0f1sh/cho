@@ -1,5 +1,6 @@
 mod ast;
 mod compiler;
+mod language;
 mod lexer;
 mod parser;
 mod runtime;

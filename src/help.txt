@@ -1,0 +1,262 @@
+cho — a small, type-aware text processor for the command line
+
+Usage: cho [--no-input | -F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'
+
+Common recipes:
+  Pick fields             cho '(p $1 $3)'
+  Filter numbers          cho '(f (> $2 20))'
+  Match a field           cho '(f (~ $1 /^api-/))'
+  Match the whole record  cho '(f (~ /ERROR|WARN/))'
+  Join values             cho '(p (s/join "," $1 $2))'
+  Replace text            cho '(p (s/replace-all $1 "-" "_"))'
+  Use a fallback          cho '(p (default $3 "unknown"))'
+  Read CSV with a header  cho --csv --skip-header '(p $1 $3)'
+  Read TSV                cho --tsv '(p $1 $2)'
+  Run without input       cho --no-input '(p (dt/now))'
+
+Input and options:
+  -F SEPARATOR       split fields using this regular expression
+  -FSEPARATOR        short form of -F SEPARATOR
+  --csv              parse CSV records, including quoted values
+  --tsv              split fields on tabs
+  --skip-header      skip the first CSV or TSV record
+  --no-input         do not read input; run once with an empty record
+  -h, --help         print help
+  -V, --version      print version
+
+  PROGRAM runs once per input record. Whitespace splits fields by default.
+  $0 is the complete record; $1, $2, ... are fields. NR is the record number;
+  NF is the field count. Missing fields are empty strings. With --skip-header,
+  the first data record keeps its input position and therefore has NR 2.
+  With --no-input, $0 is empty, NR is 1, and NF is 0.
+
+Program forms:
+  (print VALUE ...)                         print values separated by spaces
+  (p VALUE ...)                             short form of print
+  (filter BOOLEAN)                          continue only when true
+  (f BOOLEAN)                               short form of filter
+
+  A program containing only filters implicitly prints $0 after they pass.
+  An empty program also prints $0. Any explicit print disables implicit output.
+
+Literals and fields:
+  $0, $1, ...                    complete record or field
+  $-3, $3-, $2-4                field ranges, preserving original separators
+  NR, NF                         record number or field count
+  "text", 12, 3.5                String or Number
+  true, false                    Boolean
+
+  An omitted range bound extends to that edge of the complete record, including
+  leading or trailing separators. An end beyond NF stops at NF. A start beyond
+  NF is empty.
+  Field ranges are unavailable with --csv because CSV fields are decoded.
+
+Numbers:
+  (+ NUMBER NUMBER) -> NUMBER               add
+  (- NUMBER NUMBER) -> NUMBER               subtract
+  (* NUMBER NUMBER) -> NUMBER               multiply
+  (/ NUMBER NUMBER) -> NUMBER               divide
+  (n/trunc NUMBER) -> NUMBER                discard fractional digits toward zero
+  (n/floor NUMBER) -> NUMBER                round down toward negative infinity
+  (n/ceil NUMBER) -> NUMBER                 round up toward positive infinity
+  (n/round NUMBER) -> NUMBER                round to nearest, halves away from zero
+  (n/abs NUMBER) -> NUMBER                  absolute value
+  (n/fixed NUMBER DIGITS) -> STRING         format with 0 to 100 fractional digits
+  (> NUMBER NUMBER) -> BOOLEAN              greater than
+  (>= NUMBER NUMBER) -> BOOLEAN             greater than or equal
+  (< NUMBER NUMBER) -> BOOLEAN              less than
+  (<= NUMBER NUMBER) -> BOOLEAN             less than or equal
+  (= NUMBER NUMBER) -> BOOLEAN              equal
+  (!= NUMBER NUMBER) -> BOOLEAN             not equal
+
+Strings:
+  (str VALUE ...) -> STRING                 concatenate values
+  (s/join SEPARATOR VALUE ...) -> STRING    join values
+  (s/replace VALUE FROM TO) -> STRING       replace the first literal match
+  (s/replace-all VALUE FROM TO) -> STRING   replace all literal matches
+  (s/part VALUE DELIMITER POSITION) -> STRING  take a 1-based literal-delimited part
+  (s/slice VALUE START [LENGTH]) -> STRING  take Unicode characters from a 1-based start
+  (s/count VALUE) -> NUMBER                 count Unicode characters
+  (s/escape VALUE) -> STRING                escape tabs, newlines, and backslashes
+  (s/dquote VALUE) -> STRING                stringify and wrap in escaped double quotes
+  (dq VALUE) -> STRING                      short form of s/dquote
+  (s/squote VALUE) -> STRING                stringify and wrap in escaped single quotes
+  (sq VALUE) -> STRING                      short form of s/squote
+  (s/lower VALUE) -> STRING                 lowercase
+  (s/upper VALUE) -> STRING                 uppercase
+  (s/trim VALUE) -> STRING                  remove Unicode whitespace from both ends
+  (s/ltrim VALUE) -> STRING                 remove Unicode whitespace from the left
+  (s/rtrim VALUE) -> STRING                 remove Unicode whitespace from the right
+  (s/starts-with? STRING PREFIX) -> BOOLEAN  test a prefix
+  (s/ends-with? STRING SUFFIX) -> BOOLEAN   test a suffix
+  (s/contains? STRING NEEDLE) -> BOOLEAN    test a substring
+  (s/> STRING STRING) -> BOOLEAN            greater than
+  (s/>= STRING STRING) -> BOOLEAN           greater than or equal
+  (s/< STRING STRING) -> BOOLEAN            less than
+  (s/<= STRING STRING) -> BOOLEAN           less than or equal
+  (s/= STRING STRING) -> BOOLEAN            equal
+  (s/!= STRING STRING) -> BOOLEAN           not equal
+
+  s/part preserves empty parts. If no delimiter is found, position 1 returns
+  the complete value; a missing position returns an empty string. DELIMITER
+  must not be empty.
+  s/slice without LENGTH returns through the end. An excessive LENGTH stops at
+  the end; an excessive START returns empty. START must be positive and LENGTH
+  must be non-negative. Both must be whole numbers.
+  s/dquote and s/squote escape the enclosing quote, backslashes, tabs, and
+  line breaks with a backslash.
+  An empty FROM inserts TO at the start with s/replace, or at every character
+  boundary with s/replace-all, like awk sub("", ...) and gsub("", ...).
+  Empty prefixes, suffixes, and needles match every string, including empty.
+  Example: cho --no-input '(p (dq (s/trim "  hello  ")))'
+
+Boolean functions:
+  (not BOOLEAN) -> BOOLEAN                  negate
+
+Special forms (evaluate only the values they need):
+  (if BOOLEAN VALUE VALUE) -> VALUE         select one value lazily
+  (default VALUE FALLBACK) -> VALUE         use a fallback when the value is empty or errors
+  (and BOOLEAN BOOLEAN ...) -> BOOLEAN      stop at the first false value
+  (or BOOLEAN BOOLEAN ...) -> BOOLEAN       stop at the first true value
+
+Regular expressions:
+  (reg /PATTERN/) -> BOOLEAN                match a regular expression
+  (reg VALUE /PATTERN/) -> BOOLEAN          match a regular expression
+  (~ /PATTERN/) -> BOOLEAN                  short form of reg
+  (~ VALUE /PATTERN/) -> BOOLEAN            short form of reg
+  (re/replace VALUE /PATTERN/ REPLACEMENT) -> STRING  replace the first regular-expression match
+  (re/replace-all VALUE /PATTERN/ REPLACEMENT) -> STRING  replace all regular-expression matches
+
+  Regex literals preserve backslashes; escape only a literal / as \/:
+    (~ $1 /^\d+$/)     (~ $1 /^foo\/bar$/)
+  Quoted patterns are also accepted and require doubled backslashes:
+    (reg $1 "^\\d+$")     (re/replace $1 "\\d+" "X")
+  Replacement expands $0, $1, and ${name}; write $$ for a literal dollar sign.
+  Empty and zero-width matches insert text, following awk replacement behavior.
+  The -F pattern is passed directly: cho -F '\s+' '(p $1)'
+  Example: cho --no-input '(p (re/replace "id=42" /(?P<n>\d+)/ "[${n}]"))'
+
+DateTime and Duration:
+  (dt/unix NUMBER) -> DATETIME              convert Unix seconds
+  (dt/fmt DATETIME STRING) -> STRING        format in UTC
+  (dt/fmt DATETIME STRING TIMEZONE) -> STRING  format in the specified timezone
+  (dt/now) -> DATETIME                      current UTC time at second precision
+  (dt/floor-s DATETIME) -> DATETIME         floor to a local or UTC second
+  (dt/floor-s DATETIME TIMEZONE) -> DATETIME  floor to a local or UTC second
+  (dt/floor-m DATETIME) -> DATETIME         floor to a local or UTC minute
+  (dt/floor-m DATETIME TIMEZONE) -> DATETIME  floor to a local or UTC minute
+  (dt/floor-h DATETIME) -> DATETIME         floor to a local or UTC hour
+  (dt/floor-h DATETIME TIMEZONE) -> DATETIME  floor to a local or UTC hour
+  (dt/floor-d DATETIME) -> DATETIME         floor to a local or UTC calendar day
+  (dt/floor-d DATETIME TIMEZONE) -> DATETIME  floor to a local or UTC calendar day
+  (dt/add DATETIME DURATION) -> DATETIME    add a duration
+  (dt/sub DATETIME DURATION) -> DATETIME    subtract a duration
+  (dt/diff DATETIME DATETIME) -> DURATION   subtract the right datetime from the left
+  (du/s NUMBER) -> DURATION                 convert seconds to a duration
+  (du/ms NUMBER) -> DURATION                convert milliseconds to a duration
+  (du/m NUMBER) -> DURATION                 convert minutes to a duration
+  (du/h NUMBER) -> DURATION                 convert hours to a duration
+  (du/d NUMBER) -> DURATION                 convert fixed 24-hour days to a duration
+  (du/to-ms DURATION) -> NUMBER             convert a duration to milliseconds
+  (du/to-s DURATION) -> NUMBER              convert a duration to seconds
+  (du/to-m DURATION) -> NUMBER              convert a duration to minutes
+  (du/to-h DURATION) -> NUMBER              convert a duration to hours
+  (du/to-d DURATION) -> NUMBER              convert a duration to fixed 24-hour days
+  (dt/> DATETIME DATETIME) -> BOOLEAN       greater than
+  (dt/>= DATETIME DATETIME) -> BOOLEAN      greater than or equal
+  (dt/< DATETIME DATETIME) -> BOOLEAN       less than
+  (dt/<= DATETIME DATETIME) -> BOOLEAN      less than or equal
+  (dt/= DATETIME DATETIME) -> BOOLEAN       equal
+  (dt/!= DATETIME DATETIME) -> BOOLEAN      not equal
+
+  DateTime input must be RFC 3339 with an offset or Z. DateTime renders in UTC;
+  Duration renders as seconds. TIMEZONE is an IANA name such as Asia/Tokyo or a
+  fixed offset such as +09:00. Without TIMEZONE, dt/floor-* uses UTC boundaries.
+  At DST changes, floor chooses the latest matching boundary not after the input;
+  if that local boundary does not exist, it uses the first local time after it.
+
+IP and CIDR:
+  (ip/version IPADDR) -> NUMBER             return 4 or 6
+  (ip/= IPADDR IPADDR) -> BOOLEAN           test IP address equality
+  (ip/!= IPADDR IPADDR) -> BOOLEAN          test IP address inequality
+  (ip/private? IPADDR) -> BOOLEAN           test RFC 1918 IPv4 or fc00::/7 IPv6 ULA
+  (ip/loopback? IPADDR) -> BOOLEAN          test a loopback address
+  (ip/link-local? IPADDR) -> BOOLEAN        test a link-local address
+  (ip/multicast? IPADDR) -> BOOLEAN         test a multicast address
+  (cidr/contains? CIDR IPADDR) -> BOOLEAN   test CIDR membership
+  (cidr/network CIDR) -> IPADDR             return the network address
+  (cidr/prefix CIDR) -> NUMBER              return the prefix length
+  (cidr/first CIDR) -> IPADDR               return the lowest address
+  (cidr/last CIDR) -> IPADDR                return the highest address
+  (cidr/size CIDR) -> NUMBER                return the address count up to 2^53 - 1
+
+URLs:
+  (url/scheme URL) -> STRING                extract the scheme
+  (url/host URL) -> STRING                  extract the host
+  (url/port URL) -> STRING                  extract the port or an empty string
+  (url/path URL) -> STRING                  extract the path
+  (url/query URL) -> STRING                 extract the query or an empty string
+  (url/fragment URL) -> STRING              extract the fragment or an empty string
+  (url/query-get URL STRING) -> STRING      return the first decoded value or an empty string
+  (url/query-has? URL STRING) -> BOOLEAN    test whether a decoded query name exists
+  (url/encode STRING) -> STRING             encode an RFC 3986 component
+  (url/decode STRING) -> STRING             percent-decode a component
+
+  Extracted components preserve percent encoding. Query operations use form
+  semantics (+ is space), decode names and values, and use the first duplicate.
+  url/encode uses uppercase escapes. url/decode decodes only %XX and leaves +
+  unchanged. Invalid URLs, escapes, or UTF-8 are errors.
+
+Semantic versions:
+  (semver/> SEMVER SEMVER) -> BOOLEAN       greater than
+  (semver/>= SEMVER SEMVER) -> BOOLEAN      greater than or equal
+  (semver/< SEMVER SEMVER) -> BOOLEAN       less than
+  (semver/<= SEMVER SEMVER) -> BOOLEAN      less than or equal
+  (semver/= SEMVER SEMVER) -> BOOLEAN       equal
+  (semver/!= SEMVER SEMVER) -> BOOLEAN      not equal
+  (semver/major SEMVER) -> NUMBER           return the major version
+  (semver/minor SEMVER) -> NUMBER           return the minor version
+  (semver/patch SEMVER) -> NUMBER           return the patch version
+  (semver/prerelease SEMVER) -> STRING      return prerelease text or an empty string
+
+Types and errors:
+  String      fields and quoted literals    DateTime  RFC 3339 timestamps
+  Number      numeric literals, NR, NF       Duration  signed seconds
+  Boolean     true, false, predicates        IpAddr    IPv4 or IPv6
+  Cidr        IPv4 or IPv6 networks          Url       absolute URLs
+  SemVer      MAJOR.MINOR.PATCH versions
+
+  Functions convert Strings when they require another type. Failed conversion
+  reports the record, function, and argument number. Boolean values never
+  convert implicitly from strings or numbers. Numeric arithmetic is binary;
+  division by zero and non-finite results are errors.
+
+Composition:
+  A VALUE can be a literal, field, function call, or special form. Values nest
+  anywhere a VALUE is accepted. Multiple program forms run left to right; a
+  failed filter skips the rest of that record. Multiple filters therefore act
+  like AND. If the program is empty or contains only filters,
+  cho implicitly prints $0 after the filters pass.
+  Functions with one primary input put it first, followed by configuration.
+  Variadic functions such as str and s/join have no single primary input.
+
+  (-> VALUE STEP ...) -> VALUE              insert a value as each step's first argument
+  (->> VALUE STEP ...) -> VALUE             insert a value as each step's last argument
+
+    (-> $1 (dt/add (du/s 10)))
+      is (dt/add $1 (du/s 10))
+
+    (-> $1 (dt/fmt "%Y/%m/%d"))
+      is (dt/fmt $1 "%Y/%m/%d")
+
+    (-> $1 s/trim (s/replace "-" "_") s/upper)
+
+More examples:
+  Extract a log message while preserving its original whitespace:
+    printf '2026-08-24 INFO service started successfully\n' | cho '(p $3-)'
+
+  Format an RFC 3339 timestamp in Tokyo time:
+    cho '(p (dt/fmt $1 "%Y-%m-%d %H:%M" "Asia/Tokyo"))'
+
+  Join transformed fields, with a fallback for a missing third field:
+    cho '(p (s/join ":" (s/upper $1) (default $3 "UNKNOWN")))'

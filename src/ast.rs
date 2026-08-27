@@ -52,7 +52,7 @@ pub enum StringTest {
     Contains,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum IpClass {
     Private,
     Loopback,
@@ -60,7 +60,7 @@ pub enum IpClass {
     Multicast,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ComparisonType {
     Number,
     String,
@@ -69,7 +69,7 @@ pub enum ComparisonType {
     SemVer,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ComparisonOperator {
     GreaterThan,
     GreaterThanOrEqual,
@@ -79,7 +79,7 @@ pub enum ComparisonOperator {
     NotEqual,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DateTimeFloorUnit {
     Second,
     Minute,
@@ -87,7 +87,7 @@ pub enum DateTimeFloorUnit {
     Day,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ArithmeticOperator {
     Add,
     Subtract,
@@ -95,7 +95,7 @@ pub enum ArithmeticOperator {
     Divide,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum NumberOperator {
     Truncate,
     Floor,
@@ -104,7 +104,7 @@ pub enum NumberOperator {
     Absolute,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum UrlPart {
     Scheme,
     Host,
@@ -114,7 +114,7 @@ pub enum UrlPart {
     Fragment,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum UrlEncoding {
     Encode,
     Decode,
@@ -139,7 +139,7 @@ pub enum ReplaceMode {
     All,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum CidrPart {
     Network,
     Prefix,
@@ -148,7 +148,7 @@ pub enum CidrPart {
     Size,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SemVerPart {
     Major,
     Minor,

@@ -116,6 +116,10 @@ Run `cho --help` for the complete syntax, functions, and special forms.
 
 `cho --help` contains the complete syntax and short command examples.
 
+[`metadata.json`](metadata.json) is the machine-readable index of functions and
+forms. Its `schema_version` changes when the JSON structure makes an
+incompatible change.
+
 The [`examples`](examples) directory contains scripts and sample data for
 reviewing a CSV account export, investigating connection timeouts, and checking
 release versions.
@@ -126,6 +130,13 @@ release versions.
 $ cargo fmt --check
 $ cargo test
 $ cargo clippy --all-targets -- -D warnings
+```
+
+Regenerate the checked-in help and callable metadata after changing the
+language registry:
+
+```console
+$ cargo run --quiet --example generate-documentation
 ```
 
 ## The name

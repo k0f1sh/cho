@@ -1,14 +1,32 @@
-use crate::ast::{
-    ArithmeticOperator, CidrPart, ComparisonOperator, ComparisonType, DateTimeFloorUnit, Form,
-    IpClass, NumberOperator, Predicate, Program, RegexId, ReplaceMode, SemVerPart, StringQuote,
-    StringTest, StringTrim, UrlEncoding, UrlPart, Value,
+use crate::ast::{DateTimeFloorUnit, Form, Predicate, Program, RegexId, Value};
+use crate::language::{
+    CallableKind, CallableSpec, DurationOperation, Lowering, Parameter, ThreadDirection, ValueType,
+    lookup,
 };
 use crate::parser::{Atom, ParseError, SExpr};
 
 #[derive(Debug)]
-enum Argument<'syntax> {
+enum InputArgument<'syntax> {
     Syntax(&'syntax SExpr),
     Compiled(Value),
+}
+
+#[derive(Debug)]
+enum BoundArgument<'syntax> {
+    Value(Value),
+    Regex(RegexId),
+    Step(&'syntax SExpr),
+}
+
+enum CompiledExpression {
+    Form(Form),
+    Value(Value),
+}
+
+#[derive(Clone, Copy)]
+enum CompileContext {
+    Form,
+    Value,
 }
 
 pub(crate) fn compile(expressions: Vec<SExpr>) -> Result<Program, ParseError> {
@@ -41,24 +59,14 @@ impl Compiler {
     }
 
     fn compile_form(&mut self, expression: &SExpr) -> Result<Form, ParseError> {
-        let SExpr::List(items) = expression else {
-            return Err(ParseError::InvalidSyntax);
-        };
-        let Some(SExpr::Atom(Atom::Symbol(operator))) = items.first() else {
-            return Err(ParseError::InvalidSyntax);
-        };
-        let arguments = &items[1..];
-        match operator.as_str() {
-            "print" | "p" => Ok(Form::Print(
-                arguments
-                    .iter()
-                    .map(|argument| self.compile_value(argument))
-                    .collect::<Result<_, _>>()?,
-            )),
-            "filter" | "f" if arguments.len() == 1 => {
-                Ok(Form::Filter(self.compile_value(&arguments[0])?))
-            }
-            _ => Err(ParseError::InvalidSyntax),
+        let (operator, arguments) = call_parts(expression)?;
+        match self.compile_invocation(
+            operator,
+            syntax_arguments(arguments),
+            CompileContext::Form,
+        )? {
+            CompiledExpression::Form(form) => Ok(form),
+            CompiledExpression::Value(_) => Err(ParseError::InvalidSyntax),
         }
     }
 
@@ -92,359 +100,67 @@ impl Compiler {
         let Some(SExpr::Atom(Atom::Symbol(operator))) = items.first() else {
             return Err(ParseError::InvalidSyntax);
         };
-        let arguments = &items[1..];
-        match operator.as_str() {
-            "->" => self.compile_threading(arguments, true),
-            "->>" => self.compile_threading(arguments, false),
-            _ => {
-                self.compile_application(operator, arguments.iter().map(Argument::Syntax).collect())
-            }
+        match self.compile_invocation(
+            operator,
+            syntax_arguments(&items[1..]),
+            CompileContext::Value,
+        )? {
+            CompiledExpression::Value(value) => Ok(value),
+            CompiledExpression::Form(_) => Err(ParseError::InvalidSyntax),
         }
     }
 
-    fn compile_threading(
+    fn compile_invocation<'syntax>(
         &mut self,
-        expressions: &[SExpr],
-        first: bool,
-    ) -> Result<Value, ParseError> {
-        let Some((initial, steps)) = expressions.split_first() else {
-            return Err(ParseError::InvalidSyntax);
+        operator: &str,
+        arguments: Vec<InputArgument<'syntax>>,
+        context: CompileContext,
+    ) -> Result<CompiledExpression, ParseError> {
+        let callable = lookup(operator).ok_or(ParseError::InvalidSyntax)?;
+        let valid_context = match context {
+            CompileContext::Form => callable.kind == CallableKind::ProgramForm,
+            CompileContext::Value => callable.kind != CallableKind::ProgramForm,
         };
-        let mut value = self.compile_value(initial)?;
-        for step in steps {
-            let (operator, mut arguments) = match step {
-                SExpr::Atom(Atom::Symbol(operator)) => (operator.as_str(), Vec::new()),
-                SExpr::List(items) => {
-                    let Some(SExpr::Atom(Atom::Symbol(operator))) = items.first() else {
-                        return Err(ParseError::InvalidSyntax);
-                    };
-                    (
-                        operator.as_str(),
-                        items[1..].iter().map(Argument::Syntax).collect(),
-                    )
-                }
-                _ => return Err(ParseError::InvalidSyntax),
-            };
-            if first {
-                arguments.insert(0, Argument::Compiled(value));
-            } else {
-                arguments.push(Argument::Compiled(value));
-            }
-            value = self.compile_application(operator, arguments)?;
-        }
-        Ok(value)
-    }
-
-    fn compile_application(
-        &mut self,
-        operator: &str,
-        arguments: Vec<Argument<'_>>,
-    ) -> Result<Value, ParseError> {
-        match operator {
-            "str" => Ok(Value::Concat(self.compile_at_least(arguments, 0)?)),
-            "+" | "-" | "*" | "/" => {
-                let [left, right] = self.compile_exact(arguments)?;
-                Ok(Value::Arithmetic {
-                    operator: arithmetic_operator(operator).expect("operator was matched"),
-                    left: Box::new(left),
-                    right: Box::new(right),
-                })
-            }
-            "n/fixed" => {
-                let [value, digits] = self.compile_exact(arguments)?;
-                Ok(Value::FormatNumberFixed {
-                    digits: Box::new(digits),
-                    value: Box::new(value),
-                })
-            }
-            operator if number_operator(operator).is_some() => {
-                let [value] = self.compile_exact(arguments)?;
-                Ok(Value::NumberOperation {
-                    operator: number_operator(operator).expect("operator was matched"),
-                    value: Box::new(value),
-                })
-            }
-            operator if url_part(operator).is_some() => {
-                let [value] = self.compile_exact(arguments)?;
-                Ok(Value::UrlPart {
-                    part: url_part(operator).expect("operator was matched"),
-                    value: Box::new(value),
-                })
-            }
-            operator if url_encoding(operator).is_some() => {
-                let [value] = self.compile_exact(arguments)?;
-                Ok(Value::UrlEncoding {
-                    operation: url_encoding(operator).expect("operator was matched"),
-                    value: Box::new(value),
-                })
-            }
-            "s/join" => {
-                let mut arguments = self.compile_at_least(arguments, 1)?;
-                let separator = arguments.remove(0);
-                Ok(Value::Join {
-                    separator: Box::new(separator),
-                    values: arguments,
-                })
-            }
-            "s/replace" | "s/replace-all" => {
-                let [value, from, to] = self.compile_exact(arguments)?;
-                Ok(Value::Replace {
-                    mode: replace_mode(operator).expect("operator was matched"),
-                    from: Box::new(from),
-                    to: Box::new(to),
-                    value: Box::new(value),
-                })
-            }
-            "re/replace" | "re/replace-all" => self.compile_regex_replace(operator, arguments),
-            "s/part" => {
-                let [value, delimiter, position] = self.compile_exact(arguments)?;
-                Ok(Value::Part {
-                    delimiter: Box::new(delimiter),
-                    position: Box::new(position),
-                    value: Box::new(value),
-                })
-            }
-            "s/slice" => {
-                if !matches!(arguments.len(), 2 | 3) {
-                    return Err(ParseError::InvalidSyntax);
-                }
-                build_string_slice(self.compile_arguments(arguments)?)
-            }
-            "s/count" => {
-                let [value] = self.compile_exact(arguments)?;
-                Ok(Value::Count(Box::new(value)))
-            }
-            "s/escape" => {
-                let [value] = self.compile_exact(arguments)?;
-                Ok(Value::Escape(Box::new(value)))
-            }
-            "s/dquote" | "dq" | "s/squote" | "sq" => {
-                let [value] = self.compile_exact(arguments)?;
-                Ok(Value::Quote {
-                    kind: if matches!(operator, "s/dquote" | "dq") {
-                        StringQuote::Double
-                    } else {
-                        StringQuote::Single
-                    },
-                    value: Box::new(value),
-                })
-            }
-            "not" => {
-                let [value] = self.compile_exact(arguments)?;
-                Ok(Value::Not(Box::new(value)))
-            }
-            "and" => Ok(Value::And(self.compile_at_least(arguments, 1)?)),
-            "or" => Ok(Value::Or(self.compile_at_least(arguments, 1)?)),
-            "if" => {
-                let [condition, then_value, else_value] = self.compile_exact(arguments)?;
-                Ok(Value::If {
-                    condition: Box::new(condition),
-                    then_value: Box::new(then_value),
-                    else_value: Box::new(else_value),
-                })
-            }
-            "s/lower" => {
-                let [value] = self.compile_exact(arguments)?;
-                Ok(Value::Lower(Box::new(value)))
-            }
-            "s/upper" => {
-                let [value] = self.compile_exact(arguments)?;
-                Ok(Value::Upper(Box::new(value)))
-            }
-            operator if string_trim(operator).is_some() => {
-                let [value] = self.compile_exact(arguments)?;
-                Ok(Value::Trim {
-                    kind: string_trim(operator).expect("operator was matched"),
-                    value: Box::new(value),
-                })
-            }
-            "default" => {
-                let [value, fallback] = self.compile_exact(arguments)?;
-                Ok(Value::Default {
-                    value: Box::new(value),
-                    fallback: Box::new(fallback),
-                })
-            }
-            "url/query-get" => {
-                let [url, name] = self.compile_exact(arguments)?;
-                Ok(Value::UrlQueryGet {
-                    name: Box::new(name),
-                    url: Box::new(url),
-                })
-            }
-            "ip/version" => {
-                let [value] = self.compile_exact(arguments)?;
-                Ok(Value::IpVersion(Box::new(value)))
-            }
-            operator if cidr_part(operator).is_some() => {
-                let [value] = self.compile_exact(arguments)?;
-                Ok(Value::CidrPart {
-                    part: cidr_part(operator).expect("operator was matched"),
-                    value: Box::new(value),
-                })
-            }
-            operator if semver_part(operator).is_some() => {
-                let [value] = self.compile_exact(arguments)?;
-                Ok(Value::SemVerPart {
-                    part: semver_part(operator).expect("operator was matched"),
-                    value: Box::new(value),
-                })
-            }
-            "dt/unix" => {
-                let [value] = self.compile_exact(arguments)?;
-                Ok(Value::DateTimeFromUnix(Box::new(value)))
-            }
-            "dt/floor-s" => self.compile_datetime_floor(DateTimeFloorUnit::Second, arguments),
-            "dt/floor-m" => self.compile_datetime_floor(DateTimeFloorUnit::Minute, arguments),
-            "dt/floor-h" => self.compile_datetime_floor(DateTimeFloorUnit::Hour, arguments),
-            "dt/floor-d" => self.compile_datetime_floor(DateTimeFloorUnit::Day, arguments),
-            "dt/fmt" => {
-                if !matches!(arguments.len(), 2 | 3) {
-                    return Err(ParseError::InvalidSyntax);
-                }
-                let mut arguments = self.compile_arguments(arguments)?.into_iter();
-                let value = arguments.next().expect("length was checked");
-                let format = arguments.next().expect("length was checked");
-                let timezone = arguments.next().map(Box::new);
-                Ok(Value::FormatDateTime {
-                    format: Box::new(format),
-                    timezone,
-                    value: Box::new(value),
-                })
-            }
-            "du/s" => self.compile_duration(arguments, Value::DurationSeconds),
-            "du/ms" => self.compile_duration(arguments, Value::DurationMilliseconds),
-            "du/m" => self.compile_duration(arguments, Value::DurationMinutes),
-            "du/h" => self.compile_duration(arguments, Value::DurationHours),
-            "du/d" => self.compile_duration(arguments, Value::DurationDays),
-            "du/to-ms" => self.compile_duration(arguments, Value::DurationToMilliseconds),
-            "du/to-s" => self.compile_duration(arguments, Value::DurationToSeconds),
-            "du/to-m" => self.compile_duration(arguments, Value::DurationToMinutes),
-            "du/to-h" => self.compile_duration(arguments, Value::DurationToHours),
-            "du/to-d" => self.compile_duration(arguments, Value::DurationToDays),
-            "dt/now" => {
-                let [] = self.compile_exact(arguments)?;
-                Ok(Value::DateTimeNow)
-            }
-            "dt/add" => {
-                let [datetime, duration] = self.compile_exact(arguments)?;
-                Ok(Value::AddDateTime {
-                    datetime: Box::new(datetime),
-                    duration: Box::new(duration),
-                })
-            }
-            "dt/sub" => {
-                let [datetime, duration] = self.compile_exact(arguments)?;
-                Ok(Value::SubtractDateTime {
-                    datetime: Box::new(datetime),
-                    duration: Box::new(duration),
-                })
-            }
-            "dt/diff" => {
-                let [left, right] = self.compile_exact(arguments)?;
-                Ok(Value::DifferenceDateTime {
-                    left: Box::new(left),
-                    right: Box::new(right),
-                })
-            }
-            "reg" | "~" => self.compile_regex_predicate(arguments),
-            operator if parse_comparison_operator(operator).is_some() => {
-                let [left, right] = self.compile_exact(arguments)?;
-                let (kind, operator) =
-                    parse_comparison_operator(operator).expect("operator was matched");
-                Ok(Value::Predicate(Box::new(Predicate::Compare {
-                    kind,
-                    operator,
-                    left,
-                    right,
-                })))
-            }
-            operator if ip_class(operator).is_some() => {
-                let [value] = self.compile_exact(arguments)?;
-                Ok(Value::Predicate(Box::new(Predicate::IpClass {
-                    kind: ip_class(operator).expect("operator was matched"),
-                    value,
-                })))
-            }
-            operator if string_test(operator).is_some() => {
-                let [value, pattern] = self.compile_exact(arguments)?;
-                Ok(Value::Predicate(Box::new(Predicate::StringTest {
-                    kind: string_test(operator).expect("operator was matched"),
-                    value,
-                    pattern,
-                })))
-            }
-            "cidr/contains?" => {
-                let [cidr, ip] = self.compile_exact(arguments)?;
-                Ok(Value::Predicate(Box::new(Predicate::CidrContains {
-                    cidr,
-                    ip,
-                })))
-            }
-            "url/query-has?" => {
-                let [url, name] = self.compile_exact(arguments)?;
-                Ok(Value::Predicate(Box::new(Predicate::UrlQueryHas {
-                    name,
-                    url,
-                })))
-            }
-            _ => Err(ParseError::InvalidSyntax),
-        }
-    }
-
-    fn compile_regex_predicate(
-        &mut self,
-        arguments: Vec<Argument<'_>>,
-    ) -> Result<Value, ParseError> {
-        match arguments.len() {
-            1 => {
-                let [pattern] = arguments.try_into().expect("length was checked");
-                let regex = self.compile_pattern(pattern)?;
-                Ok(Value::Predicate(Box::new(Predicate::Regex {
-                    target: Value::Field(0),
-                    regex,
-                })))
-            }
-            2 => {
-                let mut arguments = arguments.into_iter();
-                let target =
-                    self.compile_argument(arguments.next().expect("length was checked"))?;
-                let regex = self.compile_pattern(arguments.next().expect("length was checked"))?;
-                Ok(Value::Predicate(Box::new(Predicate::Regex {
-                    target,
-                    regex,
-                })))
-            }
-            _ => Err(ParseError::InvalidSyntax),
-        }
-    }
-
-    fn compile_regex_replace(
-        &mut self,
-        operator: &str,
-        arguments: Vec<Argument<'_>>,
-    ) -> Result<Value, ParseError> {
-        if arguments.len() != 3 {
+        if !valid_context {
             return Err(ParseError::InvalidSyntax);
         }
-        let mut arguments = arguments.into_iter();
-        let value = self.compile_argument(arguments.next().expect("length was checked"))?;
-        let regex = self.compile_pattern(arguments.next().expect("length was checked"))?;
-        let replacement = self.compile_argument(arguments.next().expect("length was checked"))?;
-        Ok(Value::RegexReplace {
-            mode: replace_mode(operator).expect("operator was matched"),
-            regex,
-            replacement: Box::new(replacement),
-            value: Box::new(value),
-        })
+        let signature = callable
+            .signature(arguments.len())
+            .ok_or(ParseError::InvalidSyntax)?;
+        let arguments = arguments
+            .into_iter()
+            .enumerate()
+            .map(|(index, argument)| {
+                let parameter = signature
+                    .parameter(index)
+                    .expect("signature accepts argument");
+                self.bind_argument(parameter, argument)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        self.lower(callable, arguments)
     }
 
-    fn compile_pattern(&mut self, argument: Argument<'_>) -> Result<RegexId, ParseError> {
+    fn bind_argument<'syntax>(
+        &mut self,
+        parameter: Parameter,
+        argument: InputArgument<'syntax>,
+    ) -> Result<BoundArgument<'syntax>, ParseError> {
+        match parameter.value_type {
+            ValueType::Regex => self.compile_pattern(argument).map(BoundArgument::Regex),
+            ValueType::Step => match argument {
+                InputArgument::Syntax(expression) => Ok(BoundArgument::Step(expression)),
+                InputArgument::Compiled(_) => Err(ParseError::InvalidSyntax),
+            },
+            _ => self.compile_argument(argument).map(BoundArgument::Value),
+        }
+    }
+
+    fn compile_pattern(&mut self, argument: InputArgument<'_>) -> Result<RegexId, ParseError> {
         let pattern = match argument {
-            Argument::Syntax(SExpr::Atom(Atom::String(pattern) | Atom::Regex(pattern))) => {
+            InputArgument::Syntax(SExpr::Atom(Atom::String(pattern) | Atom::Regex(pattern))) => {
                 pattern.clone()
             }
-            Argument::Syntax(_) | Argument::Compiled(_) => {
+            InputArgument::Syntax(_) | InputArgument::Compiled(_) => {
                 return Err(ParseError::InvalidSyntax);
             }
         };
@@ -453,64 +169,346 @@ impl Compiler {
         Ok(id)
     }
 
-    fn compile_datetime_floor(
-        &mut self,
-        unit: DateTimeFloorUnit,
-        arguments: Vec<Argument<'_>>,
-    ) -> Result<Value, ParseError> {
-        if !matches!(arguments.len(), 1 | 2) {
-            return Err(ParseError::InvalidSyntax);
-        }
-        build_datetime_floor(unit, self.compile_arguments(arguments)?)
-    }
-
-    fn compile_duration(
-        &mut self,
-        arguments: Vec<Argument<'_>>,
-        constructor: fn(Box<Value>) -> Value,
-    ) -> Result<Value, ParseError> {
-        let [value] = self.compile_exact(arguments)?;
-        Ok(constructor(Box::new(value)))
-    }
-
-    fn compile_exact<const N: usize>(
-        &mut self,
-        arguments: Vec<Argument<'_>>,
-    ) -> Result<[Value; N], ParseError> {
-        if arguments.len() != N {
-            return Err(ParseError::InvalidSyntax);
-        }
-        self.compile_arguments(arguments)?
-            .try_into()
-            .map_err(|_| ParseError::InvalidSyntax)
-    }
-
-    fn compile_at_least(
-        &mut self,
-        arguments: Vec<Argument<'_>>,
-        minimum: usize,
-    ) -> Result<Vec<Value>, ParseError> {
-        if arguments.len() < minimum {
-            return Err(ParseError::InvalidSyntax);
-        }
-        self.compile_arguments(arguments)
-    }
-
-    fn compile_arguments(
-        &mut self,
-        arguments: Vec<Argument<'_>>,
-    ) -> Result<Vec<Value>, ParseError> {
-        arguments
-            .into_iter()
-            .map(|argument| self.compile_argument(argument))
-            .collect()
-    }
-
-    fn compile_argument(&mut self, argument: Argument<'_>) -> Result<Value, ParseError> {
+    fn compile_argument(&mut self, argument: InputArgument<'_>) -> Result<Value, ParseError> {
         match argument {
-            Argument::Syntax(expression) => self.compile_value(expression),
-            Argument::Compiled(value) => Ok(value),
+            InputArgument::Syntax(expression) => self.compile_value(expression),
+            InputArgument::Compiled(value) => Ok(value),
         }
+    }
+
+    fn lower<'syntax>(
+        &mut self,
+        callable: &CallableSpec,
+        arguments: Vec<BoundArgument<'syntax>>,
+    ) -> Result<CompiledExpression, ParseError> {
+        let expression = match callable.lowering {
+            Lowering::Print => {
+                return Ok(CompiledExpression::Form(Form::Print(values(arguments)?)));
+            }
+            Lowering::Filter => {
+                let [condition] = value_array(arguments)?;
+                return Ok(CompiledExpression::Form(Form::Filter(condition)));
+            }
+            Lowering::Thread(direction) => {
+                return self
+                    .compile_threading(direction, arguments)
+                    .map(CompiledExpression::Value);
+            }
+            Lowering::Concat => Value::Concat(values(arguments)?),
+            Lowering::Arithmetic(operator) => {
+                let [left, right] = value_array(arguments)?;
+                Value::Arithmetic {
+                    operator,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                }
+            }
+            Lowering::NumberFixed => {
+                let [value, digits] = value_array(arguments)?;
+                Value::FormatNumberFixed {
+                    value: Box::new(value),
+                    digits: Box::new(digits),
+                }
+            }
+            Lowering::NumberOperation(operator) => {
+                let [value] = value_array(arguments)?;
+                Value::NumberOperation {
+                    operator,
+                    value: Box::new(value),
+                }
+            }
+            Lowering::Join => {
+                let mut arguments = values(arguments)?;
+                let separator = arguments.remove(0);
+                Value::Join {
+                    separator: Box::new(separator),
+                    values: arguments,
+                }
+            }
+            Lowering::Replace(mode) => {
+                let [value, from, to] = value_array(arguments)?;
+                Value::Replace {
+                    mode,
+                    value: Box::new(value),
+                    from: Box::new(from),
+                    to: Box::new(to),
+                }
+            }
+            Lowering::RegexReplace(mode) => {
+                let [value, regex, replacement] = arguments
+                    .try_into()
+                    .map_err(|_| ParseError::InvalidSyntax)?;
+                Value::RegexReplace {
+                    mode,
+                    value: Box::new(expect_value(value)?),
+                    regex: expect_regex(regex)?,
+                    replacement: Box::new(expect_value(replacement)?),
+                }
+            }
+            Lowering::Part => {
+                let [value, delimiter, position] = value_array(arguments)?;
+                Value::Part {
+                    value: Box::new(value),
+                    delimiter: Box::new(delimiter),
+                    position: Box::new(position),
+                }
+            }
+            Lowering::Slice => build_string_slice(values(arguments)?)?,
+            Lowering::Count => unary(arguments, Value::Count)?,
+            Lowering::Escape => unary(arguments, Value::Escape)?,
+            Lowering::Quote(kind) => {
+                let [value] = value_array(arguments)?;
+                Value::Quote {
+                    kind,
+                    value: Box::new(value),
+                }
+            }
+            Lowering::Not => unary(arguments, Value::Not)?,
+            Lowering::And => Value::And(values(arguments)?),
+            Lowering::Or => Value::Or(values(arguments)?),
+            Lowering::If => {
+                let [condition, then_value, else_value] = value_array(arguments)?;
+                Value::If {
+                    condition: Box::new(condition),
+                    then_value: Box::new(then_value),
+                    else_value: Box::new(else_value),
+                }
+            }
+            Lowering::Lower => unary(arguments, Value::Lower)?,
+            Lowering::Upper => unary(arguments, Value::Upper)?,
+            Lowering::Trim(kind) => {
+                let [value] = value_array(arguments)?;
+                Value::Trim {
+                    kind,
+                    value: Box::new(value),
+                }
+            }
+            Lowering::Default => {
+                let [value, fallback] = value_array(arguments)?;
+                Value::Default {
+                    value: Box::new(value),
+                    fallback: Box::new(fallback),
+                }
+            }
+            Lowering::StringTest(kind) => {
+                let [value, pattern] = value_array(arguments)?;
+                Value::Predicate(Box::new(Predicate::StringTest {
+                    kind,
+                    value,
+                    pattern,
+                }))
+            }
+            Lowering::Regex => {
+                let (target, regex) = match arguments.len() {
+                    1 => {
+                        let [regex] = arguments.try_into().expect("length was checked");
+                        (Value::Field(0), expect_regex(regex)?)
+                    }
+                    2 => {
+                        let [target, regex] = arguments.try_into().expect("length was checked");
+                        (expect_value(target)?, expect_regex(regex)?)
+                    }
+                    _ => return Err(ParseError::InvalidSyntax),
+                };
+                Value::Predicate(Box::new(Predicate::Regex { target, regex }))
+            }
+            Lowering::Compare(kind, operator) => {
+                let [left, right] = value_array(arguments)?;
+                Value::Predicate(Box::new(Predicate::Compare {
+                    kind,
+                    operator,
+                    left,
+                    right,
+                }))
+            }
+            Lowering::DateTimeFromUnix => unary(arguments, Value::DateTimeFromUnix)?,
+            Lowering::FormatDateTime => {
+                let mut arguments = values(arguments)?.into_iter();
+                let value = arguments.next().expect("signature requires value");
+                let format = arguments.next().expect("signature requires format");
+                Value::FormatDateTime {
+                    value: Box::new(value),
+                    format: Box::new(format),
+                    timezone: arguments.next().map(Box::new),
+                }
+            }
+            Lowering::DateTimeNow => Value::DateTimeNow,
+            Lowering::FloorDateTime(unit) => build_datetime_floor(unit, values(arguments)?)?,
+            Lowering::Duration(operation) => {
+                let [value] = value_array(arguments)?;
+                let value = Box::new(value);
+                match operation {
+                    DurationOperation::Seconds => Value::DurationSeconds(value),
+                    DurationOperation::Milliseconds => Value::DurationMilliseconds(value),
+                    DurationOperation::Minutes => Value::DurationMinutes(value),
+                    DurationOperation::Hours => Value::DurationHours(value),
+                    DurationOperation::Days => Value::DurationDays(value),
+                    DurationOperation::ToMilliseconds => Value::DurationToMilliseconds(value),
+                    DurationOperation::ToSeconds => Value::DurationToSeconds(value),
+                    DurationOperation::ToMinutes => Value::DurationToMinutes(value),
+                    DurationOperation::ToHours => Value::DurationToHours(value),
+                    DurationOperation::ToDays => Value::DurationToDays(value),
+                }
+            }
+            Lowering::AddDateTime => {
+                let [datetime, duration] = value_array(arguments)?;
+                Value::AddDateTime {
+                    datetime: Box::new(datetime),
+                    duration: Box::new(duration),
+                }
+            }
+            Lowering::SubtractDateTime => {
+                let [datetime, duration] = value_array(arguments)?;
+                Value::SubtractDateTime {
+                    datetime: Box::new(datetime),
+                    duration: Box::new(duration),
+                }
+            }
+            Lowering::DifferenceDateTime => {
+                let [left, right] = value_array(arguments)?;
+                Value::DifferenceDateTime {
+                    left: Box::new(left),
+                    right: Box::new(right),
+                }
+            }
+            Lowering::IpVersion => unary(arguments, Value::IpVersion)?,
+            Lowering::IpClass(kind) => {
+                let [value] = value_array(arguments)?;
+                Value::Predicate(Box::new(Predicate::IpClass { kind, value }))
+            }
+            Lowering::CidrContains => {
+                let [cidr, ip] = value_array(arguments)?;
+                Value::Predicate(Box::new(Predicate::CidrContains { cidr, ip }))
+            }
+            Lowering::CidrPart(part) => {
+                let [value] = value_array(arguments)?;
+                Value::CidrPart {
+                    part,
+                    value: Box::new(value),
+                }
+            }
+            Lowering::UrlPart(part) => {
+                let [value] = value_array(arguments)?;
+                Value::UrlPart {
+                    part,
+                    value: Box::new(value),
+                }
+            }
+            Lowering::UrlEncoding(operation) => {
+                let [value] = value_array(arguments)?;
+                Value::UrlEncoding {
+                    operation,
+                    value: Box::new(value),
+                }
+            }
+            Lowering::UrlQueryGet => {
+                let [url, name] = value_array(arguments)?;
+                Value::UrlQueryGet {
+                    url: Box::new(url),
+                    name: Box::new(name),
+                }
+            }
+            Lowering::UrlQueryHas => {
+                let [url, name] = value_array(arguments)?;
+                Value::Predicate(Box::new(Predicate::UrlQueryHas { url, name }))
+            }
+            Lowering::SemVerPart(part) => {
+                let [value] = value_array(arguments)?;
+                Value::SemVerPart {
+                    part,
+                    value: Box::new(value),
+                }
+            }
+        };
+        Ok(CompiledExpression::Value(expression))
+    }
+
+    fn compile_threading(
+        &mut self,
+        direction: ThreadDirection,
+        arguments: Vec<BoundArgument<'_>>,
+    ) -> Result<Value, ParseError> {
+        let mut arguments = arguments.into_iter();
+        let mut value = expect_value(arguments.next().ok_or(ParseError::InvalidSyntax)?)?;
+        for step in arguments {
+            let step = expect_step(step)?;
+            let (operator, expressions) = match step {
+                SExpr::Atom(Atom::Symbol(operator)) => (operator.as_str(), &[][..]),
+                SExpr::List(items) => {
+                    let Some(SExpr::Atom(Atom::Symbol(operator))) = items.first() else {
+                        return Err(ParseError::InvalidSyntax);
+                    };
+                    (operator.as_str(), &items[1..])
+                }
+                _ => return Err(ParseError::InvalidSyntax),
+            };
+            let mut step_arguments = syntax_arguments(expressions);
+            match direction {
+                ThreadDirection::First => step_arguments.insert(0, InputArgument::Compiled(value)),
+                ThreadDirection::Last => step_arguments.push(InputArgument::Compiled(value)),
+            }
+            value =
+                match self.compile_invocation(operator, step_arguments, CompileContext::Value)? {
+                    CompiledExpression::Value(value) => value,
+                    CompiledExpression::Form(_) => return Err(ParseError::InvalidSyntax),
+                };
+        }
+        Ok(value)
+    }
+}
+
+fn call_parts(expression: &SExpr) -> Result<(&str, &[SExpr]), ParseError> {
+    let SExpr::List(items) = expression else {
+        return Err(ParseError::InvalidSyntax);
+    };
+    let Some(SExpr::Atom(Atom::Symbol(operator))) = items.first() else {
+        return Err(ParseError::InvalidSyntax);
+    };
+    Ok((operator, &items[1..]))
+}
+
+fn syntax_arguments(arguments: &[SExpr]) -> Vec<InputArgument<'_>> {
+    arguments.iter().map(InputArgument::Syntax).collect()
+}
+
+fn values(arguments: Vec<BoundArgument<'_>>) -> Result<Vec<Value>, ParseError> {
+    arguments.into_iter().map(expect_value).collect()
+}
+
+fn value_array<const N: usize>(
+    arguments: Vec<BoundArgument<'_>>,
+) -> Result<[Value; N], ParseError> {
+    values(arguments)?
+        .try_into()
+        .map_err(|_| ParseError::InvalidSyntax)
+}
+
+fn unary(
+    arguments: Vec<BoundArgument<'_>>,
+    constructor: fn(Box<Value>) -> Value,
+) -> Result<Value, ParseError> {
+    let [value] = value_array(arguments)?;
+    Ok(constructor(Box::new(value)))
+}
+
+fn expect_value(argument: BoundArgument<'_>) -> Result<Value, ParseError> {
+    match argument {
+        BoundArgument::Value(value) => Ok(value),
+        BoundArgument::Regex(_) | BoundArgument::Step(_) => Err(ParseError::InvalidSyntax),
+    }
+}
+
+fn expect_regex(argument: BoundArgument<'_>) -> Result<RegexId, ParseError> {
+    match argument {
+        BoundArgument::Regex(regex) => Ok(regex),
+        BoundArgument::Value(_) | BoundArgument::Step(_) => Err(ParseError::InvalidSyntax),
+    }
+}
+
+fn expect_step(argument: BoundArgument<'_>) -> Result<&SExpr, ParseError> {
+    match argument {
+        BoundArgument::Step(step) => Ok(step),
+        BoundArgument::Value(_) | BoundArgument::Regex(_) => Err(ParseError::InvalidSyntax),
     }
 }
 
@@ -545,14 +543,6 @@ fn parse_range_bound(bound: &str) -> Result<Option<usize>, ParseError> {
             .parse::<usize>()
             .map(Some)
             .map_err(|_| ParseError::InvalidField)
-    }
-}
-
-fn replace_mode(operator: &str) -> Option<ReplaceMode> {
-    match operator {
-        "s/replace" | "re/replace" => Some(ReplaceMode::First),
-        "s/replace-all" | "re/replace-all" => Some(ReplaceMode::All),
-        _ => None,
     }
 }
 
@@ -598,131 +588,10 @@ fn build_datetime_floor(
     })
 }
 
-fn string_test(value: &str) -> Option<StringTest> {
-    match value {
-        "s/starts-with?" => Some(StringTest::StartsWith),
-        "s/ends-with?" => Some(StringTest::EndsWith),
-        "s/contains?" => Some(StringTest::Contains),
-        _ => None,
-    }
-}
-
-fn arithmetic_operator(value: &str) -> Option<ArithmeticOperator> {
-    match value {
-        "+" => Some(ArithmeticOperator::Add),
-        "-" => Some(ArithmeticOperator::Subtract),
-        "*" => Some(ArithmeticOperator::Multiply),
-        "/" => Some(ArithmeticOperator::Divide),
-        _ => None,
-    }
-}
-
-fn number_operator(value: &str) -> Option<NumberOperator> {
-    match value {
-        "n/trunc" => Some(NumberOperator::Truncate),
-        "n/floor" => Some(NumberOperator::Floor),
-        "n/ceil" => Some(NumberOperator::Ceil),
-        "n/round" => Some(NumberOperator::Round),
-        "n/abs" => Some(NumberOperator::Absolute),
-        _ => None,
-    }
-}
-
-fn ip_class(value: &str) -> Option<IpClass> {
-    match value {
-        "ip/private?" => Some(IpClass::Private),
-        "ip/loopback?" => Some(IpClass::Loopback),
-        "ip/link-local?" => Some(IpClass::LinkLocal),
-        "ip/multicast?" => Some(IpClass::Multicast),
-        _ => None,
-    }
-}
-
-fn cidr_part(value: &str) -> Option<CidrPart> {
-    match value {
-        "cidr/network" => Some(CidrPart::Network),
-        "cidr/prefix" => Some(CidrPart::Prefix),
-        "cidr/first" => Some(CidrPart::First),
-        "cidr/last" => Some(CidrPart::Last),
-        "cidr/size" => Some(CidrPart::Size),
-        _ => None,
-    }
-}
-
-fn semver_part(value: &str) -> Option<SemVerPart> {
-    match value {
-        "semver/major" => Some(SemVerPart::Major),
-        "semver/minor" => Some(SemVerPart::Minor),
-        "semver/patch" => Some(SemVerPart::Patch),
-        "semver/prerelease" => Some(SemVerPart::Prerelease),
-        _ => None,
-    }
-}
-
-fn url_part(value: &str) -> Option<UrlPart> {
-    match value {
-        "url/scheme" => Some(UrlPart::Scheme),
-        "url/host" => Some(UrlPart::Host),
-        "url/port" => Some(UrlPart::Port),
-        "url/path" => Some(UrlPart::Path),
-        "url/query" => Some(UrlPart::Query),
-        "url/fragment" => Some(UrlPart::Fragment),
-        _ => None,
-    }
-}
-
-fn url_encoding(value: &str) -> Option<UrlEncoding> {
-    match value {
-        "url/encode" => Some(UrlEncoding::Encode),
-        "url/decode" => Some(UrlEncoding::Decode),
-        _ => None,
-    }
-}
-
-fn string_trim(value: &str) -> Option<StringTrim> {
-    match value {
-        "s/trim" => Some(StringTrim::Both),
-        "s/ltrim" => Some(StringTrim::Left),
-        "s/rtrim" => Some(StringTrim::Right),
-        _ => None,
-    }
-}
-
-fn parse_comparison_operator(value: &str) -> Option<(ComparisonType, ComparisonOperator)> {
-    let (kind, operator) = if let Some(operator) = value.strip_prefix("s/") {
-        (ComparisonType::String, operator)
-    } else if let Some(operator) = value.strip_prefix("dt/") {
-        (ComparisonType::DateTime, operator)
-    } else if let Some(operator) = value.strip_prefix("ip/") {
-        (ComparisonType::IpAddr, operator)
-    } else if let Some(operator) = value.strip_prefix("semver/") {
-        (ComparisonType::SemVer, operator)
-    } else {
-        (ComparisonType::Number, value)
-    };
-    let operator = match operator {
-        ">" => ComparisonOperator::GreaterThan,
-        ">=" => ComparisonOperator::GreaterThanOrEqual,
-        "<" => ComparisonOperator::LessThan,
-        "<=" => ComparisonOperator::LessThanOrEqual,
-        "=" => ComparisonOperator::Equal,
-        "!=" => ComparisonOperator::NotEqual,
-        _ => return None,
-    };
-    if kind == ComparisonType::IpAddr
-        && !matches!(
-            operator,
-            ComparisonOperator::Equal | ComparisonOperator::NotEqual
-        )
-    {
-        return None;
-    }
-    Some((kind, operator))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast::{ComparisonOperator, ComparisonType, ReplaceMode};
     use crate::parse;
 
     #[test]
@@ -1259,5 +1128,7 @@ mod tests {
             parse("(print (-> $x unknown))"),
             Err(ParseError::InvalidField)
         );
+        assert_eq!(parse("(print (print $x))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(s/count $x)"), Err(ParseError::InvalidSyntax));
     }
 }
