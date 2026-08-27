@@ -258,6 +258,24 @@ define_callable!(
 );
 
 define_callable!(
+    Reverse,
+    CallableDefinition {
+        name: "s/reverse",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::String))]
+    },
+    |_context, arguments| {
+        let [value_arg] = value_array(arguments)?;
+        value(Value::Reverse(Box::new(value_arg)))
+    },
+    String,
+    "reverse Unicode characters",
+    [],
+    [(None, "(s/reverse $1)")]
+);
+
+define_callable!(
     Trim,
     CallableDefinition {
         name: "s/trim",
