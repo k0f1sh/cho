@@ -1,5 +1,7 @@
 mod ast;
 mod compiler;
+#[cfg(any(test, feature = "documentation"))]
+pub mod documentation;
 mod language;
 mod lexer;
 mod parser;

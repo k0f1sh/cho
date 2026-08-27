@@ -1,7 +1,7 @@
-use crate::ast::{DateTimeFloorUnit, Form, Predicate, Program, RegexId, Value};
+use crate::ast::{Form, Program, RegexId, Value};
 use crate::language::{
-    CallableKind, CallableSpec, DurationOperation, Lowering, Parameter, ThreadDirection, ValueType,
-    lookup,
+    Arguments, AstContext, BoundArgument, CallableKind, CompiledExpression, Parameter,
+    ThreadDirection, ValueType, expect_value, lookup,
 };
 use crate::parser::{Atom, ParseError, SExpr};
 
@@ -9,18 +9,6 @@ use crate::parser::{Atom, ParseError, SExpr};
 enum InputArgument<'syntax> {
     Syntax(&'syntax SExpr),
     Compiled(Value),
-}
-
-#[derive(Debug)]
-enum BoundArgument<'syntax> {
-    Value(Value),
-    Regex(RegexId),
-    Step(&'syntax SExpr),
-}
-
-enum CompiledExpression {
-    Form(Form),
-    Value(Value),
 }
 
 #[derive(Clone, Copy)]
@@ -117,14 +105,15 @@ impl Compiler {
         context: CompileContext,
     ) -> Result<CompiledExpression, ParseError> {
         let callable = lookup(operator).ok_or(ParseError::InvalidSyntax)?;
+        let definition = callable.definition();
         let valid_context = match context {
-            CompileContext::Form => callable.kind == CallableKind::ProgramForm,
-            CompileContext::Value => callable.kind != CallableKind::ProgramForm,
+            CompileContext::Form => definition.kind == CallableKind::ProgramForm,
+            CompileContext::Value => definition.kind != CallableKind::ProgramForm,
         };
         if !valid_context {
             return Err(ParseError::InvalidSyntax);
         }
-        let signature = callable
+        let signature = definition
             .signature(arguments.len())
             .ok_or(ParseError::InvalidSyntax)?;
         let arguments = arguments
@@ -137,7 +126,7 @@ impl Compiler {
                 self.bind_argument(parameter, argument)
             })
             .collect::<Result<Vec<_>, _>>()?;
-        self.lower(callable, arguments)
+        callable.to_ast(self, Arguments(arguments))
     }
 
     fn bind_argument<'syntax>(
@@ -175,260 +164,15 @@ impl Compiler {
             InputArgument::Compiled(value) => Ok(value),
         }
     }
+}
 
-    fn lower<'syntax>(
-        &mut self,
-        callable: &CallableSpec,
-        arguments: Vec<BoundArgument<'syntax>>,
-    ) -> Result<CompiledExpression, ParseError> {
-        let expression = match callable.lowering {
-            Lowering::Print => {
-                return Ok(CompiledExpression::Form(Form::Print(values(arguments)?)));
-            }
-            Lowering::Filter => {
-                let [condition] = value_array(arguments)?;
-                return Ok(CompiledExpression::Form(Form::Filter(condition)));
-            }
-            Lowering::Thread(direction) => {
-                return self
-                    .compile_threading(direction, arguments)
-                    .map(CompiledExpression::Value);
-            }
-            Lowering::Concat => Value::Concat(values(arguments)?),
-            Lowering::Arithmetic(operator) => {
-                let [left, right] = value_array(arguments)?;
-                Value::Arithmetic {
-                    operator,
-                    left: Box::new(left),
-                    right: Box::new(right),
-                }
-            }
-            Lowering::NumberFixed => {
-                let [value, digits] = value_array(arguments)?;
-                Value::FormatNumberFixed {
-                    value: Box::new(value),
-                    digits: Box::new(digits),
-                }
-            }
-            Lowering::NumberOperation(operator) => {
-                let [value] = value_array(arguments)?;
-                Value::NumberOperation {
-                    operator,
-                    value: Box::new(value),
-                }
-            }
-            Lowering::Join => {
-                let mut arguments = values(arguments)?;
-                let separator = arguments.remove(0);
-                Value::Join {
-                    separator: Box::new(separator),
-                    values: arguments,
-                }
-            }
-            Lowering::Replace(mode) => {
-                let [value, from, to] = value_array(arguments)?;
-                Value::Replace {
-                    mode,
-                    value: Box::new(value),
-                    from: Box::new(from),
-                    to: Box::new(to),
-                }
-            }
-            Lowering::RegexReplace(mode) => {
-                let [value, regex, replacement] = arguments
-                    .try_into()
-                    .map_err(|_| ParseError::InvalidSyntax)?;
-                Value::RegexReplace {
-                    mode,
-                    value: Box::new(expect_value(value)?),
-                    regex: expect_regex(regex)?,
-                    replacement: Box::new(expect_value(replacement)?),
-                }
-            }
-            Lowering::Part => {
-                let [value, delimiter, position] = value_array(arguments)?;
-                Value::Part {
-                    value: Box::new(value),
-                    delimiter: Box::new(delimiter),
-                    position: Box::new(position),
-                }
-            }
-            Lowering::Slice => build_string_slice(values(arguments)?)?,
-            Lowering::Count => unary(arguments, Value::Count)?,
-            Lowering::Escape => unary(arguments, Value::Escape)?,
-            Lowering::Quote(kind) => {
-                let [value] = value_array(arguments)?;
-                Value::Quote {
-                    kind,
-                    value: Box::new(value),
-                }
-            }
-            Lowering::Not => unary(arguments, Value::Not)?,
-            Lowering::And => Value::And(values(arguments)?),
-            Lowering::Or => Value::Or(values(arguments)?),
-            Lowering::If => {
-                let [condition, then_value, else_value] = value_array(arguments)?;
-                Value::If {
-                    condition: Box::new(condition),
-                    then_value: Box::new(then_value),
-                    else_value: Box::new(else_value),
-                }
-            }
-            Lowering::Lower => unary(arguments, Value::Lower)?,
-            Lowering::Upper => unary(arguments, Value::Upper)?,
-            Lowering::Trim(kind) => {
-                let [value] = value_array(arguments)?;
-                Value::Trim {
-                    kind,
-                    value: Box::new(value),
-                }
-            }
-            Lowering::Default => {
-                let [value, fallback] = value_array(arguments)?;
-                Value::Default {
-                    value: Box::new(value),
-                    fallback: Box::new(fallback),
-                }
-            }
-            Lowering::StringTest(kind) => {
-                let [value, pattern] = value_array(arguments)?;
-                Value::Predicate(Box::new(Predicate::StringTest {
-                    kind,
-                    value,
-                    pattern,
-                }))
-            }
-            Lowering::Regex => {
-                let (target, regex) = match arguments.len() {
-                    1 => {
-                        let [regex] = arguments.try_into().expect("length was checked");
-                        (Value::Field(0), expect_regex(regex)?)
-                    }
-                    2 => {
-                        let [target, regex] = arguments.try_into().expect("length was checked");
-                        (expect_value(target)?, expect_regex(regex)?)
-                    }
-                    _ => return Err(ParseError::InvalidSyntax),
-                };
-                Value::Predicate(Box::new(Predicate::Regex { target, regex }))
-            }
-            Lowering::Compare(kind, operator) => {
-                let [left, right] = value_array(arguments)?;
-                Value::Predicate(Box::new(Predicate::Compare {
-                    kind,
-                    operator,
-                    left,
-                    right,
-                }))
-            }
-            Lowering::DateTimeFromUnix => unary(arguments, Value::DateTimeFromUnix)?,
-            Lowering::FormatDateTime => {
-                let mut arguments = values(arguments)?.into_iter();
-                let value = arguments.next().expect("signature requires value");
-                let format = arguments.next().expect("signature requires format");
-                Value::FormatDateTime {
-                    value: Box::new(value),
-                    format: Box::new(format),
-                    timezone: arguments.next().map(Box::new),
-                }
-            }
-            Lowering::DateTimeNow => Value::DateTimeNow,
-            Lowering::FloorDateTime(unit) => build_datetime_floor(unit, values(arguments)?)?,
-            Lowering::Duration(operation) => {
-                let [value] = value_array(arguments)?;
-                let value = Box::new(value);
-                match operation {
-                    DurationOperation::Seconds => Value::DurationSeconds(value),
-                    DurationOperation::Milliseconds => Value::DurationMilliseconds(value),
-                    DurationOperation::Minutes => Value::DurationMinutes(value),
-                    DurationOperation::Hours => Value::DurationHours(value),
-                    DurationOperation::Days => Value::DurationDays(value),
-                    DurationOperation::ToMilliseconds => Value::DurationToMilliseconds(value),
-                    DurationOperation::ToSeconds => Value::DurationToSeconds(value),
-                    DurationOperation::ToMinutes => Value::DurationToMinutes(value),
-                    DurationOperation::ToHours => Value::DurationToHours(value),
-                    DurationOperation::ToDays => Value::DurationToDays(value),
-                }
-            }
-            Lowering::AddDateTime => {
-                let [datetime, duration] = value_array(arguments)?;
-                Value::AddDateTime {
-                    datetime: Box::new(datetime),
-                    duration: Box::new(duration),
-                }
-            }
-            Lowering::SubtractDateTime => {
-                let [datetime, duration] = value_array(arguments)?;
-                Value::SubtractDateTime {
-                    datetime: Box::new(datetime),
-                    duration: Box::new(duration),
-                }
-            }
-            Lowering::DifferenceDateTime => {
-                let [left, right] = value_array(arguments)?;
-                Value::DifferenceDateTime {
-                    left: Box::new(left),
-                    right: Box::new(right),
-                }
-            }
-            Lowering::IpVersion => unary(arguments, Value::IpVersion)?,
-            Lowering::IpClass(kind) => {
-                let [value] = value_array(arguments)?;
-                Value::Predicate(Box::new(Predicate::IpClass { kind, value }))
-            }
-            Lowering::CidrContains => {
-                let [cidr, ip] = value_array(arguments)?;
-                Value::Predicate(Box::new(Predicate::CidrContains { cidr, ip }))
-            }
-            Lowering::CidrPart(part) => {
-                let [value] = value_array(arguments)?;
-                Value::CidrPart {
-                    part,
-                    value: Box::new(value),
-                }
-            }
-            Lowering::UrlPart(part) => {
-                let [value] = value_array(arguments)?;
-                Value::UrlPart {
-                    part,
-                    value: Box::new(value),
-                }
-            }
-            Lowering::UrlEncoding(operation) => {
-                let [value] = value_array(arguments)?;
-                Value::UrlEncoding {
-                    operation,
-                    value: Box::new(value),
-                }
-            }
-            Lowering::UrlQueryGet => {
-                let [url, name] = value_array(arguments)?;
-                Value::UrlQueryGet {
-                    url: Box::new(url),
-                    name: Box::new(name),
-                }
-            }
-            Lowering::UrlQueryHas => {
-                let [url, name] = value_array(arguments)?;
-                Value::Predicate(Box::new(Predicate::UrlQueryHas { url, name }))
-            }
-            Lowering::SemVerPart(part) => {
-                let [value] = value_array(arguments)?;
-                Value::SemVerPart {
-                    part,
-                    value: Box::new(value),
-                }
-            }
-        };
-        Ok(CompiledExpression::Value(expression))
-    }
-
+impl AstContext for Compiler {
     fn compile_threading(
         &mut self,
         direction: ThreadDirection,
-        arguments: Vec<BoundArgument<'_>>,
+        arguments: Arguments<'_>,
     ) -> Result<Value, ParseError> {
-        let mut arguments = arguments.into_iter();
+        let mut arguments = arguments.0.into_iter();
         let mut value = expect_value(arguments.next().ok_or(ParseError::InvalidSyntax)?)?;
         for step in arguments {
             let step = expect_step(step)?;
@@ -469,40 +213,6 @@ fn call_parts(expression: &SExpr) -> Result<(&str, &[SExpr]), ParseError> {
 
 fn syntax_arguments(arguments: &[SExpr]) -> Vec<InputArgument<'_>> {
     arguments.iter().map(InputArgument::Syntax).collect()
-}
-
-fn values(arguments: Vec<BoundArgument<'_>>) -> Result<Vec<Value>, ParseError> {
-    arguments.into_iter().map(expect_value).collect()
-}
-
-fn value_array<const N: usize>(
-    arguments: Vec<BoundArgument<'_>>,
-) -> Result<[Value; N], ParseError> {
-    values(arguments)?
-        .try_into()
-        .map_err(|_| ParseError::InvalidSyntax)
-}
-
-fn unary(
-    arguments: Vec<BoundArgument<'_>>,
-    constructor: fn(Box<Value>) -> Value,
-) -> Result<Value, ParseError> {
-    let [value] = value_array(arguments)?;
-    Ok(constructor(Box::new(value)))
-}
-
-fn expect_value(argument: BoundArgument<'_>) -> Result<Value, ParseError> {
-    match argument {
-        BoundArgument::Value(value) => Ok(value),
-        BoundArgument::Regex(_) | BoundArgument::Step(_) => Err(ParseError::InvalidSyntax),
-    }
-}
-
-fn expect_regex(argument: BoundArgument<'_>) -> Result<RegexId, ParseError> {
-    match argument {
-        BoundArgument::Regex(regex) => Ok(regex),
-        BoundArgument::Value(_) | BoundArgument::Step(_) => Err(ParseError::InvalidSyntax),
-    }
 }
 
 fn expect_step(argument: BoundArgument<'_>) -> Result<&SExpr, ParseError> {
@@ -546,52 +256,10 @@ fn parse_range_bound(bound: &str) -> Result<Option<usize>, ParseError> {
     }
 }
 
-fn build_string_slice(arguments: Vec<Value>) -> Result<Value, ParseError> {
-    let mut arguments = arguments.into_iter();
-    let (value, start, length) = match arguments.len() {
-        2 => (
-            arguments.next().expect("length was checked"),
-            arguments.next().expect("length was checked"),
-            None,
-        ),
-        3 => (
-            arguments.next().expect("length was checked"),
-            arguments.next().expect("length was checked"),
-            Some(arguments.next().expect("length was checked")),
-        ),
-        _ => return Err(ParseError::InvalidSyntax),
-    };
-    Ok(Value::Slice {
-        start: Box::new(start),
-        length: length.map(Box::new),
-        value: Box::new(value),
-    })
-}
-
-fn build_datetime_floor(
-    unit: DateTimeFloorUnit,
-    arguments: Vec<Value>,
-) -> Result<Value, ParseError> {
-    let mut arguments = arguments.into_iter();
-    let (value, timezone) = match arguments.len() {
-        1 => (arguments.next().expect("length was checked"), None),
-        2 => (
-            arguments.next().expect("length was checked"),
-            Some(arguments.next().expect("length was checked")),
-        ),
-        _ => return Err(ParseError::InvalidSyntax),
-    };
-    Ok(Value::FloorDateTime {
-        unit,
-        timezone: timezone.map(Box::new),
-        value: Box::new(value),
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{ComparisonOperator, ComparisonType, ReplaceMode};
+    use crate::ast::{ComparisonOperator, ComparisonType, Predicate, ReplaceMode};
     use crate::parse;
 
     #[test]

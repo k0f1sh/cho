@@ -136,7 +136,7 @@ Regenerate the checked-in help and callable metadata after changing the
 language registry:
 
 ```console
-$ cargo run --quiet --example generate-documentation
+$ cargo run --quiet --features documentation --example generate-documentation
 ```
 
 ## The name

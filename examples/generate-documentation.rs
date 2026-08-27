@@ -1,13 +1,6 @@
-#![allow(dead_code)]
-
-#[path = "../src/ast.rs"]
-mod ast;
-#[path = "../src/documentation.rs"]
-mod documentation;
-#[path = "../src/language.rs"]
-mod language;
-
 use std::fs;
+
+use cho::documentation;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let metadata = documentation::metadata(env!("CARGO_PKG_VERSION"))?;
