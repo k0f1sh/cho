@@ -328,6 +328,7 @@ registry!(
     string::SingleQuote,
     string::Lower,
     string::Upper,
+    string::Reverse,
     string::Trim,
     string::LeftTrim,
     string::RightTrim,

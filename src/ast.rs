@@ -280,6 +280,7 @@ pub enum Value {
     },
     Lower(Box<Value>),
     Upper(Box<Value>),
+    Reverse(Box<Value>),
     Trim {
         kind: StringTrim,
         value: Box<Value>,

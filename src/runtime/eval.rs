@@ -459,6 +459,9 @@ pub(super) fn evaluate(
         Value::Upper(value) => Ok(RuntimeValue::String(
             evaluate(value, record)?.render().to_uppercase(),
         )),
+        Value::Reverse(value) => Ok(RuntimeValue::String(
+            evaluate(value, record)?.render().chars().rev().collect(),
+        )),
         Value::Trim { kind, value } => {
             let value = evaluate(value, record)?.render();
             let trimmed = match kind {
