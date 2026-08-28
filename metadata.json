@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.7.0",
+  "cho_version": "0.8.0",
   "callables": [
     {
       "name": "print",
@@ -1366,6 +1366,40 @@
           "returns": "String",
           "summary": null,
           "example": "(re/replace-all $1 /[0-9]+/ \"N\")"
+        }
+      ]
+    },
+    {
+      "name": "re/part",
+      "aliases": [],
+      "kind": "function",
+      "category": "regular_expression",
+      "summary": "take a 1-based regular-expression-delimited part",
+      "notes": [
+        "POSITION must be a positive whole number. Missing parts are empty strings."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "pattern",
+              "type": "Regex",
+              "cardinality": "required"
+            },
+            {
+              "name": "position",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(re/part $1 /[,:]+/ 2)"
         }
       ]
     },
