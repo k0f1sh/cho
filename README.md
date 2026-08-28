@@ -6,6 +6,10 @@ Inspired by awk, `cho` processes input one record at a time. It fills the gap
 between shell one-liners and small standalone scripts with typed values and
 composable Lisp-like functions and forms.
 
+`cho` intentionally has no arrays, loops, user-defined functions, variable
+bindings, or assignment. It is designed for small, record-oriented
+transformations that fit in a readable pipeline.
+
 > [!WARNING]
 > `cho` is experimental. Its syntax and behavior may change.
 
