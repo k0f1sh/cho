@@ -222,6 +222,24 @@ define_callable!(
 );
 
 define_callable!(
+    ShellQuote,
+    CallableDefinition {
+        name: "shq",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::String))]
+    },
+    |_context, arguments| {
+        let [value_arg] = value_array(arguments)?;
+        value(Value::ShellQuote(Box::new(value_arg)))
+    },
+    String,
+    "stringify and quote as one shell-safe argument",
+    ["Unlike dq, prevents shell expansion of $, command substitutions, and other syntax."],
+    [(None, r#"(shq "it's good")"#)]
+);
+
+define_callable!(
     Lower,
     CallableDefinition {
         name: "s/lower",

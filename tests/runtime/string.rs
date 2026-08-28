@@ -1,5 +1,6 @@
 use super::support::{output, output_with_separator};
 use std::io::{self, Cursor};
+use std::process::Command;
 
 #[test]
 fn prints_fields_strings_and_concatenated_values() {
@@ -352,6 +353,50 @@ fn quote_stringifies_values_and_escapes_the_enclosing_quote() {
     assert_eq!(
         output("(print (dq $1) (sq $1))", "Alice\n"),
         "\"Alice\" 'Alice'\n"
+    );
+}
+
+#[test]
+fn shq_quotes_one_posix_shell_argument_without_expansion() {
+    let cases = [
+        (r#"hello"#, "hello"),
+        (r#""#, ""),
+        (r#"hello world"#, "hello world"),
+        (r#"it's good"#, "it's good"),
+        (r#"say \"hello\""#, "say \"hello\""),
+        (r#"$HOME"#, "$HOME"),
+        (r#"$(date)"#, "$(date)"),
+        (r#"`date`"#, "`date`"),
+        (r#"* ? [abc]"#, "* ? [abc]"),
+        (r#"; | && >"#, "; | && >"),
+        (r#"a\\b"#, "a\\b"),
+        ("line\\nnext", "line\nnext"),
+        (r#"日本語"#, "日本語"),
+    ];
+
+    for (literal, original) in cases {
+        let program = format!(r#"(print (shq "{literal}"))"#);
+        let rendered = output(&program, "x\n");
+        let quoted = rendered.strip_suffix('\n').unwrap();
+        let expected = format!("'{}'", original.replace('\'', "'\\''"));
+        assert_eq!(quoted, expected, "failed to quote {original:?}");
+
+        let recovered = Command::new("sh")
+            .args([
+                "-c",
+                r#"eval "set -- $1"; test "$#" -eq 1 && printf %s "$1""#,
+                "sh",
+                quoted,
+            ])
+            .output()
+            .unwrap();
+        assert!(recovered.status.success(), "shell rejected {quoted:?}");
+        assert_eq!(recovered.stdout, original.as_bytes());
+    }
+
+    assert_eq!(
+        output(r#"(print (str "command " (shq (+ 40 2))))"#, "x\n"),
+        "command '42'\n"
     );
 }
 

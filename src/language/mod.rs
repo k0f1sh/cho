@@ -329,6 +329,7 @@ registry!(
     string::Escape,
     string::DoubleQuote,
     string::SingleQuote,
+    string::ShellQuote,
     string::Lower,
     string::Upper,
     string::Reverse,

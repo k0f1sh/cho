@@ -122,3 +122,11 @@ pub(super) fn quote(value: &str, kind: &StringQuote) -> String {
     quoted.push(delimiter);
     quoted
 }
+
+pub(super) fn shell_quote(value: &str) -> String {
+    let mut quoted = String::with_capacity(value.len() + 2);
+    quoted.push('\'');
+    quoted.push_str(&value.replace('\'', "'\\''"));
+    quoted.push('\'');
+    quoted
+}
