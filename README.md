@@ -143,7 +143,7 @@ $ cargo run --quiet --features documentation --example generate-documentation
 
 In Japanese, "awk" sounds a little like *oku* (億, 10^8). *Chō* (兆,
 10^12) is the next named large-number unit. It also happens to stand for
-Composable, Hospitable, Orthogonal.
+Composable, Hospitable, One-liner friendly.
 
 ## License
 
