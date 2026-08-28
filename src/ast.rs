@@ -258,6 +258,11 @@ pub enum Value {
         regex: RegexId,
         replacement: Box<Value>,
     },
+    RegexPart {
+        value: Box<Value>,
+        regex: RegexId,
+        position: Box<Value>,
+    },
     Part {
         value: Box<Value>,
         delimiter: Box<Value>,

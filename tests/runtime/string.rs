@@ -77,6 +77,80 @@ fn regex_replace_handles_captures_zero_width_and_threading() {
 }
 
 #[test]
+fn regex_part_extracts_parts_and_composes_with_values() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (re/part $1 /[,:]+/ 1) (re/part $1 /[,:]+/ 2) "#,
+                r#"(s/upper (-> $1 (re/part /[,:]+/ (s/count "x")))))"#,
+            ),
+            "alpha,:beta,,,gamma\n",
+        ),
+        "alpha beta ALPHA\n"
+    );
+    assert_eq!(
+        output(
+            r#"(print (re/part $0 "\\s*[:;,]\\s*" 2))"#,
+            "left ; right\n"
+        ),
+        "right\n"
+    );
+}
+
+#[test]
+fn regex_part_preserves_empty_parts_and_handles_missing_parts() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (s/join "|" "#,
+                r#"(re/part ":a::" /:+/ 1) "#,
+                r#"(re/part ":a::" /:+/ 2) "#,
+                r#"(re/part ":a::" /:+/ 3))) "#,
+                r#"(print (re/part "whole" /:+/ 1) (dq (re/part "whole" /:+/ 2)))"#,
+            ),
+            "x\n",
+        ),
+        "|a|\nwhole \"\"\n"
+    );
+}
+
+#[test]
+fn regex_part_accepts_empty_and_zero_width_patterns() {
+    assert_eq!(
+        output(
+            r#"(print (s/join "|" (re/part "abc" // 1) (re/part "abc" // 2) (re/part "abc" // 5)))"#,
+            "x\n",
+        ),
+        "|a|\n"
+    );
+}
+
+#[test]
+fn regex_part_rejects_invalid_positions() {
+    for (program, expected) in [
+        (
+            r#"(print (re/part $1 /:/ 0))"#,
+            "record 1: re/part: argument 3 expects Number (positive whole part position)",
+        ),
+        (
+            r#"(print (re/part $1 /:/ 1.5))"#,
+            "record 1: re/part: argument 3 expects Number (positive whole part position)",
+        ),
+        (
+            r#"(print (re/part $1 /:/ NaN))"#,
+            "record 1: re/part: argument 3 expects finite Number",
+        ),
+        (
+            r#"(print (re/part $1 /:/ 1e40))"#,
+            "record 1: re/part: argument 3 expects Number (representable part position)",
+        ),
+    ] {
+        let error = cho::run(program, Cursor::new("a:b\n"), Vec::new()).unwrap_err();
+        assert!(error.to_string().starts_with(expected), "{error}");
+    }
+}
+
+#[test]
 fn part_extracts_one_literal_delimited_part() {
     assert_eq!(
         output(

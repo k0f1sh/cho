@@ -54,6 +54,35 @@ pub(super) fn expect_slice_index(
     Ok(number as usize)
 }
 
+pub(super) fn expect_part_position(
+    value: &Value,
+    function: &'static str,
+    record: &EvalContext<'_, '_, '_>,
+) -> EvalResult<usize> {
+    let position = expect_number(evaluate(value, record)?, function, 3)?;
+    if position.fract() != 0.0 || position < 1.0 {
+        return Err(EvalError::conversion(
+            function,
+            3,
+            "Number (positive whole part position)",
+            position.to_string(),
+            "is not a positive whole number",
+        ));
+    }
+    let position_input = position.to_string();
+    let position = position as u128;
+    if position > usize::MAX as u128 {
+        return Err(EvalError::conversion(
+            function,
+            3,
+            "Number (representable part position)",
+            position_input,
+            "is outside the supported position range",
+        ));
+    }
+    Ok(position as usize)
+}
+
 pub(super) fn string_test_name(kind: &StringTest) -> &'static str {
     match kind {
         StringTest::StartsWith => "s/starts-with?",

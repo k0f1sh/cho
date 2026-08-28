@@ -92,3 +92,30 @@ define_callable!(
     [],
     [(None, "(re/replace-all $1 /[0-9]+/ \"N\")")]
 );
+
+define_callable!(
+    Part,
+    CallableDefinition {
+        name: "re/part",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[
+            sig!([p!("value", Value, Required), p!("pattern", Regex, Required), p!("position", Number, Required)] => Some(ValueType::String))
+        ]
+    },
+    |_context, arguments| {
+        let [value_arg, regex, position] = arguments
+            .0
+            .try_into()
+            .map_err(|_| ParseError::InvalidSyntax)?;
+        value(Value::RegexPart {
+            value: Box::new(expect_value(value_arg)?),
+            regex: expect_regex(regex)?,
+            position: Box::new(expect_value(position)?),
+        })
+    },
+    RegularExpression,
+    "take a 1-based regular-expression-delimited part",
+    ["POSITION must be a positive whole number. Missing parts are empty strings."],
+    [(None, "(re/part $1 /[,:]+/ 2)")]
+);

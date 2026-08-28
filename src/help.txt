@@ -128,13 +128,16 @@ Regular expressions:
   (~ VALUE /PATTERN/) -> BOOLEAN            short form of reg
   (re/replace VALUE /PATTERN/ REPLACEMENT) -> STRING  replace the first regular-expression match
   (re/replace-all VALUE /PATTERN/ REPLACEMENT) -> STRING  replace all regular-expression matches
+  (re/part VALUE /PATTERN/ POSITION) -> STRING  take a 1-based regular-expression-delimited part
 
   Regex literals preserve backslashes; escape only a literal / as \/:
     (~ $1 /^\d+$/)     (~ $1 /^foo\/bar$/)
   Quoted patterns are also accepted and require doubled backslashes:
     (reg $1 "^\\d+$")     (re/replace $1 "\\d+" "X")
   Replacement expands $0, $1, and ${name}; write $$ for a literal dollar sign.
-  Empty and zero-width matches insert text, following awk replacement behavior.
+  re/part preserves empty parts. If the pattern does not match, position 1
+  returns the complete value; a missing position returns an empty string.
+  In replacements, empty and zero-width matches insert text, following awk behavior.
   The -F pattern is passed directly: cho -F '\s+' '(p $1)'
   Example: cho --no-input '(p (re/replace "id=42" /(?P<n>\d+)/ "[${n}]"))'
 

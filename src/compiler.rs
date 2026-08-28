@@ -444,6 +444,20 @@ mod tests {
             parse(r#"(print (-> $1 (s/part "=" 2)))"#),
             parse(r#"(print (s/part $1 "=" 2))"#)
         );
+        let program = parse(r#"(print (re/part $1 /[,:]+/ (s/count "x")))"#).unwrap();
+        assert_eq!(program.regex_patterns, vec!["[,:]+"]);
+        assert!(matches!(
+            &program.forms[0],
+            Form::Print(values)
+                if matches!(values[0], Value::RegexPart {
+                    regex: RegexId(0),
+                    ..
+                })
+        ));
+        assert_eq!(
+            parse(r#"(print (-> $1 (re/part /:/ 2)))"#),
+            parse(r#"(print (re/part $1 /:/ 2))"#)
+        );
     }
 
     #[test]
@@ -755,6 +769,10 @@ mod tests {
             r#"(print (re/replace $1 /a/))"#,
             r#"(print (re/replace $1 /a/ "b" $2))"#,
             r#"(print (re/replace $1 $2 "b"))"#,
+            r#"(print (re/part))"#,
+            r#"(print (re/part $1 /:/))"#,
+            r#"(print (re/part $1 /:/ 1 $2))"#,
+            r#"(print (re/part $1 $2 1))"#,
             r#"(print (->> $1 (re/replace /a/ "b")))"#,
             r#"(print (-> $1 n/fixed))"#,
             r#"(print (-> $1 unknown))"#,

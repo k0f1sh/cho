@@ -352,6 +352,7 @@ registry!(
     regex::Regex,
     regex::Replace,
     regex::ReplaceAll,
+    regex::Part,
     datetime::Unix,
     datetime::Format,
     datetime::Now,

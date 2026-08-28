@@ -15,7 +15,7 @@ use super::network::{cidr_part_name, expect_cidr, expect_ip};
 use super::number;
 use super::predicate::matches;
 use super::semver;
-use super::string::{escape, evaluate_string_slice, quote};
+use super::string::{escape, evaluate_string_slice, expect_part_position, quote};
 use super::url::{
     decode_url_component, encode_url_component, parse_absolute_url, url_encoding_name,
     url_part_name,
@@ -402,6 +402,21 @@ pub(super) fn evaluate(
             };
             Ok(RuntimeValue::String(replaced.into_owned()))
         }
+        Value::RegexPart {
+            regex,
+            position,
+            value,
+        } => {
+            let value = evaluate(value, record)?.render();
+            let position = expect_part_position(position, "re/part", record)?;
+            Ok(RuntimeValue::String(
+                record.regexes[regex.0]
+                    .split(&value)
+                    .nth(position - 1)
+                    .unwrap_or("")
+                    .to_owned(),
+            ))
+        }
         Value::Part {
             delimiter,
             position,
@@ -418,31 +433,11 @@ pub(super) fn evaluate(
                     "is empty",
                 ));
             }
-            let position = expect_number(evaluate(position, record)?, "s/part", 3)?;
-            if position.fract() != 0.0 || position < 1.0 {
-                return Err(EvalError::conversion(
-                    "s/part",
-                    3,
-                    "Number (positive whole part position)",
-                    position.to_string(),
-                    "is not a positive whole number",
-                ));
-            }
-            let position_input = position.to_string();
-            let position = position as u128;
-            if position > usize::MAX as u128 {
-                return Err(EvalError::conversion(
-                    "s/part",
-                    3,
-                    "Number (representable part position)",
-                    position_input,
-                    "is outside the supported position range",
-                ));
-            }
+            let position = expect_part_position(position, "s/part", record)?;
             Ok(RuntimeValue::String(
                 value
                     .split(&delimiter)
-                    .nth(position as usize - 1)
+                    .nth(position - 1)
                     .unwrap_or("")
                     .to_owned(),
             ))

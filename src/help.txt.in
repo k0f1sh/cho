@@ -82,7 +82,9 @@ Regular expressions:
   Quoted patterns are also accepted and require doubled backslashes:
     (reg $1 "^\\d+$")     (re/replace $1 "\\d+" "X")
   Replacement expands $0, $1, and ${name}; write $$ for a literal dollar sign.
-  Empty and zero-width matches insert text, following awk replacement behavior.
+  re/part preserves empty parts. If the pattern does not match, position 1
+  returns the complete value; a missing position returns an empty string.
+  In replacements, empty and zero-width matches insert text, following awk behavior.
   The -F pattern is passed directly: cho -F '\s+' '(p $1)'
   Example: cho --no-input '(p (re/replace "id=42" /(?P<n>\d+)/ "[${n}]"))'
 
