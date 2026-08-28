@@ -279,6 +279,7 @@ pub enum Value {
         kind: StringQuote,
         value: Box<Value>,
     },
+    ShellQuote(Box<Value>),
     If {
         condition: Box<Value>,
         then_value: Box<Value>,

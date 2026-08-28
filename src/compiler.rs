@@ -493,7 +493,7 @@ mod tests {
 
     #[test]
     fn parses_quote_values_and_threading() {
-        assert!(parse("(print (s/dquote $1) (s/squote 42) (dq $2) (sq true))").is_ok());
+        assert!(parse("(print (s/dquote $1) (s/squote 42) (dq $2) (sq true) (shq $0))").is_ok());
         assert_eq!(parse("(print (dq $1))"), parse("(print (s/dquote $1))"));
         assert_eq!(parse("(print (sq $1))"), parse("(print (s/squote $1))"));
         assert_eq!(
@@ -688,6 +688,8 @@ mod tests {
             "(print (dq $1 $2))",
             "(print (sq))",
             "(print (sq $1 $2))",
+            "(print (shq))",
+            "(print (shq $1 $2))",
             "(print (q $1))",
         ] {
             assert_eq!(parse(program), Err(ParseError::InvalidSyntax), "{program}");

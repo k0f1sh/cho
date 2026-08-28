@@ -63,6 +63,8 @@ Strings:
   must be non-negative. Both must be whole numbers.
   s/dquote and s/squote escape the enclosing quote, backslashes, tabs, and
   line breaks with a backslash.
+  shq produces POSIX shell-safe quoting for exactly one argument. Unlike dq,
+  it prevents parameter expansion, command substitution, and globbing.
   An empty FROM inserts TO at the start with s/replace, or at every character
   boundary with s/replace-all, like awk sub("", ...) and gsub("", ...).
   Empty prefixes, suffixes, and needles match every string, including empty.
