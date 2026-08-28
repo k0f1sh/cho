@@ -1,10 +1,16 @@
 use std::env;
-use std::io;
+use std::ffi::OsStr;
+use std::io::{self, IsTerminal};
 use std::process::ExitCode;
 
 const USAGE: &str =
     "Usage: cho [--no-input | -F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'";
 const HELP: &str = include_str!("help.txt");
+const RESET: &str = "\x1b[0m";
+const BOLD: &str = "\x1b[1m";
+const DIM: &str = "\x1b[2m";
+const CYAN: &str = "\x1b[36m";
+const MAGENTA: &str = "\x1b[35m";
 
 #[derive(Debug, PartialEq)]
 struct Options {
@@ -14,6 +20,82 @@ struct Options {
     skip_header: bool,
     no_input: bool,
     program: String,
+}
+
+fn help_color_enabled(
+    stdout_is_terminal: bool,
+    no_color: Option<&OsStr>,
+    term: Option<&OsStr>,
+) -> bool {
+    stdout_is_terminal && no_color.is_none() && term != Some(OsStr::new("dumb"))
+}
+
+fn colorize_help(help: &str) -> String {
+    let mut output = String::with_capacity(help.len() + 512);
+    for (index, line) in help.lines().enumerate() {
+        if index > 0 {
+            output.push('\n');
+        }
+        if index == 0 {
+            output.push_str(BOLD);
+            output.push_str(line);
+            output.push_str(RESET);
+        } else if !line.starts_with(char::is_whitespace) && line.ends_with(':') {
+            output.push_str(BOLD);
+            output.push_str(CYAN);
+            output.push_str(line);
+            output.push_str(RESET);
+        } else if let Some(styled) = colorize_signature(line) {
+            output.push_str(&styled);
+        } else if line.starts_with("    ")
+            && matches!(line.trim_start(), command if command.starts_with("cho ") || command.starts_with("printf "))
+        {
+            output.push_str(DIM);
+            output.push_str(line);
+            output.push_str(RESET);
+        } else if let Some((name, rest)) = split_type_definition(line) {
+            output.push_str("  ");
+            output.push_str(MAGENTA);
+            output.push_str(name);
+            output.push_str(RESET);
+            output.push_str(rest);
+        } else {
+            output.push_str(line);
+        }
+    }
+    output
+}
+
+fn colorize_signature(line: &str) -> Option<String> {
+    let syntax = line.strip_prefix("  ")?;
+    if !(syntax.starts_with('(') || syntax.starts_with('-')) {
+        return None;
+    }
+    let description = syntax.find("  ").unwrap_or(syntax.len());
+    Some(format!(
+        "  {CYAN}{}{RESET}{}",
+        &syntax[..description],
+        &syntax[description..]
+    ))
+}
+
+fn split_type_definition(line: &str) -> Option<(&str, &str)> {
+    let definition = line.strip_prefix("  ")?;
+    let name_end = definition.find(char::is_whitespace)?;
+    let name = &definition[..name_end];
+    matches!(
+        name,
+        "String"
+            | "Number"
+            | "Boolean"
+            | "DateTime"
+            | "Duration"
+            | "IpAddr"
+            | "Cidr"
+            | "Url"
+            | "SemVer"
+    )
+    .then_some((name, &definition[name_end..]))
 }
 
 fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()> {
@@ -72,7 +154,16 @@ fn main() -> ExitCode {
         .iter()
         .any(|argument| matches!(argument.as_str(), "-h" | "--help"))
     {
-        println!("{HELP}");
+        let stdout = io::stdout();
+        if help_color_enabled(
+            stdout.is_terminal(),
+            env::var_os("NO_COLOR").as_deref(),
+            env::var_os("TERM").as_deref(),
+        ) {
+            println!("{}", colorize_help(HELP));
+        } else {
+            println!("{HELP}");
+        }
         return ExitCode::SUCCESS;
     }
     if arguments
@@ -122,6 +213,48 @@ mod tests {
 
     fn args(values: &[&str]) -> Vec<String> {
         values.iter().map(|value| (*value).to_owned()).collect()
+    }
+
+    #[test]
+    fn help_color_requires_a_supported_terminal() {
+        assert!(help_color_enabled(
+            true,
+            None,
+            Some(OsStr::new("xterm-256color"))
+        ));
+        assert!(!help_color_enabled(
+            false,
+            None,
+            Some(OsStr::new("xterm-256color"))
+        ));
+        assert!(!help_color_enabled(true, Some(OsStr::new("")), None));
+        assert!(!help_color_enabled(true, None, Some(OsStr::new("dumb"))));
+    }
+
+    #[test]
+    fn colored_help_styles_structure_without_changing_text() {
+        let plain = concat!(
+            "cho — description\n\n",
+            "Strings:\n",
+            "  (s/count VALUE) -> NUMBER    count characters\n",
+            "  String      a string value\n",
+            "    cho '(p $1)'\n",
+            "  ordinary explanation"
+        );
+        let colored = colorize_help(plain);
+        assert!(colored.contains("\x1b[1mcho — description\x1b[0m"));
+        assert!(colored.contains("\x1b[1m\x1b[36mStrings:\x1b[0m"));
+        assert!(colored.contains("\x1b[36m(s/count VALUE) -> NUMBER\x1b[0m"));
+        assert!(colored.contains("\x1b[35mString\x1b[0m"));
+        assert!(colored.contains("\x1b[2m    cho '(p $1)'\x1b[0m"));
+        assert_eq!(strip_ansi(&colored), plain);
+        assert_eq!(strip_ansi(&colorize_help(HELP)), HELP);
+    }
+
+    fn strip_ansi(value: &str) -> String {
+        [BOLD, DIM, CYAN, MAGENTA, RESET]
+            .iter()
+            .fold(value.to_owned(), |value, code| value.replace(code, ""))
     }
 
     #[test]
