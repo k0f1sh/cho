@@ -222,6 +222,26 @@ define_callable!(
 );
 
 define_callable!(
+    Unquote,
+    CallableDefinition {
+        name: "s/unquote",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::String))]
+    },
+    |_context, arguments| {
+        let [value_arg] = value_array(arguments)?;
+        value(Value::Unquote(Box::new(value_arg)))
+    },
+    String,
+    "remove matching quotes and decode backslash escapes",
+    [
+        "Unquoted values are unchanged. Quoted values accept \\\\, \\n, \\r, \\t, and an escaped enclosing quote."
+    ],
+    [(None, r#"(s/unquote $1)"#)]
+);
+
+define_callable!(
     ShellQuote,
     CallableDefinition {
         name: "shq",

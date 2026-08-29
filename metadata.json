@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.9.0",
+  "cho_version": "0.10.0",
   "callables": [
     {
       "name": "print",
@@ -759,6 +759,30 @@
           "returns": "String",
           "summary": null,
           "example": "(s/squote $1)"
+        }
+      ]
+    },
+    {
+      "name": "s/unquote",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "remove matching quotes and decode backslash escapes",
+      "notes": [
+        "Unquoted values are unchanged. Quoted values accept \\\\, \\n, \\r, \\t, and an escaped enclosing quote."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/unquote $1)"
         }
       ]
     },

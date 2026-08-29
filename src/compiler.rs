@@ -737,6 +737,8 @@ mod tests {
             "(print (dq $1 $2))",
             "(print (sq))",
             "(print (sq $1 $2))",
+            "(print (s/unquote))",
+            "(print (s/unquote $1 $2))",
             "(print (shq))",
             "(print (shq $1 $2))",
             "(print (q $1))",
