@@ -7,6 +7,7 @@ Common recipes:
   Filter numbers          cho '(f (> $2 20))'
   Match a field           cho '(f (~ $1 /^api-/))'
   Match the whole record  cho '(f (~ /ERROR|WARN/))'
+  Transform one value     cho '(s/upper $1)'
   Join values             cho '(p (s/join "," $1 $2))'
   Replace text            cho '(p (s/replace-all $1 "-" "_"))'
   Use a fallback          cho '(p (default $3 "unknown"))'
@@ -33,6 +34,9 @@ Input and options:
 Program forms:
 {{callables:program}}
 
+  A single top-level value is printed automatically. It may follow filters.
+  Use print to output multiple values separated by spaces. Do not mix an
+  automatic top-level value with print or place multiple values at the top level.
   A program containing only filters implicitly prints $0 after they pass.
   An empty program also prints $0. Any explicit print disables implicit output.
 
