@@ -15,7 +15,9 @@ use super::network::{cidr_part_name, expect_cidr, expect_ip};
 use super::number;
 use super::predicate::matches;
 use super::semver;
-use super::string::{escape, evaluate_string_slice, expect_part_position, quote, shell_quote};
+use super::string::{
+    escape, evaluate_string_slice, expect_part_position, quote, shell_quote, unquote,
+};
 use super::url::{
     decode_url_component, encode_url_component, parse_absolute_url, url_encoding_name,
     url_part_name,
@@ -457,6 +459,7 @@ pub(super) fn evaluate(
             &evaluate(value, record)?.render(),
             kind,
         ))),
+        Value::Unquote(value) => unquote(&evaluate(value, record)?.render()),
         Value::ShellQuote(value) => Ok(RuntimeValue::String(shell_quote(
             &evaluate(value, record)?.render(),
         ))),

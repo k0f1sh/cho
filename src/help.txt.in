@@ -67,6 +67,8 @@ Strings:
   must be non-negative. Both must be whole numbers.
   s/dquote and s/squote escape the enclosing quote, backslashes, tabs, and
   line breaks with a backslash.
+  s/unquote reverses s/dquote and s/squote. Unquoted values are unchanged;
+  mismatched quotes, incomplete escapes, and unsupported escapes are errors.
   shq produces POSIX shell-safe quoting for exactly one argument. Unlike dq,
   it prevents parameter expansion, command substitution, and globbing.
   An empty FROM inserts TO at the start with s/replace, or at every character

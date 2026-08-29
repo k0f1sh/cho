@@ -123,6 +123,71 @@ pub(super) fn quote(value: &str, kind: &StringQuote) -> String {
     quoted
 }
 
+pub(super) fn unquote(value: &str) -> EvalResult<RuntimeValue> {
+    let first = value.chars().next();
+    let last = value.chars().next_back();
+    let boundary_is_quote = |character| matches!(character, Some('\'' | '"'));
+
+    if !boundary_is_quote(first) && !boundary_is_quote(last) {
+        return Ok(RuntimeValue::String(value.to_owned()));
+    }
+    if first != last || value.len() < 2 {
+        return Err(EvalError::conversion(
+            "s/unquote",
+            1,
+            "matching single or double quotes",
+            value,
+            "has mismatched quote boundaries",
+        ));
+    }
+
+    let delimiter = first.expect("a quoted boundary was established");
+    let inner = &value[delimiter.len_utf8()..value.len() - delimiter.len_utf8()];
+    let mut decoded = String::with_capacity(inner.len());
+    let mut characters = inner.chars();
+    while let Some(character) = characters.next() {
+        if character != '\\' {
+            if character == delimiter {
+                return Err(EvalError::conversion(
+                    "s/unquote",
+                    1,
+                    "a valid quoted string",
+                    value,
+                    "contains an unescaped enclosing quote",
+                ));
+            }
+            decoded.push(character);
+            continue;
+        }
+        let Some(escaped) = characters.next() else {
+            return Err(EvalError::conversion(
+                "s/unquote",
+                1,
+                "a valid quoted string",
+                value,
+                "ends with an incomplete escape",
+            ));
+        };
+        match escaped {
+            '\\' => decoded.push('\\'),
+            'n' => decoded.push('\n'),
+            'r' => decoded.push('\r'),
+            't' => decoded.push('\t'),
+            escaped if escaped == delimiter => decoded.push(escaped),
+            escaped => {
+                return Err(EvalError::conversion(
+                    "s/unquote",
+                    1,
+                    "a valid quoted string",
+                    value,
+                    format!("contains unsupported escape \\\\{escaped}"),
+                ));
+            }
+        }
+    }
+    Ok(RuntimeValue::String(decoded))
+}
+
 pub(super) fn shell_quote(value: &str) -> String {
     let mut quoted = String::with_capacity(value.len() + 2);
     quoted.push('\'');

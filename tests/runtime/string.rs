@@ -357,6 +357,51 @@ fn quote_stringifies_values_and_escapes_the_enclosing_quote() {
 }
 
 #[test]
+fn unquote_decodes_quotes_and_composes_as_a_value() {
+    assert_eq!(
+        output(
+            r#"(print (dq (s/unquote $0))) (print (s/upper (s/unquote $0)))"#,
+            "\"say \\\"hello\\\"\\nnext\\tpath\\\\end\"\n'it\\'s good'\nplain\n\"\"\n",
+        ),
+        concat!(
+            "\"say \\\"hello\\\"\\nnext\\tpath\\\\end\"\n",
+            "SAY \"HELLO\"\nNEXT\tPATH\\END\n",
+            "\"it's good\"\nIT'S GOOD\n",
+            "\"plain\"\nPLAIN\n",
+            "\"\"\n\n",
+        )
+    );
+    assert_eq!(
+        output("(print (s/unquote (dq $0)))", "say \"it's\\ok\"\n"),
+        "say \"it's\\ok\"\n"
+    );
+    assert_eq!(
+        output("(print (s/unquote (sq $0)))", "say \"it's\\ok\"\n"),
+        "say \"it's\\ok\"\n"
+    );
+    assert_eq!(output("(print (s/unquote 42))", "x\n"), "42\n");
+}
+
+#[test]
+fn unquote_rejects_mismatched_quotes_and_invalid_escapes() {
+    for input in [
+        "\"value'\n",
+        "\"value\n",
+        "\"bad\\q\"\n",
+        "\"bad\\\"\n",
+        "\"bad\"quote\"\n",
+    ] {
+        let error = cho::run("(print (s/unquote $0))", Cursor::new(input), Vec::new()).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .starts_with("record 1: s/unquote: argument 1 expects"),
+            "{error}"
+        );
+    }
+}
+
+#[test]
 fn shq_quotes_one_posix_shell_argument_without_expansion() {
     let cases = [
         (r#"hello"#, "hello"),
