@@ -11,6 +11,15 @@ fn short_top_level_aliases_filter_and_print() {
 }
 
 #[test]
+fn a_single_top_level_value_is_printed() {
+    assert_eq!(output("(s/upper $1)", "Alice 18\nBob 30\n"), "ALICE\nBOB\n");
+    assert_eq!(
+        output("(f (> $2 20)) (s/upper $1)", "Alice 18\nBob 30\n"),
+        "BOB\n"
+    );
+}
+
+#[test]
 fn if_selects_a_value_and_nests_with_other_values() {
     assert_eq!(
         output(

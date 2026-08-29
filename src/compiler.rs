@@ -35,10 +35,32 @@ impl Compiler {
     }
 
     fn compile_program(mut self, expressions: Vec<SExpr>) -> Result<Program, ParseError> {
-        let forms = expressions
-            .iter()
-            .map(|expression| self.compile_form(expression))
-            .collect::<Result<_, _>>()?;
+        let mut forms = Vec::with_capacity(expressions.len());
+        let mut has_explicit_print = false;
+        let mut has_implicit_print = false;
+        for expression in &expressions {
+            let compiled = self.compile_top_level(expression)?;
+            match compiled {
+                CompiledExpression::Form(Form::Print(_)) if has_implicit_print => {
+                    return Err(ParseError::InvalidSyntax);
+                }
+                CompiledExpression::Form(Form::Print(values)) => {
+                    has_explicit_print = true;
+                    forms.push(Form::Print(values));
+                }
+                CompiledExpression::Form(Form::Filter(_)) if has_implicit_print => {
+                    return Err(ParseError::InvalidSyntax);
+                }
+                CompiledExpression::Form(form) => forms.push(form),
+                CompiledExpression::Value(_) if has_explicit_print || has_implicit_print => {
+                    return Err(ParseError::InvalidSyntax);
+                }
+                CompiledExpression::Value(value) => {
+                    has_implicit_print = true;
+                    forms.push(Form::Print(vec![value]));
+                }
+            }
+        }
         Ok(Program {
             forms,
             regex_patterns: self.regex_patterns,
@@ -46,15 +68,21 @@ impl Compiler {
         })
     }
 
-    fn compile_form(&mut self, expression: &SExpr) -> Result<Form, ParseError> {
-        let (operator, arguments) = call_parts(expression)?;
-        match self.compile_invocation(
-            operator,
-            syntax_arguments(arguments),
-            CompileContext::Form,
-        )? {
-            CompiledExpression::Form(form) => Ok(form),
-            CompiledExpression::Value(_) => Err(ParseError::InvalidSyntax),
+    fn compile_top_level(&mut self, expression: &SExpr) -> Result<CompiledExpression, ParseError> {
+        match expression {
+            SExpr::List(_) => {
+                let (operator, arguments) = call_parts(expression)?;
+                let callable = lookup(operator).ok_or(ParseError::InvalidSyntax)?;
+                let context = if callable.definition().kind == CallableKind::ProgramForm {
+                    CompileContext::Form
+                } else {
+                    CompileContext::Value
+                };
+                self.compile_invocation(operator, syntax_arguments(arguments), context)
+            }
+            _ => self
+                .compile_value(expression)
+                .map(CompiledExpression::Value),
         }
     }
 
@@ -318,6 +346,27 @@ mod tests {
             parse("(filter (> $2 20)) (print $1)")
         );
         assert_eq!(parse("(p)"), parse("(print)"));
+    }
+
+    #[test]
+    fn parses_one_top_level_value_as_a_print() {
+        assert_eq!(parse("$1"), parse("(print $1)"));
+        assert_eq!(
+            parse("(filter (> $2 20)) (s/upper $1)"),
+            parse("(filter (> $2 20)) (print (s/upper $1))")
+        );
+    }
+
+    #[test]
+    fn rejects_ambiguous_top_level_values() {
+        for program in [
+            "$1 $2",
+            "(print $1) $2",
+            "$1 (print $2)",
+            "$1 (filter (> $2 20))",
+        ] {
+            assert_eq!(parse(program), Err(ParseError::InvalidSyntax), "{program}");
+        }
     }
 
     #[test]
@@ -824,6 +873,6 @@ mod tests {
             Err(ParseError::InvalidField)
         );
         assert_eq!(parse("(print (print $x))"), Err(ParseError::InvalidSyntax));
-        assert_eq!(parse("(s/count $x)"), Err(ParseError::InvalidSyntax));
+        assert_eq!(parse("(s/count $x)"), Err(ParseError::InvalidField));
     }
 }
