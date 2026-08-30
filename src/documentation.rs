@@ -230,15 +230,43 @@ pub fn render_help(template: &str, metadata: &Metadata) -> Result<String, String
     Ok(output)
 }
 
+fn signature_width(metadata: &Metadata, category: Category) -> usize {
+    metadata
+        .callables
+        .iter()
+        .filter(|callable| callable.category == category)
+        .flat_map(|callable| {
+            std::iter::once(callable.name)
+                .chain(callable.aliases.iter().copied())
+                .flat_map(|name| {
+                    callable
+                        .signatures
+                        .iter()
+                        .map(move |signature| render_signature_syntax(name, signature).len())
+                })
+        })
+        .max()
+        .unwrap_or(0)
+        .saturating_add(2)
+        .max(42)
+}
+
 fn render_category(metadata: &Metadata, category: Category) -> String {
     let mut output = String::new();
+    let signature_width = signature_width(metadata, category);
     for callable in metadata
         .callables
         .iter()
         .filter(|callable| callable.category == category)
     {
         for signature in &callable.signatures {
-            render_signature(&mut output, callable.name, signature, &callable.summary);
+            render_signature(
+                &mut output,
+                callable.name,
+                signature,
+                &callable.summary,
+                signature_width,
+            );
         }
         for alias in callable.aliases {
             for signature in &callable.signatures {
@@ -247,6 +275,7 @@ fn render_category(metadata: &Metadata, category: Category) -> String {
                     alias,
                     signature,
                     &format!("short form of {}", callable.name),
+                    signature_width,
                 );
             }
         }
@@ -254,7 +283,22 @@ fn render_category(metadata: &Metadata, category: Category) -> String {
     output.trim_end().to_owned()
 }
 
-fn render_signature(output: &mut String, name: &str, signature: &Signature, fallback: &str) {
+fn render_signature(
+    output: &mut String,
+    name: &str,
+    signature: &Signature,
+    fallback: &str,
+    signature_width: usize,
+) {
+    let syntax = render_signature_syntax(name, signature);
+    output.push_str("  ");
+    output.push_str(&syntax);
+    output.push_str(&" ".repeat(signature_width.saturating_sub(syntax.len()).max(2)));
+    output.push_str(signature.summary.as_deref().unwrap_or(fallback));
+    output.push('\n');
+}
+
+fn render_signature_syntax(name: &str, signature: &Signature) -> String {
     let mut syntax = format!("({name}");
     for parameter in &signature.parameters {
         syntax.push(' ');
@@ -271,18 +315,14 @@ fn render_signature(output: &mut String, name: &str, signature: &Signature, fall
         syntax.push_str(" -> ");
         syntax.push_str(returns.help_name());
     }
-    output.push_str("  ");
-    output.push_str(&syntax);
-    output.push_str(&" ".repeat(42_usize.saturating_sub(syntax.len()).max(2)));
-    output.push_str(signature.summary.as_deref().unwrap_or(fallback));
-    output.push('\n');
+    syntax
 }
 
 fn help_label(parameter: &Parameter) -> String {
     match parameter.name {
         "pattern" => "/PATTERN/".to_owned(),
-        "digits" | "separator" | "from" | "to" | "delimiter" | "position" | "start" | "length"
-        | "prefix" | "suffix" | "needle" | "fallback" | "replacement" | "timezone" => {
+        "digits" | "separator" | "from" | "to" | "delimiter" | "position" | "start" | "end"
+        | "length" | "prefix" | "suffix" | "needle" | "fallback" | "replacement" | "timezone" => {
             parameter.name.to_ascii_uppercase()
         }
         _ => parameter.value_type.help_name().to_owned(),
@@ -407,6 +447,53 @@ mod tests {
             std::iter::once(callable.name).chain(callable.aliases.iter().copied())
         }) {
             assert!(help.contains(&format!("({name}")), "help omits {name}");
+        }
+    }
+
+    #[test]
+    fn help_uses_field_range_bound_names() {
+        let metadata = metadata(env!("CARGO_PKG_VERSION")).unwrap();
+        let help = render_help(include_str!("help.txt.in"), &metadata).unwrap();
+        assert!(help.contains("(fields START END) -> STRING"));
+        assert!(help.contains("(fields-to END) -> STRING"));
+    }
+
+    #[test]
+    fn callable_descriptions_share_one_column() {
+        let metadata = metadata(env!("CARGO_PKG_VERSION")).unwrap();
+        let help = render_help(include_str!("help.txt.in"), &metadata).unwrap();
+        for category in Category::ALL {
+            let description_column = signature_width(&metadata, category) + 2;
+            for callable in metadata
+                .callables
+                .iter()
+                .filter(|callable| callable.category == category)
+            {
+                let names = std::iter::once((callable.name, callable.summary.clone()))
+                    .chain(
+                        callable
+                            .aliases
+                            .iter()
+                            .map(|alias| (*alias, format!("short form of {}", callable.name))),
+                    )
+                    .collect::<Vec<_>>();
+                for (name, fallback) in names {
+                    for signature in &callable.signatures {
+                        let syntax = render_signature_syntax(name, signature);
+                        let prefix = format!("  {syntax}");
+                        let line = help
+                            .lines()
+                            .find(|line| line.starts_with(&prefix))
+                            .unwrap_or_else(|| panic!("help omits signature {syntax}"));
+                        let summary = signature.summary.as_deref().unwrap_or(&fallback);
+                        let actual_column = line
+                            .strip_suffix(summary)
+                            .map(str::len)
+                            .unwrap_or_else(|| panic!("help omits summary for {syntax}"));
+                        assert_eq!(actual_column, description_column, "{syntax}");
+                    }
+                }
+            }
         }
     }
 }
