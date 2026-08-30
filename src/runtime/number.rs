@@ -14,10 +14,15 @@ pub(super) fn evaluate_arithmetic(
         ArithmeticOperator::Subtract => "-",
         ArithmeticOperator::Multiply => "*",
         ArithmeticOperator::Divide => "/",
+        ArithmeticOperator::Remainder => "%",
     };
     let left = expect_number(evaluate(left, record)?, function, 1)?;
     let right = expect_number(evaluate(right, record)?, function, 2)?;
-    if matches!(operator, ArithmeticOperator::Divide) && right == 0.0 {
+    if matches!(
+        operator,
+        ArithmeticOperator::Divide | ArithmeticOperator::Remainder
+    ) && right == 0.0
+    {
         return Err(EvalError::conversion(
             function,
             2,
@@ -31,6 +36,7 @@ pub(super) fn evaluate_arithmetic(
         ArithmeticOperator::Subtract => left - right,
         ArithmeticOperator::Multiply => left * right,
         ArithmeticOperator::Divide => left / right,
+        ArithmeticOperator::Remainder => left % right,
     };
     if !result.is_finite() {
         return Err(EvalError::conversion(
@@ -41,7 +47,13 @@ pub(super) fn evaluate_arithmetic(
             "produces a non-finite result",
         ));
     }
-    Ok(RuntimeValue::Number(result))
+    Ok(RuntimeValue::Number(
+        if matches!(operator, ArithmeticOperator::Remainder) && result == 0.0 {
+            0.0
+        } else {
+            result
+        },
+    ))
 }
 
 pub(super) fn evaluate_operation(
