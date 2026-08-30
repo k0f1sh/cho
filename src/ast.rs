@@ -169,6 +169,7 @@ pub enum Value {
     String(String),
     Number(f64),
     Boolean(bool),
+    StringEmpty(Box<Value>),
     Arithmetic {
         operator: ArithmeticOperator,
         left: Box<Value>,

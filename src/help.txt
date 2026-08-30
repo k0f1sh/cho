@@ -4,6 +4,7 @@ Usage: cho [--no-input | -F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'
 
 Common recipes:
   Pick fields             cho '(p $1 $3)'
+  Skip empty records      cho '(f (not (s/empty? $0)))'
   Filter numbers          cho '(f (> $2 20))'
   Match a field           cho '(f (~ $1 /^api-/))'
   Match the whole record  cho '(f (~ /ERROR|WARN/))'
@@ -82,6 +83,7 @@ Strings:
   (s/part VALUE DELIMITER POSITION) -> STRING  take a 1-based literal-delimited part
   (s/slice VALUE START [LENGTH]) -> STRING  take Unicode characters from a 1-based start
   (s/count VALUE) -> NUMBER                 count Unicode characters
+  (s/empty? STRING) -> BOOLEAN              test whether a string is empty
   (s/escape VALUE) -> STRING                escape tabs, newlines, and backslashes
   (s/dquote VALUE) -> STRING                stringify and wrap in escaped double quotes
   (dq VALUE) -> STRING                      short form of s/dquote

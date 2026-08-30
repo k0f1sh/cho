@@ -326,6 +326,7 @@ registry!(
     string::Part,
     string::Slice,
     string::Count,
+    string::Empty,
     string::Escape,
     string::DoubleQuote,
     string::SingleQuote,
