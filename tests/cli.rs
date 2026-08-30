@@ -72,6 +72,28 @@ fn parse_errors_preserve_lexer_details() {
 }
 
 #[test]
+fn parse_errors_explain_function_argument_counts() {
+    for (program, message) in [
+        (
+            "(print (s/count))",
+            "cho: invalid program: s/count: expected 1 argument, but got 0\n",
+        ),
+        (
+            "(filter (reg $1 $2 $3))",
+            "cho: invalid program: reg: expected 1 or 2 arguments, but got 3\n",
+        ),
+        (
+            "(print (s/join))",
+            "cho: invalid program: s/join: expected at least 1 argument, but got 0\n",
+        ),
+    ] {
+        let output = run(program, "");
+        assert!(!output.status.success());
+        assert_eq!(String::from_utf8(output.stderr).unwrap(), message);
+    }
+}
+
+#[test]
 fn help_lists_types_and_signatures() {
     let output = Command::new(env!("CARGO_BIN_EXE_cho"))
         .arg("--help")
