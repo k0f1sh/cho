@@ -46,6 +46,17 @@ fn binary_arithmetic_converts_fields_and_composes_as_values() {
 }
 
 #[test]
+fn remainder_handles_whole_fractional_and_negative_numbers_and_composes() {
+    assert_eq!(
+        output(
+            "(print (% $1 $2) (% $3 $2) (% $4 $2) (+ 10 (% $1 $2)))",
+            "7 3 -7 7.5\n-4 2 4 -4.5\n",
+        ),
+        "1 -1 1.5 11\n0 0 -0.5 10\n"
+    );
+}
+
+#[test]
 fn arithmetic_reports_invalid_numbers_zero_division_and_non_finite_results() {
     for (program, input, expected) in [
         (
@@ -57,6 +68,11 @@ fn arithmetic_reports_invalid_numbers_zero_division_and_non_finite_results() {
             "(print (/ 1 $1))",
             "0\n",
             r#"record 1: /: argument 2 expects a non-zero Number, but "0" is zero"#,
+        ),
+        (
+            "(print (% 1 $1))",
+            "0\n",
+            r#"record 1: %: argument 2 expects a non-zero Number, but "0" is zero"#,
         ),
     ] {
         let error = cho::run(program, Cursor::new(input), Vec::new()).unwrap_err();

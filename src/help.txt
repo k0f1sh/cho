@@ -65,6 +65,7 @@ Numbers:
   (- NUMBER NUMBER) -> NUMBER               subtract
   (* NUMBER NUMBER) -> NUMBER               multiply
   (/ NUMBER NUMBER) -> NUMBER               divide
+  (% NUMBER NUMBER) -> NUMBER               remainder
   (n/trunc NUMBER) -> NUMBER                discard fractional digits toward zero
   (n/floor NUMBER) -> NUMBER                round down toward negative infinity
   (n/ceil NUMBER) -> NUMBER                 round up toward positive infinity

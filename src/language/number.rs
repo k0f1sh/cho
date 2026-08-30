@@ -99,6 +99,30 @@ define_callable!(
 );
 
 define_callable!(
+    Remainder,
+    CallableDefinition {
+        name: "%",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[
+            sig!([p!("left", Number, Required), p!("right", Number, Required)] => Some(ValueType::Number))
+        ]
+    },
+    |_context, arguments| {
+        let [left, right] = value_array(arguments)?;
+        value(Value::Arithmetic {
+            operator: ArithmeticOperator::Remainder,
+            left: Box::new(left),
+            right: Box::new(right),
+        })
+    },
+    Number,
+    "remainder",
+    ["A zero divisor is an error. The result has the sign of the dividend."],
+    [(None, "(% $1 2)")]
+);
+
+define_callable!(
     Truncate,
     CallableDefinition {
         name: "n/trunc",

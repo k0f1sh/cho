@@ -312,6 +312,7 @@ registry!(
     number::Subtract,
     number::Multiply,
     number::Divide,
+    number::Remainder,
     number::Truncate,
     number::Floor,
     number::Ceil,

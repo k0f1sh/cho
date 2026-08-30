@@ -93,6 +93,7 @@ pub enum ArithmeticOperator {
     Subtract,
     Multiply,
     Divide,
+    Remainder,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

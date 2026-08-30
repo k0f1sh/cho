@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.11.0",
+  "cho_version": "0.11.1",
   "callables": [
     {
       "name": "print",
@@ -258,6 +258,35 @@
           "returns": "Number",
           "summary": null,
           "example": "(/ $1 2)"
+        }
+      ]
+    },
+    {
+      "name": "%",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "remainder",
+      "notes": [
+        "A zero divisor is an error. The result has the sign of the dividend."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(% $1 2)"
         }
       ]
     },

@@ -648,8 +648,10 @@ mod tests {
 
     #[test]
     fn parses_binary_arithmetic_values() {
-        assert!(parse("(print (+ $1 2.0) (- $1 $2) (* 3 4) (/ 10 2))").is_ok());
+        assert!(parse("(print (+ $1 2.0) (- $1 $2) (* 3 4) (/ 10 2) (% 10 3))").is_ok());
         assert!(parse("(print (+ (* $1 2) (/ $2 4)))").is_ok());
+        assert_invalid("(print (% 1))");
+        assert_invalid("(print (% 1 2 3))");
     }
 
     #[test]
