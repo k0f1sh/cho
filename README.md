@@ -56,19 +56,19 @@ parts as fields. Use `-F`, `--csv`, or `--tsv` to change how fields are parsed.
 
 ## Examples
 
-Extract a log message with field ranges — `$3-` keeps everything from the
+Extract a log message with field ranges — `$3..` keeps everything from the
 third field through the end of the record, preserving the original spacing:
 
 ```console
-$ echo '2026-08-24 INFO service   started successfully' | cho '(p $3-)'
+$ echo '2026-08-24 INFO service   started successfully' | cho '(p $3..)'
 service   started successfully
 ```
 
-`$2-4` picks a bounded range — here, fields 2 through 4, preserving the
+`$2..4` picks an inclusive bounded range — here, fields 2 through 4, preserving the
 separators between them:
 
 ```console
-$ echo 'one  two   three four five' | cho '(p $2-4)'
+$ echo 'one  two   three four five' | cho '(p $2..4)'
 two   three four
 ```
 
