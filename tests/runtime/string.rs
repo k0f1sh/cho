@@ -329,6 +329,21 @@ fn count_can_be_used_in_filters() {
 }
 
 #[test]
+fn empty_predicate_composes_and_distinguishes_empty_from_whitespace() {
+    assert_eq!(
+        output("(f (not (s/empty? $0))) (p NR $0)", "first\n\n   \nlast\n"),
+        "1 first\n3    \n4 last\n"
+    );
+    assert_eq!(
+        output(
+            r#"(p (s/empty? $2) (if (s/empty? "") "empty" "filled"))"#,
+            "one\none two\n"
+        ),
+        "true empty\nfalse empty\n"
+    );
+}
+
+#[test]
 fn escape_makes_tabs_and_backslashes_visible() {
     assert_eq!(
         output(r#"(print (s/escape $0))"#, "first\tsecond\\third\r\n"),

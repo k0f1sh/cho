@@ -786,6 +786,8 @@ mod tests {
         assert_invalid("(filter (or))");
         assert_eq!(parse("(print (fmt $1))"), Err(ParseError::InvalidSyntax));
         assert_invalid("(print (s/join))");
+        assert_invalid("(print (s/empty?))");
+        assert_invalid("(print (s/empty? $1 $2))");
         for program in [
             "(print (+))",
             "(print (+ $1))",

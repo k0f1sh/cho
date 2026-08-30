@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.10.2",
+  "cho_version": "0.10.3",
   "callables": [
     {
       "name": "print",
@@ -689,6 +689,28 @@
           "returns": "Number",
           "summary": null,
           "example": "(s/count $1)"
+        }
+      ]
+    },
+    {
+      "name": "s/empty?",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "test whether a string is empty",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "string",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(s/empty? $1)"
         }
       ]
     },

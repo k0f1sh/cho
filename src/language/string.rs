@@ -162,6 +162,24 @@ define_callable!(
 );
 
 define_callable!(
+    Empty,
+    CallableDefinition {
+        name: "s/empty?",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[sig!([p!("string", String, Required)] => Some(ValueType::Boolean))]
+    },
+    |_context, arguments| {
+        let [value_arg] = value_array(arguments)?;
+        value(Value::StringEmpty(Box::new(value_arg)))
+    },
+    String,
+    "test whether a string is empty",
+    [],
+    [(None, "(s/empty? $1)")]
+);
+
+define_callable!(
     Escape,
     CallableDefinition {
         name: "s/escape",
