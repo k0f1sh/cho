@@ -45,6 +45,33 @@ fn default_recovery_finishes_successfully_without_a_diagnostic() {
 }
 
 #[test]
+fn parse_errors_explain_unbalanced_parentheses() {
+    let missing = run("(print $1", "");
+    assert!(!missing.status.success());
+    assert_eq!(
+        String::from_utf8(missing.stderr).unwrap(),
+        "cho: invalid program: missing closing parenthesis\n"
+    );
+
+    let unexpected = run("(print $1))", "");
+    assert!(!unexpected.status.success());
+    assert_eq!(
+        String::from_utf8(unexpected.stderr).unwrap(),
+        "cho: invalid program: unexpected closing parenthesis\n"
+    );
+}
+
+#[test]
+fn parse_errors_preserve_lexer_details() {
+    let output = run(r#"(print "unfinished)"#, "");
+    assert!(!output.status.success());
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "cho: invalid program: unterminated string literal\n"
+    );
+}
+
+#[test]
 fn help_lists_types_and_signatures() {
     let output = Command::new(env!("CARGO_BIN_EXE_cho"))
         .arg("--help")

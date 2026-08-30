@@ -1,4 +1,5 @@
 use crate::lexer::{Token, tokenize};
+use std::fmt;
 
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
@@ -6,7 +7,25 @@ pub enum ParseError {
     InvalidField,
     UnterminatedString,
     UnterminatedRegex,
+    MissingClosingParenthesis,
+    UnexpectedClosingParenthesis,
 }
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = match self {
+            Self::InvalidSyntax => "invalid syntax",
+            Self::InvalidField => "invalid field reference",
+            Self::UnterminatedString => "unterminated string literal",
+            Self::UnterminatedRegex => "unterminated regex literal",
+            Self::MissingClosingParenthesis => "missing closing parenthesis",
+            Self::UnexpectedClosingParenthesis => "unexpected closing parenthesis",
+        };
+        formatter.write_str(message)
+    }
+}
+
+impl std::error::Error for ParseError {}
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum SExpr {
@@ -56,11 +75,12 @@ impl Parser {
                             return Ok(SExpr::List(expressions));
                         }
                         Some(_) => expressions.push(self.parse_expression()?),
-                        None => return Err(ParseError::InvalidSyntax),
+                        None => return Err(ParseError::MissingClosingParenthesis),
                     }
                 }
             }
-            Some(Token::RightParen) | None => Err(ParseError::InvalidSyntax),
+            Some(Token::RightParen) => Err(ParseError::UnexpectedClosingParenthesis),
+            None => Err(ParseError::InvalidSyntax),
         }
     }
 
@@ -110,7 +130,22 @@ mod tests {
 
     #[test]
     fn rejects_unbalanced_parentheses() {
-        assert_eq!(parse("(print $1"), Err(ParseError::InvalidSyntax));
-        assert_eq!(parse("print $1)"), Err(ParseError::InvalidSyntax));
+        assert_eq!(
+            parse("(print $1"),
+            Err(ParseError::MissingClosingParenthesis)
+        );
+        assert_eq!(
+            parse("print $1)"),
+            Err(ParseError::UnexpectedClosingParenthesis)
+        );
+    }
+
+    #[test]
+    fn describes_parse_errors() {
+        assert_eq!(ParseError::InvalidSyntax.to_string(), "invalid syntax");
+        assert_eq!(
+            ParseError::MissingClosingParenthesis.to_string(),
+            "missing closing parenthesis"
+        );
     }
 }

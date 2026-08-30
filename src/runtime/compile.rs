@@ -11,8 +11,12 @@ pub(super) struct CompiledProgram {
 }
 
 pub(super) fn compile_program(source: &str) -> io::Result<CompiledProgram> {
-    let mut program = parse(source)
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid program"))?;
+    let mut program = parse(source).map_err(|error| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("invalid program: {error}"),
+        )
+    })?;
     if program
         .forms
         .iter()
