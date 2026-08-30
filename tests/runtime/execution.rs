@@ -91,6 +91,39 @@ fn computed_field_numbers_must_be_non_negative_whole_numbers() {
 }
 
 #[test]
+fn computed_field_ranges_preserve_record_edges_and_compose_as_values() {
+    assert_eq!(
+        output(
+            "(print (dq (fields-to (- NF 2)))) (print (dq (fields-from 3))) (print (s/upper (fields 2 (- NF 1))))",
+            "  one\t two   three four  five  \n",
+        ),
+        "\"  one\\t two   three\"\n\"three four  five  \"\nTWO   THREE FOUR\n"
+    );
+}
+
+#[test]
+fn computed_field_ranges_handle_empty_and_missing_fields() {
+    assert_eq!(
+        output(
+            "(print (dq (fields-to 3)) (dq (fields-from 3)) (dq (fields 2 4)))",
+            "one two\n\n",
+        ),
+        "\"one two\" \"\" \"two\"\n\"\" \"\" \"\"\n"
+    );
+}
+
+#[test]
+fn computed_field_range_bounds_must_be_positive_ordered_whole_numbers() {
+    for program in [
+        "(print (fields-from 0))",
+        "(print (fields-to 1.5))",
+        "(print (fields 3 2))",
+    ] {
+        assert!(cho::run(program, Cursor::new("one two three\n"), Vec::new()).is_err());
+    }
+}
+
+#[test]
 fn computed_fields_are_available_for_decoded_csv_fields() {
     let mut result = Vec::new();
     cho::run_csv(
@@ -100,6 +133,17 @@ fn computed_fields_are_available_for_decoded_csv_fields() {
     )
     .unwrap();
     assert_eq!(String::from_utf8(result).unwrap(), "Tokyo, Japan\n");
+}
+
+#[test]
+fn computed_field_ranges_are_unavailable_for_decoded_csv_fields() {
+    for program in ["(fields 1 2)", "(fields-from 2)", "(fields-to 2)"] {
+        let error = cho::run_csv(program, Cursor::new("one,two,three\n"), Vec::new()).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "field ranges are not supported with --csv"
+        );
+    }
 }
 
 #[test]

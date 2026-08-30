@@ -125,6 +125,8 @@ pub(crate) enum ThreadDirection {
 }
 
 pub(crate) trait AstContext {
+    fn mark_field_range(&mut self);
+
     fn compile_threading(
         &mut self,
         direction: ThreadDirection,
@@ -303,6 +305,9 @@ registry!(
     program::Print,
     program::Filter,
     field::Field,
+    field::Fields,
+    field::FieldsFrom,
+    field::FieldsTo,
     number::Add,
     number::Subtract,
     number::Multiply,
