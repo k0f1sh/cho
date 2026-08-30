@@ -60,11 +60,11 @@ fn semver_extractors_return_components_and_preserve_build_support() {
         output(
             concat!(
                 "(print (semver/major $1) (semver/minor $1) ",
-                "(semver/patch $1) (semver/prerelease $1))",
+                "(semver/patch $1) (semver/prerelease $1) (semver/build $1))",
             ),
             "1.2.3-alpha.1+build.9\n2.0.0+metadata\n",
         ),
-        "1 2 3 alpha.1\n2 0 0 \n"
+        "1 2 3 alpha.1 build.9\n2 0 0  metadata\n"
     );
     assert_eq!(
         output(
@@ -72,6 +72,13 @@ fn semver_extractors_return_components_and_preserve_build_support() {
             "10.2.3\n"
         ),
         "12\n"
+    );
+    assert_eq!(
+        output(
+            "(print (s/upper (semver/build $1)))",
+            "1.2.3+linux.x86-64\n1.2.3\n"
+        ),
+        "LINUX.X86-64\n\n"
     );
 }
 
@@ -82,6 +89,7 @@ fn semver_extractors_report_invalid_versions() {
         "semver/minor",
         "semver/patch",
         "semver/prerelease",
+        "semver/build",
     ] {
         let program = format!("(print ({extractor} $1))");
         let error = cho::run(&program, Cursor::new("1.2\n"), Vec::new()).unwrap_err();

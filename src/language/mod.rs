@@ -421,6 +421,7 @@ registry!(
     semver::Minor,
     semver::Patch,
     semver::Prerelease,
+    semver::Build,
     composition::ThreadFirst,
     composition::ThreadLast,
 );
