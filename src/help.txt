@@ -51,6 +51,9 @@ Literals and fields:
   "text", 12, 3.5                String or Number
   true, false                    Boolean
   (field NUMBER) -> STRING                  get a field by its computed number
+  (fields START NUMBER) -> STRING           get a computed inclusive field range
+  (fields-from START) -> STRING             get fields from a computed position through the record end
+  (fields-to NUMBER) -> STRING              get fields from the record start through a computed position
 
   An omitted range bound extends to that edge of the complete record, including
   leading or trailing separators. An end beyond NF stops at NF. A start beyond

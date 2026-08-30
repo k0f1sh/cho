@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.10.3",
+  "cho_version": "0.11.0",
   "callables": [
     {
       "name": "print",
@@ -71,6 +71,83 @@
           "returns": "String",
           "summary": null,
           "example": "(field (- NF 1))"
+        }
+      ]
+    },
+    {
+      "name": "fields",
+      "aliases": [],
+      "kind": "function",
+      "category": "field",
+      "summary": "get a computed inclusive field range",
+      "notes": [
+        "START and END must be positive whole numbers. Original separators between the fields are preserved."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "start",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "end",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(fields 2 (- NF 1))"
+        }
+      ]
+    },
+    {
+      "name": "fields-from",
+      "aliases": [],
+      "kind": "function",
+      "category": "field",
+      "summary": "get fields from a computed position through the record end",
+      "notes": [
+        "START must be a positive whole number. Trailing separators are preserved."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "start",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(fields-from (- NF 2))"
+        }
+      ]
+    },
+    {
+      "name": "fields-to",
+      "aliases": [],
+      "kind": "function",
+      "category": "field",
+      "summary": "get fields from the record start through a computed position",
+      "notes": [
+        "END must be a positive whole number. Leading separators are preserved."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "end",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(fields-to (- NF 1))"
         }
       ]
     },

@@ -267,6 +267,10 @@ fn expected_argument_count(signatures: &[Signature]) -> String {
 }
 
 impl AstContext for Compiler {
+    fn mark_field_range(&mut self) {
+        self.contains_field_range = true;
+    }
+
     fn compile_threading(
         &mut self,
         direction: ThreadDirection,
@@ -651,6 +655,9 @@ mod tests {
     #[test]
     fn parses_computed_fields_and_rejects_invalid_arities() {
         assert!(parse("(print (field (- NF 2)))").is_ok());
+        assert!(parse("(print (fields 2 (- NF 1)))").is_ok());
+        assert!(parse("(print (fields-from (- NF 2)))").is_ok());
+        assert!(parse("(print (fields-to (- NF 1)))").is_ok());
         assert_eq!(
             parse("(print (field))"),
             Err(ParseError::InvalidArity {
@@ -660,6 +667,12 @@ mod tests {
             })
         );
         assert_invalid("(print (field 1 2))");
+        assert_invalid("(print (fields 1))");
+        assert_invalid("(print (fields 1 2 3))");
+        assert_invalid("(print (fields-from))");
+        assert_invalid("(print (fields-from 1 2))");
+        assert_invalid("(print (fields-to))");
+        assert_invalid("(print (fields-to 1 2))");
     }
 
     #[test]

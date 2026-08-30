@@ -124,6 +124,37 @@ pub(super) fn evaluate(
         Value::FieldRange { start, end } => Ok(RuntimeValue::String(
             record.field_range(*start, *end).to_owned(),
         )),
+        Value::DynamicFieldRange { start, end } => {
+            let function = match (start, end) {
+                (Some(_), Some(_)) => "fields",
+                (Some(_), None) => "fields-from",
+                (None, Some(_)) => "fields-to",
+                (None, None) => unreachable!("a dynamic field range has at least one bound"),
+            };
+            let start = start
+                .as_deref()
+                .map(|value| evaluate_field_bound(value, record, function, 1))
+                .transpose()?;
+            let end_argument = usize::from(start.is_some()) + 1;
+            let end = end
+                .as_deref()
+                .map(|value| evaluate_field_bound(value, record, function, end_argument))
+                .transpose()?;
+            if let (Some(start), Some(end)) = (start, end)
+                && start > end
+            {
+                return Err(EvalError::conversion(
+                    function,
+                    2,
+                    "field number greater than or equal to START",
+                    end.to_string(),
+                    "is before START",
+                ));
+            }
+            Ok(RuntimeValue::String(
+                record.field_range(start, end).to_owned(),
+            ))
+        }
         Value::RecordNumber => Ok(RuntimeValue::Number(record.number as f64)),
         Value::FieldCount => Ok(RuntimeValue::Number(record.field_count() as f64)),
         Value::String(value) => Ok(RuntimeValue::String(value.clone())),
@@ -500,4 +531,25 @@ pub(super) fn evaluate(
             Ok(_) | Err(_) => evaluate(fallback, record),
         },
     }
+}
+
+fn evaluate_field_bound(
+    value: &Value,
+    record: &EvalContext<'_, '_, '_>,
+    function: &'static str,
+    argument: usize,
+) -> EvalResult<usize> {
+    let input = evaluate(value, record)?;
+    let rendered = input.render();
+    let number = expect_number(input, function, argument)?;
+    if number < 1.0 || number.fract() != 0.0 || number > usize::MAX as f64 {
+        return Err(EvalError::conversion(
+            function,
+            argument,
+            "Number (positive whole field number)",
+            rendered,
+            "is not a positive whole number",
+        ));
+    }
+    Ok(number as usize)
 }

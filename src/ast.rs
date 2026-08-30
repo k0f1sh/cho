@@ -164,6 +164,10 @@ pub enum Value {
         start: Option<usize>,
         end: Option<usize>,
     },
+    DynamicFieldRange {
+        start: Option<Box<Value>>,
+        end: Option<Box<Value>>,
+    },
     RecordNumber,
     FieldCount,
     String(String),
