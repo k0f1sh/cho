@@ -239,6 +239,7 @@ Semantic versions:
   (semver/minor SEMVER) -> NUMBER           return the minor version
   (semver/patch SEMVER) -> NUMBER           return the patch version
   (semver/prerelease SEMVER) -> STRING      return prerelease text or an empty string
+  (semver/build SEMVER) -> STRING           return build metadata or an empty string
 
 Types and errors:
   String      fields and quoted literals    DateTime  RFC 3339 timestamps

@@ -155,6 +155,7 @@ pub enum SemVerPart {
     Minor,
     Patch,
     Prerelease,
+    Build,
 }
 
 #[derive(Debug, PartialEq)]

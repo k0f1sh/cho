@@ -235,3 +235,24 @@ define_callable!(
     [],
     [(None, "(semver/prerelease $1)")]
 );
+
+define_callable!(
+    Build,
+    CallableDefinition {
+        name: "semver/build",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[sig!([p!("value", SemVer, Required)] => Some(ValueType::String))]
+    },
+    |_context, arguments| {
+        let [value_arg] = value_array(arguments)?;
+        value(Value::SemVerPart {
+            part: SemVerPart::Build,
+            value: Box::new(value_arg),
+        })
+    },
+    SemanticVersion,
+    "return build metadata or an empty string",
+    [],
+    [(None, "(semver/build $1)")]
+);

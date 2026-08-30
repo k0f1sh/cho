@@ -714,7 +714,7 @@ mod tests {
         assert!(parse(r#"(print (cidr/size $1))"#).is_ok());
         assert!(parse(r#"(print (url/query-get $1 "lang") (url/query-has? $1 "page"))"#).is_ok());
         assert!(
-            parse(r#"(print (semver/major $1) (semver/minor $1) (semver/patch $1) (semver/prerelease $1))"#)
+            parse(r#"(print (semver/major $1) (semver/minor $1) (semver/patch $1) (semver/prerelease $1) (semver/build $1))"#)
                 .is_ok()
         );
         assert!(parse(r#"(print (dt/add (dt/unix $1) (du/m 2)))"#).is_ok());
@@ -894,6 +894,8 @@ mod tests {
             "(print (semver/minor $1 $2))",
             "(print (semver/patch))",
             "(print (semver/prerelease $1 $2))",
+            "(print (semver/build))",
+            "(print (semver/build $1 $2))",
             "(print (du/s))",
             "(print (du/ms))",
             "(print (du/ms $1 $2))",

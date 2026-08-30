@@ -18,6 +18,7 @@ pub(super) fn evaluate_part(
         SemVerPart::Minor => exact_u64_number(version.minor, function, 1, version.to_string()),
         SemVerPart::Patch => exact_u64_number(version.patch, function, 1, version.to_string()),
         SemVerPart::Prerelease => Ok(RuntimeValue::String(version.pre.to_string())),
+        SemVerPart::Build => Ok(RuntimeValue::String(version.build.to_string())),
     }
 }
 
@@ -60,6 +61,7 @@ fn part_name(part: &SemVerPart) -> &'static str {
         SemVerPart::Minor => "semver/minor",
         SemVerPart::Patch => "semver/patch",
         SemVerPart::Prerelease => "semver/prerelease",
+        SemVerPart::Build => "semver/build",
     }
 }
 

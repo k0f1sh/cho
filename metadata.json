@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.11.1",
+  "cho_version": "0.11.2",
   "callables": [
     {
       "name": "print",
@@ -3063,6 +3063,28 @@
           "returns": "String",
           "summary": null,
           "example": "(semver/prerelease $1)"
+        }
+      ]
+    },
+    {
+      "name": "semver/build",
+      "aliases": [],
+      "kind": "function",
+      "category": "semantic_version",
+      "summary": "return build metadata or an empty string",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "SemVer",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(semver/build $1)"
         }
       ]
     },
