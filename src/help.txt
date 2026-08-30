@@ -51,9 +51,9 @@ Literals and fields:
   "text", 12, 3.5                String or Number
   true, false                    Boolean
   (field NUMBER) -> STRING                  get a field by its computed number
-  (fields START NUMBER) -> STRING           get a computed inclusive field range
+  (fields START END) -> STRING              get a computed inclusive field range
   (fields-from START) -> STRING             get fields from a computed position through the record end
-  (fields-to NUMBER) -> STRING              get fields from the record start through a computed position
+  (fields-to END) -> STRING                 get fields from the record start through a computed position
 
   An omitted range bound extends to that edge of the complete record, including
   leading or trailing separators. An end beyond NF stops at NF. A start beyond
@@ -80,36 +80,36 @@ Numbers:
   (!= NUMBER NUMBER) -> BOOLEAN             not equal
 
 Strings:
-  (str VALUE ...) -> STRING                 concatenate values
-  (s/join SEPARATOR VALUE ...) -> STRING    join values
-  (s/replace VALUE FROM TO) -> STRING       replace the first literal match
-  (s/replace-all VALUE FROM TO) -> STRING   replace all literal matches
+  (str VALUE ...) -> STRING                    concatenate values
+  (s/join SEPARATOR VALUE ...) -> STRING       join values
+  (s/replace VALUE FROM TO) -> STRING          replace the first literal match
+  (s/replace-all VALUE FROM TO) -> STRING      replace all literal matches
   (s/part VALUE DELIMITER POSITION) -> STRING  take a 1-based literal-delimited part
-  (s/slice VALUE START [LENGTH]) -> STRING  take Unicode characters from a 1-based start
-  (s/count VALUE) -> NUMBER                 count Unicode characters
-  (s/empty? STRING) -> BOOLEAN              test whether a string is empty
-  (s/escape VALUE) -> STRING                escape tabs, newlines, and backslashes
-  (s/dquote VALUE) -> STRING                stringify and wrap in escaped double quotes
-  (dq VALUE) -> STRING                      short form of s/dquote
-  (s/squote VALUE) -> STRING                stringify and wrap in escaped single quotes
-  (sq VALUE) -> STRING                      short form of s/squote
-  (s/unquote VALUE) -> STRING               remove matching quotes and decode backslash escapes
-  (shq VALUE) -> STRING                     stringify and quote as one shell-safe argument
-  (s/lower VALUE) -> STRING                 lowercase
-  (s/upper VALUE) -> STRING                 uppercase
-  (s/reverse VALUE) -> STRING               reverse Unicode characters
-  (s/trim VALUE) -> STRING                  remove Unicode whitespace from both ends
-  (s/ltrim VALUE) -> STRING                 remove Unicode whitespace from the left
-  (s/rtrim VALUE) -> STRING                 remove Unicode whitespace from the right
-  (s/starts-with? STRING PREFIX) -> BOOLEAN  test a prefix
-  (s/ends-with? STRING SUFFIX) -> BOOLEAN   test a suffix
-  (s/contains? STRING NEEDLE) -> BOOLEAN    test a substring
-  (s/> STRING STRING) -> BOOLEAN            greater than
-  (s/>= STRING STRING) -> BOOLEAN           greater than or equal
-  (s/< STRING STRING) -> BOOLEAN            less than
-  (s/<= STRING STRING) -> BOOLEAN           less than or equal
-  (s/= STRING STRING) -> BOOLEAN            equal
-  (s/!= STRING STRING) -> BOOLEAN           not equal
+  (s/slice VALUE START [LENGTH]) -> STRING     take Unicode characters from a 1-based start
+  (s/count VALUE) -> NUMBER                    count Unicode characters
+  (s/empty? STRING) -> BOOLEAN                 test whether a string is empty
+  (s/escape VALUE) -> STRING                   escape tabs, newlines, and backslashes
+  (s/dquote VALUE) -> STRING                   stringify and wrap in escaped double quotes
+  (dq VALUE) -> STRING                         short form of s/dquote
+  (s/squote VALUE) -> STRING                   stringify and wrap in escaped single quotes
+  (sq VALUE) -> STRING                         short form of s/squote
+  (s/unquote VALUE) -> STRING                  remove matching quotes and decode backslash escapes
+  (shq VALUE) -> STRING                        stringify and quote as one shell-safe argument
+  (s/lower VALUE) -> STRING                    lowercase
+  (s/upper VALUE) -> STRING                    uppercase
+  (s/reverse VALUE) -> STRING                  reverse Unicode characters
+  (s/trim VALUE) -> STRING                     remove Unicode whitespace from both ends
+  (s/ltrim VALUE) -> STRING                    remove Unicode whitespace from the left
+  (s/rtrim VALUE) -> STRING                    remove Unicode whitespace from the right
+  (s/starts-with? STRING PREFIX) -> BOOLEAN    test a prefix
+  (s/ends-with? STRING SUFFIX) -> BOOLEAN      test a suffix
+  (s/contains? STRING NEEDLE) -> BOOLEAN       test a substring
+  (s/> STRING STRING) -> BOOLEAN               greater than
+  (s/>= STRING STRING) -> BOOLEAN              greater than or equal
+  (s/< STRING STRING) -> BOOLEAN               less than
+  (s/<= STRING STRING) -> BOOLEAN              less than or equal
+  (s/= STRING STRING) -> BOOLEAN               equal
+  (s/!= STRING STRING) -> BOOLEAN              not equal
 
   s/part preserves empty parts. If no delimiter is found, position 1 returns
   the complete value; a missing position returns an empty string. DELIMITER
@@ -138,13 +138,13 @@ Special forms (evaluate only the values they need):
   (or BOOLEAN BOOLEAN ...) -> BOOLEAN       stop at the first true value
 
 Regular expressions:
-  (reg /PATTERN/) -> BOOLEAN                match a regular expression
-  (reg VALUE /PATTERN/) -> BOOLEAN          match a regular expression
-  (~ /PATTERN/) -> BOOLEAN                  short form of reg
-  (~ VALUE /PATTERN/) -> BOOLEAN            short form of reg
-  (re/replace VALUE /PATTERN/ REPLACEMENT) -> STRING  replace the first regular-expression match
+  (reg /PATTERN/) -> BOOLEAN                              match a regular expression
+  (reg VALUE /PATTERN/) -> BOOLEAN                        match a regular expression
+  (~ /PATTERN/) -> BOOLEAN                                short form of reg
+  (~ VALUE /PATTERN/) -> BOOLEAN                          short form of reg
+  (re/replace VALUE /PATTERN/ REPLACEMENT) -> STRING      replace the first regular-expression match
   (re/replace-all VALUE /PATTERN/ REPLACEMENT) -> STRING  replace all regular-expression matches
-  (re/part VALUE /PATTERN/ POSITION) -> STRING  take a 1-based regular-expression-delimited part
+  (re/part VALUE /PATTERN/ POSITION) -> STRING            take a 1-based regular-expression-delimited part
 
   Regex literals preserve backslashes; escape only a literal / as \/:
     (~ $1 /^\d+$/)     (~ $1 /^foo\/bar$/)
@@ -158,37 +158,37 @@ Regular expressions:
   Example: cho --no-input '(p (re/replace "id=42" /(?P<n>\d+)/ "[${n}]"))'
 
 DateTime and Duration:
-  (dt/unix NUMBER) -> DATETIME              convert Unix seconds
-  (dt/fmt DATETIME STRING) -> STRING        format in UTC
+  (dt/unix NUMBER) -> DATETIME                 convert Unix seconds
+  (dt/fmt DATETIME STRING) -> STRING           format in UTC
   (dt/fmt DATETIME STRING TIMEZONE) -> STRING  format in the specified timezone
-  (dt/now) -> DATETIME                      current UTC time at second precision
-  (dt/floor-s DATETIME) -> DATETIME         floor to a local or UTC second
-  (dt/floor-s DATETIME TIMEZONE) -> DATETIME  floor to a local or UTC second
-  (dt/floor-m DATETIME) -> DATETIME         floor to a local or UTC minute
-  (dt/floor-m DATETIME TIMEZONE) -> DATETIME  floor to a local or UTC minute
-  (dt/floor-h DATETIME) -> DATETIME         floor to a local or UTC hour
-  (dt/floor-h DATETIME TIMEZONE) -> DATETIME  floor to a local or UTC hour
-  (dt/floor-d DATETIME) -> DATETIME         floor to a local or UTC calendar day
-  (dt/floor-d DATETIME TIMEZONE) -> DATETIME  floor to a local or UTC calendar day
-  (dt/add DATETIME DURATION) -> DATETIME    add a duration
-  (dt/sub DATETIME DURATION) -> DATETIME    subtract a duration
-  (dt/diff DATETIME DATETIME) -> DURATION   subtract the right datetime from the left
-  (du/s NUMBER) -> DURATION                 convert seconds to a duration
-  (du/ms NUMBER) -> DURATION                convert milliseconds to a duration
-  (du/m NUMBER) -> DURATION                 convert minutes to a duration
-  (du/h NUMBER) -> DURATION                 convert hours to a duration
-  (du/d NUMBER) -> DURATION                 convert fixed 24-hour days to a duration
-  (du/to-ms DURATION) -> NUMBER             convert a duration to milliseconds
-  (du/to-s DURATION) -> NUMBER              convert a duration to seconds
-  (du/to-m DURATION) -> NUMBER              convert a duration to minutes
-  (du/to-h DURATION) -> NUMBER              convert a duration to hours
-  (du/to-d DURATION) -> NUMBER              convert a duration to fixed 24-hour days
-  (dt/> DATETIME DATETIME) -> BOOLEAN       greater than
-  (dt/>= DATETIME DATETIME) -> BOOLEAN      greater than or equal
-  (dt/< DATETIME DATETIME) -> BOOLEAN       less than
-  (dt/<= DATETIME DATETIME) -> BOOLEAN      less than or equal
-  (dt/= DATETIME DATETIME) -> BOOLEAN       equal
-  (dt/!= DATETIME DATETIME) -> BOOLEAN      not equal
+  (dt/now) -> DATETIME                         current UTC time at second precision
+  (dt/floor-s DATETIME) -> DATETIME            floor to a local or UTC second
+  (dt/floor-s DATETIME TIMEZONE) -> DATETIME   floor to a local or UTC second
+  (dt/floor-m DATETIME) -> DATETIME            floor to a local or UTC minute
+  (dt/floor-m DATETIME TIMEZONE) -> DATETIME   floor to a local or UTC minute
+  (dt/floor-h DATETIME) -> DATETIME            floor to a local or UTC hour
+  (dt/floor-h DATETIME TIMEZONE) -> DATETIME   floor to a local or UTC hour
+  (dt/floor-d DATETIME) -> DATETIME            floor to a local or UTC calendar day
+  (dt/floor-d DATETIME TIMEZONE) -> DATETIME   floor to a local or UTC calendar day
+  (dt/add DATETIME DURATION) -> DATETIME       add a duration
+  (dt/sub DATETIME DURATION) -> DATETIME       subtract a duration
+  (dt/diff DATETIME DATETIME) -> DURATION      subtract the right datetime from the left
+  (du/s NUMBER) -> DURATION                    convert seconds to a duration
+  (du/ms NUMBER) -> DURATION                   convert milliseconds to a duration
+  (du/m NUMBER) -> DURATION                    convert minutes to a duration
+  (du/h NUMBER) -> DURATION                    convert hours to a duration
+  (du/d NUMBER) -> DURATION                    convert fixed 24-hour days to a duration
+  (du/to-ms DURATION) -> NUMBER                convert a duration to milliseconds
+  (du/to-s DURATION) -> NUMBER                 convert a duration to seconds
+  (du/to-m DURATION) -> NUMBER                 convert a duration to minutes
+  (du/to-h DURATION) -> NUMBER                 convert a duration to hours
+  (du/to-d DURATION) -> NUMBER                 convert a duration to fixed 24-hour days
+  (dt/> DATETIME DATETIME) -> BOOLEAN          greater than
+  (dt/>= DATETIME DATETIME) -> BOOLEAN         greater than or equal
+  (dt/< DATETIME DATETIME) -> BOOLEAN          less than
+  (dt/<= DATETIME DATETIME) -> BOOLEAN         less than or equal
+  (dt/= DATETIME DATETIME) -> BOOLEAN          equal
+  (dt/!= DATETIME DATETIME) -> BOOLEAN         not equal
 
   DateTime input must be RFC 3339 with an offset or Z. DateTime renders in UTC;
   Duration renders as seconds. TIMEZONE is an IANA name such as Asia/Tokyo or a
