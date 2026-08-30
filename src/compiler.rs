@@ -328,14 +328,14 @@ fn expect_step(argument: BoundArgument<'_>) -> Result<&SExpr, ParseError> {
 
 fn parse_field(field: &str) -> Result<Value, ParseError> {
     let field = field.strip_prefix('$').ok_or(ParseError::InvalidSyntax)?;
-    if !field.contains('-') {
+    if !field.contains("..") {
         return field
             .parse::<usize>()
             .map(Value::Field)
             .map_err(|_| ParseError::InvalidField);
     }
 
-    let mut bounds = field.split('-');
+    let mut bounds = field.split("..");
     let start = parse_range_bound(bounds.next().expect("split always yields one item"))?;
     let end = parse_range_bound(bounds.next().ok_or(ParseError::InvalidField)?)?;
     if bounds.next().is_some()
@@ -403,7 +403,7 @@ mod tests {
     #[test]
     fn parses_field_ranges_with_explicit_bounds() {
         assert_eq!(
-            parse("(print $-3 $3- $2-4)"),
+            parse("(print $..3 $3.. $2..4)"),
             Ok(Program {
                 forms: vec![Form::Print(vec![
                     Value::FieldRange {
@@ -785,7 +785,9 @@ mod tests {
     #[test]
     fn rejects_invalid_programs() {
         assert_eq!(parse("(print $x)"), Err(ParseError::InvalidField));
-        for field in ["$-", "$0-", "$-0", "$2-1", "$1-2-3", "$a-2", "$1-b"] {
+        for field in [
+            "$..", "$0..", "$..0", "$2..1", "$1..2..3", "$a..2", "$1..b", "$-3", "$3-", "$2-4",
+        ] {
             assert_eq!(
                 parse(&format!("(print {field})")),
                 Err(ParseError::InvalidField)

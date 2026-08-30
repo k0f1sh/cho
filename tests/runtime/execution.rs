@@ -13,7 +13,7 @@ fn field_zero_preserves_the_line_and_missing_fields_are_empty() {
 fn field_ranges_preserve_original_whitespace_and_compose_as_values() {
     assert_eq!(
         output(
-            "(print $-2) (print $3-) (print (s/upper $2-4))",
+            "(print $..2) (print $3..) (print (s/upper $2..4))",
             "  one\t two   three four  five  \n",
         ),
         "  one\t two\nthree four  five  \nTWO   THREE FOUR\n"
@@ -24,7 +24,7 @@ fn field_ranges_preserve_original_whitespace_and_compose_as_values() {
 fn open_field_ranges_extend_to_record_edges() {
     assert_eq!(
         output(
-            "(print (dq $-2) (dq $2-) (dq $1-))",
+            "(print (dq $..2) (dq $2..) (dq $1..))",
             "  one  two  three  \n"
         ),
         "\"  one  two\" \"two  three  \" \"one  two  three  \"\n"
@@ -34,12 +34,12 @@ fn open_field_ranges_extend_to_record_edges() {
 #[test]
 fn field_range_ends_are_clamped_and_missing_starts_are_empty() {
     assert_eq!(
-        output("(print $3-) (print $-3) (print $2-4)", "one two\n\n"),
+        output("(print $3..) (print $..3) (print $2..4)", "one two\n\n"),
         "\none two\ntwo\n\n\n\n"
     );
     assert_eq!(
         output(
-            "(print (dq $-4000) (dq $1-30) (dq $30-40))",
+            "(print (dq $..4000) (dq $1..30) (dq $30..40))",
             "  a b   c ddd    eeee  \n"
         ),
         "\"  a b   c ddd    eeee\" \"a b   c ddd    eeee\" \"\"\n"
@@ -206,7 +206,7 @@ fn empty_records_have_no_fields() {
 #[test]
 fn csv_mode_rejects_field_ranges_before_reading_input() {
     let error = cho::run_csv(
-        "(print (s/upper $2-))",
+        "(print (s/upper $2..))",
         Cursor::new("not,csv,\""),
         Vec::new(),
     )

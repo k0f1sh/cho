@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.11.3",
+  "cho_version": "0.12.0",
   "callables": [
     {
       "name": "print",

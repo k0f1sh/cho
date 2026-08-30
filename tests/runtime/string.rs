@@ -562,7 +562,7 @@ fn default_replaces_only_empty_values_and_can_be_nested() {
 fn field_ranges_preserve_regex_separators_and_empty_fields() {
     assert_eq!(
         output_with_separator(
-            "(print $-2) (print $2-) (print $2-3)",
+            "(print $..2) (print $2..) (print $2..3)",
             "[,;]",
             ",Alice;Tokyo;"
         ),
