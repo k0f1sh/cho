@@ -9,6 +9,11 @@ pub enum ParseError {
     UnterminatedRegex,
     MissingClosingParenthesis,
     UnexpectedClosingParenthesis,
+    InvalidArity {
+        expression: String,
+        expected: String,
+        actual: usize,
+    },
 }
 
 impl fmt::Display for ParseError {
@@ -20,6 +25,16 @@ impl fmt::Display for ParseError {
             Self::UnterminatedRegex => "unterminated regex literal",
             Self::MissingClosingParenthesis => "missing closing parenthesis",
             Self::UnexpectedClosingParenthesis => "unexpected closing parenthesis",
+            Self::InvalidArity {
+                expression,
+                expected,
+                actual,
+            } => {
+                return write!(
+                    formatter,
+                    "{expression}: expected {expected}, but got {actual}"
+                );
+            }
         };
         formatter.write_str(message)
     }

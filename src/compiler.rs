@@ -1,7 +1,7 @@
 use crate::ast::{Form, Program, RegexId, Value};
 use crate::language::{
-    Arguments, AstContext, BoundArgument, CallableKind, CompiledExpression, Parameter,
-    ThreadDirection, ValueType, expect_value, lookup,
+    Arguments, AstContext, BoundArgument, CallableDefinition, CallableKind, Cardinality,
+    CompiledExpression, Parameter, Signature, ThreadDirection, ValueType, expect_value, lookup,
 };
 use crate::parser::{Atom, ParseError, SExpr};
 
@@ -143,7 +143,7 @@ impl Compiler {
         }
         let signature = definition
             .signature(arguments.len())
-            .ok_or(ParseError::InvalidSyntax)?;
+            .ok_or_else(|| invalid_arity(operator, definition, arguments.len()))?;
         let arguments = arguments
             .into_iter()
             .enumerate()
@@ -191,6 +191,78 @@ impl Compiler {
             InputArgument::Syntax(expression) => self.compile_value(expression),
             InputArgument::Compiled(value) => Ok(value),
         }
+    }
+}
+
+fn invalid_arity(expression: &str, definition: &CallableDefinition, actual: usize) -> ParseError {
+    ParseError::InvalidArity {
+        expression: expression.to_owned(),
+        expected: expected_argument_count(definition.signatures),
+        actual,
+    }
+}
+
+fn expected_argument_count(signatures: &[Signature]) -> String {
+    let mut ranges = signatures
+        .iter()
+        .map(|signature| {
+            let minimum = signature
+                .parameters
+                .iter()
+                .filter(|parameter| {
+                    matches!(
+                        parameter.cardinality,
+                        Cardinality::Required | Cardinality::OneOrMore
+                    )
+                })
+                .count();
+            let maximum = signature.parameters.last().and_then(|parameter| {
+                (!matches!(
+                    parameter.cardinality,
+                    Cardinality::ZeroOrMore | Cardinality::OneOrMore
+                ))
+                .then_some(signature.parameters.len())
+            });
+            (minimum, maximum)
+        })
+        .collect::<Vec<_>>();
+    ranges.sort_unstable();
+    ranges.dedup();
+
+    if ranges
+        .iter()
+        .all(|(minimum, maximum)| *maximum == Some(*minimum))
+    {
+        let counts = ranges
+            .iter()
+            .map(|(count, _)| count.to_string())
+            .collect::<Vec<_>>();
+        let counts = match counts.as_slice() {
+            [count] => count.clone(),
+            [first, second] => format!("{first} or {second}"),
+            _ => counts.join(", "),
+        };
+        let plural = ranges.len() != 1 || ranges[0].0 != 1;
+        return format!("{counts} argument{}", if plural { "s" } else { "" });
+    }
+
+    let descriptions = ranges
+        .into_iter()
+        .map(|(minimum, maximum)| match maximum {
+            Some(maximum) if minimum == maximum => {
+                format!("{minimum} argument{}", if minimum == 1 { "" } else { "s" })
+            }
+            Some(maximum) => format!("{minimum} to {maximum} arguments"),
+            None => format!(
+                "at least {minimum} argument{}",
+                if minimum == 1 { "" } else { "s" }
+            ),
+        })
+        .collect::<Vec<_>>();
+    match descriptions.as_slice() {
+        [description] => description.clone(),
+        [first, second] => format!("{first} or {second}"),
+        _ => descriptions.join(", "),
     }
 }
 
@@ -290,6 +362,16 @@ mod tests {
     use crate::ast::{ComparisonOperator, ComparisonType, Predicate, ReplaceMode};
     use crate::parse;
 
+    fn assert_invalid(program: &str) {
+        assert!(
+            matches!(
+                parse(program),
+                Err(ParseError::InvalidSyntax | ParseError::InvalidArity { .. })
+            ),
+            "{program}"
+        );
+    }
+
     #[test]
     fn parses_a_complete_program() {
         assert_eq!(
@@ -365,7 +447,7 @@ mod tests {
             "$1 (print $2)",
             "$1 (filter (> $2 20))",
         ] {
-            assert_eq!(parse(program), Err(ParseError::InvalidSyntax), "{program}");
+            assert_invalid(program);
         }
     }
 
@@ -569,8 +651,15 @@ mod tests {
     #[test]
     fn parses_computed_fields_and_rejects_invalid_arities() {
         assert!(parse("(print (field (- NF 2)))").is_ok());
-        assert_eq!(parse("(print (field))"), Err(ParseError::InvalidSyntax));
-        assert_eq!(parse("(print (field 1 2))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(
+            parse("(print (field))"),
+            Err(ParseError::InvalidArity {
+                expression: "field".into(),
+                expected: "1 argument".into(),
+                actual: 0,
+            })
+        );
+        assert_invalid("(print (field 1 2))");
     }
 
     #[test]
@@ -688,15 +777,15 @@ mod tests {
             );
         }
         assert_eq!(parse("print $1"), Err(ParseError::InvalidSyntax));
-        assert_eq!(parse("(filter (> $1))"), Err(ParseError::InvalidSyntax));
-        assert_eq!(parse("(f)"), Err(ParseError::InvalidSyntax));
-        assert_eq!(parse("(f (> $1 0) $2)"), Err(ParseError::InvalidSyntax));
-        assert_eq!(parse("(filter (reg $1))"), Err(ParseError::InvalidSyntax));
-        assert_eq!(parse("(filter (not))"), Err(ParseError::InvalidSyntax));
-        assert_eq!(parse("(filter (and))"), Err(ParseError::InvalidSyntax));
-        assert_eq!(parse("(filter (or))"), Err(ParseError::InvalidSyntax));
+        assert_invalid("(filter (> $1))");
+        assert_invalid("(f)");
+        assert_invalid("(f (> $1 0) $2)");
+        assert_invalid("(filter (reg $1))");
+        assert_invalid("(filter (not))");
+        assert_invalid("(filter (and))");
+        assert_invalid("(filter (or))");
         assert_eq!(parse("(print (fmt $1))"), Err(ParseError::InvalidSyntax));
-        assert_eq!(parse("(print (s/join))"), Err(ParseError::InvalidSyntax));
+        assert_invalid("(print (s/join))");
         for program in [
             "(print (+))",
             "(print (+ $1))",
@@ -743,18 +832,12 @@ mod tests {
             "(print (shq $1 $2))",
             "(print (q $1))",
         ] {
-            assert_eq!(parse(program), Err(ParseError::InvalidSyntax), "{program}");
+            assert_invalid(program);
         }
-        assert_eq!(parse("(print (s/count))"), Err(ParseError::InvalidSyntax));
-        assert_eq!(
-            parse("(print (s/count $1 $2))"),
-            Err(ParseError::InvalidSyntax)
-        );
-        assert_eq!(parse("(print (s/escape))"), Err(ParseError::InvalidSyntax));
-        assert_eq!(
-            parse("(print (s/escape $1 $2))"),
-            Err(ParseError::InvalidSyntax)
-        );
+        assert_invalid("(print (s/count))");
+        assert_invalid("(print (s/count $1 $2))");
+        assert_invalid("(print (s/escape))");
+        assert_invalid("(print (s/escape $1 $2))");
         for program in [
             "(print (if))",
             "(print (if (= $1 $2) $1))",
@@ -844,7 +927,7 @@ mod tests {
             "(filter (semver/> $1))",
             "(filter (semver/= $1 $2 $3))",
         ] {
-            assert_eq!(parse(program), Err(ParseError::InvalidSyntax), "{program}");
+            assert_invalid(program);
         }
         assert_eq!(
             parse("(print \"unfinished)"),
@@ -864,12 +947,13 @@ mod tests {
         );
         assert_eq!(
             parse("(print (s/count $1 $x))"),
-            Err(ParseError::InvalidSyntax)
+            Err(ParseError::InvalidArity {
+                expression: "s/count".into(),
+                expected: "1 argument".into(),
+                actual: 2,
+            })
         );
-        assert_eq!(
-            parse("(print (-> $1 (s/count $x $2)))"),
-            Err(ParseError::InvalidSyntax)
-        );
+        assert_invalid("(print (-> $1 (s/count $x $2)))");
         assert_eq!(
             parse("(print (-> $x unknown))"),
             Err(ParseError::InvalidField)
