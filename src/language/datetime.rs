@@ -28,7 +28,7 @@ define_callable!(
         kind: CallableKind::Function,
         signatures: &[
             sig!([p!("datetime", DateTime, Required), p!("format", String, Required)] => Some(ValueType::String)),
-            sig!([p!("datetime", DateTime, Required), p!("format", String, Required), p!("timezone", String, Required)] => Some(ValueType::String))
+            sig!([p!("datetime", DateTime, Required), p!("format", String, Required), p!("timezone", String, Required, "TIMEZONE")] => Some(ValueType::String))
         ]
     },
     |_context, arguments| {
@@ -79,7 +79,7 @@ define_callable!(
         kind: CallableKind::Function,
         signatures: &[
             sig!([p!("datetime", DateTime, Required)] => Some(ValueType::DateTime)),
-            sig!([p!("datetime", DateTime, Required), p!("timezone", String, Required)] => Some(ValueType::DateTime))
+            sig!([p!("datetime", DateTime, Required), p!("timezone", String, Required, "TIMEZONE")] => Some(ValueType::DateTime))
         ]
     },
     |_context, arguments| {
@@ -108,7 +108,7 @@ define_callable!(
         kind: CallableKind::Function,
         signatures: &[
             sig!([p!("datetime", DateTime, Required)] => Some(ValueType::DateTime)),
-            sig!([p!("datetime", DateTime, Required), p!("timezone", String, Required)] => Some(ValueType::DateTime))
+            sig!([p!("datetime", DateTime, Required), p!("timezone", String, Required, "TIMEZONE")] => Some(ValueType::DateTime))
         ]
     },
     |_context, arguments| {
@@ -137,7 +137,7 @@ define_callable!(
         kind: CallableKind::Function,
         signatures: &[
             sig!([p!("datetime", DateTime, Required)] => Some(ValueType::DateTime)),
-            sig!([p!("datetime", DateTime, Required), p!("timezone", String, Required)] => Some(ValueType::DateTime))
+            sig!([p!("datetime", DateTime, Required), p!("timezone", String, Required, "TIMEZONE")] => Some(ValueType::DateTime))
         ]
     },
     |_context, arguments| {
@@ -166,7 +166,7 @@ define_callable!(
         kind: CallableKind::Function,
         signatures: &[
             sig!([p!("datetime", DateTime, Required)] => Some(ValueType::DateTime)),
-            sig!([p!("datetime", DateTime, Required), p!("timezone", String, Required)] => Some(ValueType::DateTime))
+            sig!([p!("datetime", DateTime, Required), p!("timezone", String, Required, "TIMEZONE")] => Some(ValueType::DateTime))
         ]
     },
     |_context, arguments| {

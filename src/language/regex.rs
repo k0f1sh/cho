@@ -9,8 +9,8 @@ define_callable!(
         aliases: &["~"],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("pattern", Regex, Required)] => Some(ValueType::Boolean)),
-            sig!([p!("value", Value, Required), p!("pattern", Regex, Required)] => Some(ValueType::Boolean))
+            sig!([p!("pattern", Regex, Required, "/PATTERN/")] => Some(ValueType::Boolean)),
+            sig!([p!("value", Value, Required), p!("pattern", Regex, Required, "/PATTERN/")] => Some(ValueType::Boolean))
         ]
     },
     |_context, arguments| {
@@ -44,7 +44,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("value", Value, Required), p!("pattern", Regex, Required), p!("replacement", Value, Required)] => Some(ValueType::String))
+            sig!([p!("value", Value, Required), p!("pattern", Regex, Required, "/PATTERN/"), p!("replacement", Value, Required, "REPLACEMENT")] => Some(ValueType::String))
         ]
     },
     |_context, arguments| {
@@ -72,7 +72,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("value", Value, Required), p!("pattern", Regex, Required), p!("replacement", Value, Required)] => Some(ValueType::String))
+            sig!([p!("value", Value, Required), p!("pattern", Regex, Required, "/PATTERN/"), p!("replacement", Value, Required, "REPLACEMENT")] => Some(ValueType::String))
         ]
     },
     |_context, arguments| {
@@ -100,7 +100,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("value", Value, Required), p!("pattern", Regex, Required), p!("position", Number, Required)] => Some(ValueType::String))
+            sig!([p!("value", Value, Required), p!("pattern", Regex, Required, "/PATTERN/"), p!("position", Number, Required, "POSITION")] => Some(ValueType::String))
         ]
     },
     |_context, arguments| {
