@@ -389,6 +389,8 @@ registry!(
     datetime::Equal,
     datetime::NotEqual,
     network::IpVersion,
+    network::IpV4,
+    network::IpV6,
     network::IpEqual,
     network::IpNotEqual,
     network::IpPrivate,

@@ -21,6 +21,48 @@ define_callable!(
 );
 
 define_callable!(
+    IpV4,
+    CallableDefinition {
+        name: "ip/v4?",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[sig!([p!("value", IpAddr, Required)] => Some(ValueType::Boolean))]
+    },
+    |_context, arguments| {
+        let [value_arg] = value_array(arguments)?;
+        value(Value::Predicate(Box::new(Predicate::IpClass {
+            kind: IpClass::V4,
+            value: value_arg,
+        })))
+    },
+    Network,
+    "test an IPv4 address",
+    [],
+    [(None, "(ip/v4? $1)")]
+);
+
+define_callable!(
+    IpV6,
+    CallableDefinition {
+        name: "ip/v6?",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[sig!([p!("value", IpAddr, Required)] => Some(ValueType::Boolean))]
+    },
+    |_context, arguments| {
+        let [value_arg] = value_array(arguments)?;
+        value(Value::Predicate(Box::new(Predicate::IpClass {
+            kind: IpClass::V6,
+            value: value_arg,
+        })))
+    },
+    Network,
+    "test an IPv6 address",
+    [],
+    [(None, "(ip/v6? $1)")]
+);
+
+define_callable!(
     IpEqual,
     CallableDefinition {
         name: "ip/=",

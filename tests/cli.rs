@@ -135,6 +135,8 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("(du/ms NUMBER)"));
     assert!(stdout.contains("(du/d NUMBER)"));
     assert!(stdout.contains("(ip/version IPADDR)"));
+    assert!(stdout.contains("(ip/v4? IPADDR)"));
+    assert!(stdout.contains("(ip/v6? IPADDR)"));
     assert!(stdout.contains("(cidr/network CIDR)"));
     assert!(stdout.contains("(cidr/prefix CIDR)"));
     assert!(stdout.contains("(cidr/first CIDR)"));
