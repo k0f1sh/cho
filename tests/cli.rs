@@ -45,6 +45,23 @@ fn default_recovery_finishes_successfully_without_a_diagnostic() {
 }
 
 #[test]
+fn closed_output_pipe_finishes_successfully_without_a_diagnostic() {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_cho"))
+        .arg("(print $1)")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    drop(child.stdout.take());
+    child.stdin.take().unwrap().write_all(b"value\n").unwrap();
+
+    let output = child.wait_with_output().unwrap();
+    assert!(output.status.success());
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
 fn parse_errors_explain_unbalanced_parentheses() {
     let missing = run("(print $1", "");
     assert!(!missing.status.success());
