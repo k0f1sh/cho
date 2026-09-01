@@ -186,6 +186,52 @@ define_callable!(
     [(None, "(s/slice $1 3 5)")]
 );
 
+macro_rules! define_padding {
+    ($type:ident, $name:literal, $kind:ident, $summary:literal, $example:literal) => {
+        define_callable!(
+            $type,
+            CallableDefinition {
+                name: $name,
+                aliases: &[],
+                kind: CallableKind::Function,
+                signatures: &[
+                    sig!([p!("value", Value, Required), p!("width", Number, Required), p!("fill", Value, Optional)] => Some(ValueType::String))
+                ]
+            },
+            |_context, arguments| {
+                let mut args = values(arguments)?.into_iter();
+                let value_arg = args.next().expect("signature requires value");
+                let width = args.next().expect("signature requires width");
+                value(Value::Pad {
+                    kind: StringPadding::$kind,
+                    value: Box::new(value_arg),
+                    width: Box::new(width),
+                    fill: args.next().map(Box::new),
+                })
+            },
+            String,
+            $summary,
+            ["WIDTH counts Unicode characters and must be a non-negative whole number. FILL defaults to one space and must be exactly one Unicode character."],
+            [(None, $example)]
+        );
+    };
+}
+
+define_padding!(
+    LeftPad,
+    "s/lpad",
+    Left,
+    "pad the left side to a Unicode character width",
+    "(s/lpad $1 5 \"0\")"
+);
+define_padding!(
+    RightPad,
+    "s/rpad",
+    Right,
+    "pad the right side to a Unicode character width",
+    "(s/rpad $1 10)"
+);
+
 define_callable!(
     Count,
     CallableDefinition {

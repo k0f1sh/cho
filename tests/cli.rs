@@ -193,6 +193,8 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("(s/before VALUE DELIMITER)"));
     assert!(stdout.contains("(s/after VALUE DELIMITER)"));
     assert!(stdout.contains("(s/slice VALUE START [LENGTH])"));
+    assert!(stdout.contains("(s/lpad VALUE WIDTH [FILL])"));
+    assert!(stdout.contains("(s/rpad VALUE WIDTH [FILL])"));
     assert!(stdout.contains("(s/replace VALUE FROM TO)"));
     assert!(stdout.contains("(s/replace-all VALUE FROM TO)"));
     assert!(stdout.contains("(s/starts-with? VALUE PREFIX)"));

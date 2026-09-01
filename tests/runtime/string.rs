@@ -345,6 +345,53 @@ fn slice_rejects_invalid_starts_and_lengths() {
 }
 
 #[test]
+fn padding_uses_unicode_width_and_an_optional_single_character_fill() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (dq (s/lpad "42" 5)) (dq (s/rpad "42" 5))) "#,
+                r#"(print (s/lpad "42" 5 "0") (s/rpad "東京" 4 "・")) "#,
+                r#"(print (dq (s/lpad "" 2)) (s/rpad "🦀" 3 "x")) "#,
+                r#"(print (s/lpad "already" 3 "0") (s/rpad "exact" 5 "x")) "#,
+                r#"(print (s/lpad $2 2 "0") (s/rpad "zero" 0 "x"))"#,
+            ),
+            "x\n",
+        ),
+        "\"   42\" \"42   \"\n00042 東京・・\n\"  \" 🦀xx\nalready exact\n00 zero\n"
+    );
+}
+
+#[test]
+fn padding_composes_with_values_and_threading() {
+    assert_eq!(
+        output(
+            r#"(print (s/upper (s/lpad $1 (+ 2 3) "x")) (-> $2 (s/rpad 4 0) (dq)))"#,
+            "ab 7\n",
+        ),
+        "XXXAB \"7000\"\n"
+    );
+}
+
+#[test]
+fn padding_rejects_invalid_widths_and_fills() {
+    for (program, function, argument) in [
+        (r#"(print (s/lpad "a" -1))"#, "s/lpad", 2),
+        (r#"(print (s/rpad "a" 1.5))"#, "s/rpad", 2),
+        (r#"(print (s/lpad "a" 1e40))"#, "s/lpad", 2),
+        (r#"(print (s/lpad "a" 3 ""))"#, "s/lpad", 3),
+        (r#"(print (s/rpad "a" 3 "xy"))"#, "s/rpad", 3),
+    ] {
+        let error = cho::run(program, Cursor::new("x\n"), Vec::new()).unwrap_err();
+        assert!(
+            error.to_string().starts_with(&format!(
+                "record 1: {function}: argument {argument} expects"
+            )),
+            "{error}"
+        );
+    }
+}
+
+#[test]
 fn count_counts_unicode_characters() {
     assert_eq!(
         output("(print (s/count $1))", "Alice\n東京\n🦀\n"),

@@ -335,6 +335,8 @@ registry!(
     string::Before,
     string::After,
     string::Slice,
+    string::LeftPad,
+    string::RightPad,
     string::Count,
     string::Empty,
     string::Escape,

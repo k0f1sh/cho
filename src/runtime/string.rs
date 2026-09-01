@@ -1,4 +1,4 @@
-use crate::ast::{StringQuote, Value};
+use crate::ast::{StringPadding, StringQuote, Value};
 
 use super::eval::{EvalContext, evaluate};
 use super::value::{EvalError, EvalResult, RuntimeValue, expect_number};
@@ -26,6 +26,111 @@ pub(super) fn evaluate_string_slice(
         })
         .unwrap_or(value.len());
     Ok(RuntimeValue::String(value[start..end].to_owned()))
+}
+
+pub(super) fn evaluate_string_padding(
+    kind: &StringPadding,
+    value: &Value,
+    width: &Value,
+    fill: Option<&Value>,
+    record: &EvalContext<'_, '_, '_>,
+) -> EvalResult<RuntimeValue> {
+    let function = match kind {
+        StringPadding::Left => "s/lpad",
+        StringPadding::Right => "s/rpad",
+    };
+    let value = evaluate(value, record)?.render();
+    let width = expect_padding_width(width, function, record)?;
+    let fill = fill
+        .map(|fill| evaluate(fill, record).map(|fill| fill.render()))
+        .transpose()?
+        .unwrap_or_else(|| " ".to_owned());
+    let mut fill_chars = fill.chars();
+    let Some(fill_char) = fill_chars.next() else {
+        return Err(EvalError::conversion(
+            function,
+            3,
+            "String (one Unicode character)",
+            fill,
+            "is empty",
+        ));
+    };
+    if fill_chars.next().is_some() {
+        return Err(EvalError::conversion(
+            function,
+            3,
+            "String (one Unicode character)",
+            fill,
+            "contains more than one Unicode character",
+        ));
+    }
+
+    let padding = width.saturating_sub(value.chars().count());
+    let padding_bytes = padding.checked_mul(fill_char.len_utf8()).ok_or_else(|| {
+        EvalError::conversion(
+            function,
+            2,
+            "Number (representable padding width)",
+            width.to_string(),
+            "is outside the supported padding range",
+        )
+    })?;
+    let capacity = value.len().checked_add(padding_bytes).ok_or_else(|| {
+        EvalError::conversion(
+            function,
+            2,
+            "Number (representable padding width)",
+            width.to_string(),
+            "is outside the supported padding range",
+        )
+    })?;
+    let mut result = String::new();
+    result.try_reserve(capacity).map_err(|_| {
+        EvalError::conversion(
+            function,
+            2,
+            "Number (allocatable padding width)",
+            width.to_string(),
+            "is too large",
+        )
+    })?;
+    if matches!(kind, StringPadding::Left) {
+        result.extend(std::iter::repeat_n(fill_char, padding));
+    }
+    result.push_str(&value);
+    if matches!(kind, StringPadding::Right) {
+        result.extend(std::iter::repeat_n(fill_char, padding));
+    }
+    Ok(RuntimeValue::String(result))
+}
+
+fn expect_padding_width(
+    value: &Value,
+    function: &'static str,
+    record: &EvalContext<'_, '_, '_>,
+) -> EvalResult<usize> {
+    let width = expect_number(evaluate(value, record)?, function, 2)?;
+    if width.fract() != 0.0 || width < 0.0 {
+        return Err(EvalError::conversion(
+            function,
+            2,
+            "Number (non-negative whole padding width)",
+            width.to_string(),
+            "is outside the supported padding range",
+        ));
+    }
+    let width_input = width.to_string();
+    let width = width as u128;
+    if width > usize::MAX as u128 {
+        return Err(EvalError::conversion(
+            function,
+            2,
+            "Number (representable padding width)",
+            width_input,
+            "is outside the supported padding range",
+        ));
+    }
+    Ok(width as usize)
 }
 
 pub(super) fn expect_slice_index(

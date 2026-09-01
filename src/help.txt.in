@@ -82,6 +82,10 @@ Strings:
   s/slice without LENGTH returns through the end. An excessive LENGTH stops at
   the end; an excessive START returns empty. START must be positive and LENGTH
   must be non-negative. Both must be whole numbers.
+  s/lpad and s/rpad count Unicode characters, not terminal display columns.
+  WIDTH must be a non-negative whole number. FILL defaults to one space and
+  must be exactly one Unicode character. Values already at least WIDTH long are
+  unchanged.
   s/dquote and s/squote escape the enclosing quote, backslashes, tabs, and
   line breaks with a backslash.
   With explicit affixes, s/trim removes PREFIX and then SUFFIX independently;

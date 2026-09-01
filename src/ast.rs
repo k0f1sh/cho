@@ -151,6 +151,12 @@ pub enum StringBoundary {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StringPadding {
+    Left,
+    Right,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReplaceMode {
     First,
     All,
@@ -304,6 +310,12 @@ pub enum Value {
         value: Box<Value>,
         start: Box<Value>,
         length: Option<Box<Value>>,
+    },
+    Pad {
+        kind: StringPadding,
+        value: Box<Value>,
+        width: Box<Value>,
+        fill: Option<Box<Value>>,
     },
     Count(Box<Value>),
     Escape(Box<Value>),
