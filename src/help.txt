@@ -31,6 +31,8 @@ Input and options:
   NF is the field count. Missing fields are empty strings. With --skip-header,
   the first data record keeps its input position and therefore has NR 2.
   With --no-input, $0 is empty, NR is 1, and NF is 0.
+  The -F separator must be a valid regular expression. It must not match an
+  empty string.
 
 Program forms:
   (print VALUE ...)                         print values separated by spaces
@@ -58,6 +60,9 @@ Literals and fields:
   An omitted range bound extends to that edge of the complete record, including
   leading or trailing separators. An end beyond NF stops at NF. A start beyond
   NF is empty.
+  field accepts a non-negative whole number; 0 selects the complete record.
+  fields, fields-from, and fields-to require positive whole-number bounds;
+  fields also requires START to be less than or equal to END.
   Field ranges are unavailable with --csv because CSV fields are decoded.
 
 Numbers:
@@ -201,6 +206,7 @@ DateTime and Duration:
   DateTime input must be RFC 3339 with an offset or Z. DateTime renders in UTC;
   Duration renders as seconds. TIMEZONE is an IANA name such as Asia/Tokyo or a
   fixed offset such as +09:00. Without TIMEZONE, dt/floor-* uses UTC boundaries.
+  dt/unix accepts only whole Unix seconds within the supported DateTime range.
   At DST changes, floor chooses the latest matching boundary not after the input;
   if that local boundary does not exist, it uses the first local time after it.
 

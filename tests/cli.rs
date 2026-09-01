@@ -167,6 +167,11 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("(if BOOLEAN VALUE VALUE)"));
     assert!(stdout.contains("--skip-header"));
     assert!(stdout.contains("--no-input"));
+    assert!(stdout.contains("-F separator must be a valid regular expression"));
+    assert!(stdout.contains("It must not match an\n  empty string"));
+    assert!(stdout.contains("field accepts a non-negative whole number"));
+    assert!(stdout.contains("fields also requires START to be less than or equal to END"));
+    assert!(stdout.contains("dt/unix accepts only whole Unix seconds"));
     assert!(stdout.contains("(s/part VALUE DELIMITER POSITION)"));
     assert!(stdout.contains("(s/slice VALUE START [LENGTH])"));
     assert!(stdout.contains("(s/replace VALUE FROM TO)"));
