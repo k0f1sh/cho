@@ -115,9 +115,13 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.starts_with("cho — a small, type-aware text processor for the command line\n"));
     assert!(stdout.contains("Common recipes:"));
     assert!(stdout.contains("Types and errors:"));
+    assert!(stdout.contains("Number uses IEEE 754 double precision."));
+    assert!(stdout.contains("integer identifiers as strings with s/="));
+    assert!(stdout.contains("String functions render VALUE arguments"));
+    assert!(stdout.contains("s/ prefix therefore explicitly selects string"));
     assert!(stdout.contains("(p VALUE ...)"));
     assert!(stdout.contains("(f BOOLEAN)"));
-    assert!(stdout.contains("(s/empty? STRING)"));
+    assert!(stdout.contains("(s/empty? VALUE)"));
     assert!(stdout.contains("only filters implicitly prints $0"));
     assert!(stdout.contains("An empty program also prints $0"));
     assert!(stdout.contains("true, false"));
@@ -128,9 +132,9 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("(s/slice VALUE START [LENGTH])"));
     assert!(stdout.contains("(s/replace VALUE FROM TO)"));
     assert!(stdout.contains("(s/replace-all VALUE FROM TO)"));
-    assert!(stdout.contains("(s/starts-with? STRING PREFIX)"));
-    assert!(stdout.contains("(s/ends-with? STRING SUFFIX)"));
-    assert!(stdout.contains("(s/contains? STRING NEEDLE)"));
+    assert!(stdout.contains("(s/starts-with? VALUE PREFIX)"));
+    assert!(stdout.contains("(s/ends-with? VALUE SUFFIX)"));
+    assert!(stdout.contains("(s/contains? VALUE NEEDLE)"));
     assert!(stdout.contains("(re/replace VALUE /PATTERN/ REPLACEMENT)"));
     assert!(stdout.contains("(re/replace-all VALUE /PATTERN/ REPLACEMENT)"));
     assert!(stdout.contains("like awk sub(\"\", ...) and gsub(\"\", ...)"));

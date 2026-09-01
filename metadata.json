@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.13.1",
+  "cho_version": "0.14.0",
   "callables": [
     {
       "name": "print",
@@ -809,8 +809,8 @@
         {
           "parameters": [
             {
-              "name": "string",
-              "type": "String",
+              "name": "value",
+              "type": "Value",
               "cardinality": "required"
             }
           ],
@@ -1081,13 +1081,13 @@
         {
           "parameters": [
             {
-              "name": "string",
-              "type": "String",
+              "name": "value",
+              "type": "Value",
               "cardinality": "required"
             },
             {
               "name": "prefix",
-              "type": "String",
+              "type": "Value",
               "cardinality": "required"
             }
           ],
@@ -1108,13 +1108,13 @@
         {
           "parameters": [
             {
-              "name": "string",
-              "type": "String",
+              "name": "value",
+              "type": "Value",
               "cardinality": "required"
             },
             {
               "name": "suffix",
-              "type": "String",
+              "type": "Value",
               "cardinality": "required"
             }
           ],
@@ -1135,13 +1135,13 @@
         {
           "parameters": [
             {
-              "name": "string",
-              "type": "String",
+              "name": "value",
+              "type": "Value",
               "cardinality": "required"
             },
             {
               "name": "needle",
-              "type": "String",
+              "type": "Value",
               "cardinality": "required"
             }
           ],
@@ -1163,12 +1163,12 @@
           "parameters": [
             {
               "name": "left",
-              "type": "String",
+              "type": "Value",
               "cardinality": "required"
             },
             {
               "name": "right",
-              "type": "String",
+              "type": "Value",
               "cardinality": "required"
             }
           ],
@@ -1190,12 +1190,12 @@
           "parameters": [
             {
               "name": "left",
-              "type": "String",
+              "type": "Value",
               "cardinality": "required"
             },
             {
               "name": "right",
-              "type": "String",
+              "type": "Value",
               "cardinality": "required"
             }
           ],
@@ -1217,12 +1217,12 @@
           "parameters": [
             {
               "name": "left",
-              "type": "String",
+              "type": "Value",
               "cardinality": "required"
             },
             {
               "name": "right",
-              "type": "String",
+              "type": "Value",
               "cardinality": "required"
             }
           ],
@@ -1244,12 +1244,12 @@
           "parameters": [
             {
               "name": "left",
-              "type": "String",
+              "type": "Value",
               "cardinality": "required"
             },
             {
               "name": "right",
-              "type": "String",
+              "type": "Value",
               "cardinality": "required"
             }
           ],
@@ -1271,12 +1271,12 @@
           "parameters": [
             {
               "name": "left",
-              "type": "String",
+              "type": "Value",
               "cardinality": "required"
             },
             {
               "name": "right",
-              "type": "String",
+              "type": "Value",
               "cardinality": "required"
             }
           ],
@@ -1298,12 +1298,12 @@
           "parameters": [
             {
               "name": "left",
-              "type": "String",
+              "type": "Value",
               "cardinality": "required"
             },
             {
               "name": "right",
-              "type": "String",
+              "type": "Value",
               "cardinality": "required"
             }
           ],

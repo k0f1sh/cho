@@ -4,7 +4,6 @@ use super::datetime::expect_datetime;
 use super::eval::{EvalContext, evaluate};
 use super::network::{expect_cidr, expect_ip, ip_class_name, matches_ip_class};
 use super::semver;
-use super::string::string_test_name;
 use super::url::parse_absolute_url;
 use super::value::{EvalResult, expect_number, expect_string};
 
@@ -26,9 +25,8 @@ pub(super) fn matches(predicate: &Predicate, record: &EvalContext<'_, '_, '_>) -
             value,
             pattern,
         } => {
-            let function = string_test_name(kind);
-            let value = expect_string(evaluate(value, record)?, function, 1)?;
-            let pattern = expect_string(evaluate(pattern, record)?, function, 2)?;
+            let value = evaluate(value, record)?.render();
+            let pattern = evaluate(pattern, record)?.render();
             Ok(match kind {
                 StringTest::StartsWith => value.starts_with(&pattern),
                 StringTest::EndsWith => value.ends_with(&pattern),
@@ -68,8 +66,8 @@ pub(super) fn compare(
             Ok(apply_ordering(operator, left.partial_cmp(&right)))
         }
         ComparisonType::String => {
-            let left = expect_string(evaluate(left, record)?, function, 1)?;
-            let right = expect_string(evaluate(right, record)?, function, 2)?;
+            let left = evaluate(left, record)?.render();
+            let right = evaluate(right, record)?.render();
             Ok(apply_ordering(operator, Some(left.cmp(&right))))
         }
         ComparisonType::DateTime => {

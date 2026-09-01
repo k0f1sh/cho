@@ -17,6 +17,21 @@ fn numeric_and_string_equality_are_explicit() {
 }
 
 #[test]
+fn numbers_follow_ieee_754_precision() {
+    assert_eq!(
+        output(
+            r#"(print (= $1 $2) (s/= $1 $2))"#,
+            "9007199254740992 9007199254740993\n",
+        ),
+        "true false\n"
+    );
+    assert_eq!(
+        output("(print (= (+ $1 $2) $3))", "0.1 0.2 0.3\n"),
+        "false\n"
+    );
+}
+
+#[test]
 fn non_numeric_values_are_runtime_errors() {
     let error = cho::run(
         "(filter (> $2 20)) (print $1)",
@@ -175,7 +190,7 @@ fn fixed_number_formatting_rejects_invalid_digits_and_values() {
 }
 
 #[test]
-fn boolean_values_do_not_convert_to_numbers_or_strings() {
+fn boolean_values_do_not_convert_to_numbers_or_url_components() {
     for program in ["(print (+ (> 2 1) 1))", r#"(print (url/encode (> 2 1)))"#] {
         let error = cho::run(program, Cursor::new("x\n"), Vec::new()).unwrap_err();
         assert!(error.to_string().contains("has type Boolean"), "{error}");

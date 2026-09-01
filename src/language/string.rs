@@ -167,7 +167,7 @@ define_callable!(
         name: "s/empty?",
         aliases: &[],
         kind: CallableKind::Function,
-        signatures: &[sig!([p!("string", String, Required)] => Some(ValueType::Boolean))]
+        signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::Boolean))]
     },
     |_context, arguments| {
         let [value_arg] = value_array(arguments)?;
@@ -401,7 +401,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("string", String, Required), p!("prefix", String, Required)] => Some(ValueType::Boolean))
+            sig!([p!("value", Value, Required), p!("prefix", Value, Required)] => Some(ValueType::Boolean))
         ]
     },
     |_context, arguments| {
@@ -425,7 +425,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("string", String, Required), p!("suffix", String, Required)] => Some(ValueType::Boolean))
+            sig!([p!("value", Value, Required), p!("suffix", Value, Required)] => Some(ValueType::Boolean))
         ]
     },
     |_context, arguments| {
@@ -449,7 +449,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("string", String, Required), p!("needle", String, Required)] => Some(ValueType::Boolean))
+            sig!([p!("value", Value, Required), p!("needle", Value, Required)] => Some(ValueType::Boolean))
         ]
     },
     |_context, arguments| {
@@ -473,7 +473,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("left", String, Required), p!("right", String, Required)] => Some(ValueType::Boolean))
+            sig!([p!("left", Value, Required), p!("right", Value, Required)] => Some(ValueType::Boolean))
         ]
     },
     |_context, arguments| {
@@ -498,7 +498,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("left", String, Required), p!("right", String, Required)] => Some(ValueType::Boolean))
+            sig!([p!("left", Value, Required), p!("right", Value, Required)] => Some(ValueType::Boolean))
         ]
     },
     |_context, arguments| {
@@ -523,7 +523,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("left", String, Required), p!("right", String, Required)] => Some(ValueType::Boolean))
+            sig!([p!("left", Value, Required), p!("right", Value, Required)] => Some(ValueType::Boolean))
         ]
     },
     |_context, arguments| {
@@ -548,7 +548,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("left", String, Required), p!("right", String, Required)] => Some(ValueType::Boolean))
+            sig!([p!("left", Value, Required), p!("right", Value, Required)] => Some(ValueType::Boolean))
         ]
     },
     |_context, arguments| {
@@ -573,7 +573,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("left", String, Required), p!("right", String, Required)] => Some(ValueType::Boolean))
+            sig!([p!("left", Value, Required), p!("right", Value, Required)] => Some(ValueType::Boolean))
         ]
     },
     |_context, arguments| {
@@ -598,7 +598,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("left", String, Required), p!("right", String, Required)] => Some(ValueType::Boolean))
+            sig!([p!("left", Value, Required), p!("right", Value, Required)] => Some(ValueType::Boolean))
         ]
     },
     |_context, arguments| {

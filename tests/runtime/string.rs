@@ -527,20 +527,18 @@ fn string_tests_use_subject_first_and_compose_as_boolean_values() {
 }
 
 #[test]
-fn string_tests_require_string_arguments() {
-    for (program, argument) in [
-        (r#"(print (s/starts-with? 1 "1"))"#, 1),
-        (r#"(print (s/ends-with? $1 1))"#, 2),
-        (r#"(print (s/contains? true "true"))"#, 1),
-    ] {
-        let error = cho::run(program, Cursor::new("value\n"), Vec::new()).unwrap_err();
-        assert!(
-            error
-                .to_string()
-                .contains(&format!("argument {argument} expects String")),
-            "{error}"
-        );
-    }
+fn string_tests_render_typed_values() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (s/starts-with? (dt/unix 0) 1970) "#,
+                r#"(s/ends-with? (du/s 1.5) 1.5) "#,
+                r#"(s/contains? true "ru") (s/empty? (cidr/network "10.0.0.0/8")))"#,
+            ),
+            "x\n",
+        ),
+        "true true true false\n"
+    );
 }
 
 #[test]
@@ -613,6 +611,13 @@ fn supports_all_string_comparison_operators() {
     assert_eq!(
         output(r#"(print (if (s/!= "a" "b") "yes" "no"))"#, "x\n"),
         "yes\n"
+    );
+    assert_eq!(
+        output(
+            r#"(print (s/= 1 "1") (s/= true "true") (s/< (du/s 2) (du/s 30)))"#,
+            "x\n",
+        ),
+        "true true true\n"
     );
 }
 

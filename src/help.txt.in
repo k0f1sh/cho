@@ -57,8 +57,16 @@ Literals and fields:
 Numbers:
 {{callables:number}}
 
+  Number uses IEEE 754 double precision. Integers outside the safe range from
+  -(2^53 - 1) through 2^53 - 1 may lose precision or compare equal. Compare
+  integer identifiers as strings with s/=. Decimal arithmetic may round.
+
 Strings:
 {{callables:string}}
+
+  String functions render VALUE arguments with their default representation
+  before processing. The s/ prefix therefore explicitly selects string
+  semantics for transformations, tests, and comparisons of any value.
 
   s/part preserves empty parts. If no delimiter is found, position 1 returns
   the complete value; a missing position returns an empty string. DELIMITER
