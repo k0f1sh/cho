@@ -16,7 +16,8 @@ use super::number;
 use super::predicate::matches;
 use super::semver;
 use super::string::{
-    escape, evaluate_string_slice, expect_part_position, quote, shell_quote, unquote,
+    escape, evaluate_string_padding, evaluate_string_slice, expect_part_position, quote,
+    shell_quote, unquote,
 };
 use super::url::{
     decode_url_component, encode_url_component, parse_absolute_url, url_encoding_name,
@@ -516,6 +517,12 @@ pub(super) fn evaluate(
             length,
             value,
         } => evaluate_string_slice(start, length.as_deref(), value, record),
+        Value::Pad {
+            kind,
+            value,
+            width,
+            fill,
+        } => evaluate_string_padding(kind, value, width, fill.as_deref(), record),
         Value::Count(value) => Ok(RuntimeValue::Number(
             evaluate(value, record)?.render().chars().count() as f64,
         )),

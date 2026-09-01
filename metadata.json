@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.16.0",
+  "cho_version": "0.17.0",
   "callables": [
     {
       "name": "print",
@@ -831,6 +831,74 @@
           "returns": "String",
           "summary": null,
           "example": "(s/slice $1 3 5)"
+        }
+      ]
+    },
+    {
+      "name": "s/lpad",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "pad the left side to a Unicode character width",
+      "notes": [
+        "WIDTH counts Unicode characters and must be a non-negative whole number. FILL defaults to one space and must be exactly one Unicode character."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "width",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "fill",
+              "type": "Value",
+              "cardinality": "optional"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/lpad $1 5 \"0\")"
+        }
+      ]
+    },
+    {
+      "name": "s/rpad",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "pad the right side to a Unicode character width",
+      "notes": [
+        "WIDTH counts Unicode characters and must be a non-negative whole number. FILL defaults to one space and must be exactly one Unicode character."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "width",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "fill",
+              "type": "Value",
+              "cardinality": "optional"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/rpad $1 10)"
         }
       ]
     },

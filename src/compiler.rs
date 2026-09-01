@@ -369,7 +369,7 @@ fn parse_range_bound(bound: &str) -> Result<Option<usize>, ParseError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{ComparisonOperator, ComparisonType, Predicate, ReplaceMode};
+    use crate::ast::{ComparisonOperator, ComparisonType, Predicate, ReplaceMode, StringPadding};
     use crate::parse;
 
     fn assert_invalid(program: &str) {
@@ -636,6 +636,35 @@ mod tests {
     }
 
     #[test]
+    fn parses_padding_with_an_optional_fill_and_threading() {
+        assert_eq!(
+            parse(r#"(print (s/lpad $1 5) (s/rpad $2 4 "0"))"#),
+            Ok(Program {
+                forms: vec![Form::Print(vec![
+                    Value::Pad {
+                        kind: StringPadding::Left,
+                        value: Box::new(Value::Field(1)),
+                        width: Box::new(Value::Number(5.0)),
+                        fill: None,
+                    },
+                    Value::Pad {
+                        kind: StringPadding::Right,
+                        value: Box::new(Value::Field(2)),
+                        width: Box::new(Value::Number(4.0)),
+                        fill: Some(Box::new(Value::String("0".into()))),
+                    },
+                ])],
+                regex_patterns: vec![],
+                contains_field_range: false,
+            })
+        );
+        assert_eq!(
+            parse(r#"(print (-> $1 (s/lpad 5 "0") (s/rpad 7 "x")))"#),
+            parse(r#"(print (s/rpad (s/lpad $1 5 "0") 7 "x"))"#)
+        );
+    }
+
+    #[test]
     fn parses_conditional_and_string_values() {
         assert!(
             parse(r#"(print (if (s/= (s/lower $1) "alice") (s/upper $2) (default $3 "unknown")))"#)
@@ -892,6 +921,12 @@ mod tests {
             "(print (s/slice))",
             "(print (s/slice 1))",
             "(print (s/slice 1 2 3 4))",
+            "(print (s/lpad))",
+            "(print (s/lpad 1))",
+            "(print (s/lpad 1 2 3 4))",
+            "(print (s/rpad))",
+            "(print (s/rpad 1))",
+            "(print (s/rpad 1 2 3 4))",
             "(print (s/dquote))",
             "(print (s/dquote $1 $2))",
             "(print (s/squote))",

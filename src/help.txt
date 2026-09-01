@@ -97,6 +97,8 @@ Strings:
   (s/before VALUE DELIMITER) -> STRING         take text before the first literal delimiter
   (s/after VALUE DELIMITER) -> STRING          take text after the first literal delimiter
   (s/slice VALUE START [LENGTH]) -> STRING     take Unicode characters from a 1-based start
+  (s/lpad VALUE WIDTH [FILL]) -> STRING        pad the left side to a Unicode character width
+  (s/rpad VALUE WIDTH [FILL]) -> STRING        pad the right side to a Unicode character width
   (s/count VALUE) -> NUMBER                    count Unicode characters
   (s/empty? VALUE) -> BOOLEAN                  test whether a string is empty
   (s/escape VALUE) -> STRING                   escape tabs, newlines, and backslashes
@@ -138,6 +140,10 @@ Strings:
   s/slice without LENGTH returns through the end. An excessive LENGTH stops at
   the end; an excessive START returns empty. START must be positive and LENGTH
   must be non-negative. Both must be whole numbers.
+  s/lpad and s/rpad count Unicode characters, not terminal display columns.
+  WIDTH must be a non-negative whole number. FILL defaults to one space and
+  must be exactly one Unicode character. Values already at least WIDTH long are
+  unchanged.
   s/dquote and s/squote escape the enclosing quote, backslashes, tabs, and
   line breaks with a backslash.
   With explicit affixes, s/trim removes PREFIX and then SUFFIX independently;

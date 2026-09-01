@@ -326,9 +326,8 @@ fn help_label(parameter: &Parameter) -> String {
     match parameter.name {
         "pattern" => "/PATTERN/".to_owned(),
         "digits" | "separator" | "from" | "to" | "delimiter" | "position" | "start" | "end"
-        | "length" | "prefix" | "suffix" | "needle" | "fallback" | "replacement" | "timezone" => {
-            parameter.name.to_ascii_uppercase()
-        }
+        | "length" | "width" | "fill" | "prefix" | "suffix" | "needle" | "fallback"
+        | "replacement" | "timezone" => parameter.name.to_ascii_uppercase(),
         _ => parameter.value_type.help_name().to_owned(),
     }
 }
