@@ -79,6 +79,10 @@ Numbers:
   (= NUMBER NUMBER) -> BOOLEAN              equal
   (!= NUMBER NUMBER) -> BOOLEAN             not equal
 
+  Number uses IEEE 754 double precision. Integers outside the safe range from
+  -(2^53 - 1) through 2^53 - 1 may lose precision or compare equal. Compare
+  integer identifiers as strings with s/=. Decimal arithmetic may round.
+
 Strings:
   (str VALUE ...) -> STRING                    concatenate values
   (s/join SEPARATOR VALUE ...) -> STRING       join values
@@ -87,7 +91,7 @@ Strings:
   (s/part VALUE DELIMITER POSITION) -> STRING  take a 1-based literal-delimited part
   (s/slice VALUE START [LENGTH]) -> STRING     take Unicode characters from a 1-based start
   (s/count VALUE) -> NUMBER                    count Unicode characters
-  (s/empty? STRING) -> BOOLEAN                 test whether a string is empty
+  (s/empty? VALUE) -> BOOLEAN                  test whether a string is empty
   (s/escape VALUE) -> STRING                   escape tabs, newlines, and backslashes
   (s/dquote VALUE) -> STRING                   stringify and wrap in escaped double quotes
   (dq VALUE) -> STRING                         short form of s/dquote
@@ -101,15 +105,19 @@ Strings:
   (s/trim VALUE) -> STRING                     remove Unicode whitespace from both ends
   (s/ltrim VALUE) -> STRING                    remove Unicode whitespace from the left
   (s/rtrim VALUE) -> STRING                    remove Unicode whitespace from the right
-  (s/starts-with? STRING PREFIX) -> BOOLEAN    test a prefix
-  (s/ends-with? STRING SUFFIX) -> BOOLEAN      test a suffix
-  (s/contains? STRING NEEDLE) -> BOOLEAN       test a substring
-  (s/> STRING STRING) -> BOOLEAN               greater than
-  (s/>= STRING STRING) -> BOOLEAN              greater than or equal
-  (s/< STRING STRING) -> BOOLEAN               less than
-  (s/<= STRING STRING) -> BOOLEAN              less than or equal
-  (s/= STRING STRING) -> BOOLEAN               equal
-  (s/!= STRING STRING) -> BOOLEAN              not equal
+  (s/starts-with? VALUE PREFIX) -> BOOLEAN     test a prefix
+  (s/ends-with? VALUE SUFFIX) -> BOOLEAN       test a suffix
+  (s/contains? VALUE NEEDLE) -> BOOLEAN        test a substring
+  (s/> VALUE VALUE) -> BOOLEAN                 greater than
+  (s/>= VALUE VALUE) -> BOOLEAN                greater than or equal
+  (s/< VALUE VALUE) -> BOOLEAN                 less than
+  (s/<= VALUE VALUE) -> BOOLEAN                less than or equal
+  (s/= VALUE VALUE) -> BOOLEAN                 equal
+  (s/!= VALUE VALUE) -> BOOLEAN                not equal
+
+  String functions render VALUE arguments with their default representation
+  before processing. The s/ prefix therefore explicitly selects string
+  semantics for transformations, tests, and comparisons of any value.
 
   s/part preserves empty parts. If no delimiter is found, position 1 returns
   the complete value; a missing position returns an empty string. DELIMITER

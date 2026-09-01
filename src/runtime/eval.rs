@@ -161,7 +161,7 @@ pub(super) fn evaluate(
         Value::Number(number) => Ok(RuntimeValue::Number(*number)),
         Value::Boolean(value) => Ok(RuntimeValue::Boolean(*value)),
         Value::StringEmpty(value) => Ok(RuntimeValue::Boolean(
-            expect_string(evaluate(value, record)?, "s/empty?", 1)?.is_empty(),
+            evaluate(value, record)?.render().is_empty(),
         )),
         Value::Arithmetic {
             operator,

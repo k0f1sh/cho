@@ -1,4 +1,4 @@
-use crate::ast::{StringQuote, StringTest, Value};
+use crate::ast::{StringQuote, Value};
 
 use super::eval::{EvalContext, evaluate};
 use super::value::{EvalError, EvalResult, RuntimeValue, expect_number};
@@ -81,14 +81,6 @@ pub(super) fn expect_part_position(
         ));
     }
     Ok(position as usize)
-}
-
-pub(super) fn string_test_name(kind: &StringTest) -> &'static str {
-    match kind {
-        StringTest::StartsWith => "s/starts-with?",
-        StringTest::EndsWith => "s/ends-with?",
-        StringTest::Contains => "s/contains?",
-    }
 }
 
 pub(super) fn escape(value: &str) -> String {
