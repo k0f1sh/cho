@@ -7,6 +7,7 @@ pub enum ParseError {
     AutomaticValueWithPrint,
     MultipleAutomaticValues,
     FilterAfterAutomaticValue,
+    NonFiniteNumberLiteral(String),
     UnknownFunction(String),
     InvalidField,
     UnterminatedString,
@@ -30,6 +31,9 @@ impl fmt::Display for ParseError {
             Self::MultipleAutomaticValues => "only one automatic top-level value is allowed",
             Self::FilterAfterAutomaticValue => {
                 "an automatic top-level value must follow all filters"
+            }
+            Self::NonFiniteNumberLiteral(literal) => {
+                return write!(formatter, "non-finite number literal: {literal}");
             }
             Self::UnknownFunction(function) => {
                 return write!(formatter, "no such function: {function}");
