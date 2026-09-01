@@ -125,8 +125,8 @@ forms. Its `schema_version` changes when the JSON structure makes an
 incompatible change.
 
 The [`examples`](examples) directory contains scripts and sample data for
-reviewing a CSV account export, investigating connection timeouts, and checking
-release versions.
+reviewing a CSV account export, investigating connection timeouts, checking
+release versions, and composing multiple cho processes as a typed pipeline.
 
 ## Development
 
