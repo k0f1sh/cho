@@ -94,6 +94,16 @@ fn parse_errors_explain_function_argument_counts() {
 }
 
 #[test]
+fn parse_errors_name_unknown_functions() {
+    let output = run_with_args(&["--no-input", r#"(p (ip/v6 "10.0.0.1"))"#], "");
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "cho: invalid program: no such function: ip/v6\n"
+    );
+}
+
+#[test]
 fn help_lists_types_and_signatures() {
     let output = Command::new(env!("CARGO_BIN_EXE_cho"))
         .arg("--help")

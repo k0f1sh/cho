@@ -4,6 +4,7 @@ use std::fmt;
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
     InvalidSyntax,
+    UnknownFunction(String),
     InvalidField,
     UnterminatedString,
     UnterminatedRegex,
@@ -20,6 +21,9 @@ impl fmt::Display for ParseError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let message = match self {
             Self::InvalidSyntax => "invalid syntax",
+            Self::UnknownFunction(function) => {
+                return write!(formatter, "no such function: {function}");
+            }
             Self::InvalidField => "invalid field reference",
             Self::UnterminatedString => "unterminated string literal",
             Self::UnterminatedRegex => "unterminated regex literal",
@@ -158,6 +162,10 @@ mod tests {
     #[test]
     fn describes_parse_errors() {
         assert_eq!(ParseError::InvalidSyntax.to_string(), "invalid syntax");
+        assert_eq!(
+            ParseError::UnknownFunction("ip/v6".to_owned()).to_string(),
+            "no such function: ip/v6"
+        );
         assert_eq!(
             ParseError::MissingClosingParenthesis.to_string(),
             "missing closing parenthesis"
