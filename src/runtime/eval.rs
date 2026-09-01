@@ -5,7 +5,7 @@ use chrono::format::{Item, StrftimeItems};
 use chrono::{DateTime, Utc};
 use regex::Regex;
 
-use crate::ast::{CidrPart, ReplaceMode, StringTrim, UrlEncoding, UrlPart, Value};
+use crate::ast::{CidrPart, ReplaceMode, StringBoundary, StringTrim, UrlEncoding, UrlPart, Value};
 
 use super::datetime::{
     duration_as_number, duration_from_value, expect_datetime, expect_duration, floor_datetime,
@@ -483,6 +483,34 @@ pub(super) fn evaluate(
                     .to_owned(),
             ))
         }
+        Value::Boundary {
+            kind,
+            delimiter,
+            value,
+        } => {
+            let value = evaluate(value, record)?.render();
+            let delimiter = evaluate(delimiter, record)?.render();
+            let function = match kind {
+                StringBoundary::Before => "s/before",
+                StringBoundary::After => "s/after",
+            };
+            if delimiter.is_empty() {
+                return Err(EvalError::conversion(
+                    function,
+                    2,
+                    "a non-empty delimiter",
+                    delimiter,
+                    "is empty",
+                ));
+            }
+            let result = match (kind, value.split_once(&delimiter)) {
+                (StringBoundary::Before, Some((before, _))) => before,
+                (StringBoundary::After, Some((_, after))) => after,
+                (StringBoundary::Before, None) => &value,
+                (StringBoundary::After, None) => "",
+            };
+            Ok(RuntimeValue::String(result.to_owned()))
+        }
         Value::Slice {
             start,
             length,
@@ -530,6 +558,30 @@ pub(super) fn evaluate(
                 StringTrim::Right => value.trim_end(),
             };
             Ok(RuntimeValue::String(trimmed.to_owned()))
+        }
+        Value::TrimAffixes {
+            value,
+            prefix,
+            suffix,
+        } => {
+            let value = evaluate(value, record)?.render();
+            let prefix = prefix
+                .as_deref()
+                .map(|prefix| evaluate(prefix, record).map(|value| value.render()))
+                .transpose()?;
+            let suffix = suffix
+                .as_deref()
+                .map(|suffix| evaluate(suffix, record).map(|value| value.render()))
+                .transpose()?;
+            let without_prefix = prefix
+                .as_deref()
+                .and_then(|prefix| value.strip_prefix(prefix))
+                .unwrap_or(&value);
+            let without_suffix = suffix
+                .as_deref()
+                .and_then(|suffix| without_prefix.strip_suffix(suffix))
+                .unwrap_or(without_prefix);
+            Ok(RuntimeValue::String(without_suffix.to_owned()))
         }
         Value::Default { value, fallback } => match evaluate(value, record) {
             Ok(value) if !value.is_empty() => Ok(value),

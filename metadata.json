@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.15.0",
+  "cho_version": "0.16.0",
   "callables": [
     {
       "name": "print",
@@ -743,6 +743,64 @@
       ]
     },
     {
+      "name": "s/before",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "take text before the first literal delimiter",
+      "notes": [
+        "DELIMITER must not be empty."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "delimiter",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/before $1 \"=\")"
+        }
+      ]
+    },
+    {
+      "name": "s/after",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "take text after the first literal delimiter",
+      "notes": [
+        "DELIMITER must not be empty."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "delimiter",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/after $1 \"=\")"
+        }
+      ]
+    },
+    {
       "name": "s/slice",
       "aliases": [],
       "kind": "function",
@@ -1009,8 +1067,10 @@
       "aliases": [],
       "kind": "function",
       "category": "string",
-      "summary": "remove Unicode whitespace from both ends",
-      "notes": [],
+      "summary": "trim whitespace or exact affixes",
+      "notes": [
+        "Exact affixes are removed at most once; empty or absent affixes leave that end unchanged."
+      ],
       "signatures": [
         {
           "parameters": [
@@ -1021,8 +1081,30 @@
             }
           ],
           "returns": "String",
-          "summary": null,
+          "summary": "remove Unicode whitespace from both ends",
           "example": "(s/trim $1)"
+        },
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "prefix",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "suffix",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": "remove one exact prefix and suffix",
+          "example": "(s/trim $1 \"[\" \"]\")"
         }
       ]
     },
@@ -1031,8 +1113,10 @@
       "aliases": [],
       "kind": "function",
       "category": "string",
-      "summary": "remove Unicode whitespace from the left",
-      "notes": [],
+      "summary": "trim left whitespace or an exact prefix",
+      "notes": [
+        "An exact prefix is removed at most once; an empty or absent prefix leaves the value unchanged."
+      ],
       "signatures": [
         {
           "parameters": [
@@ -1043,8 +1127,25 @@
             }
           ],
           "returns": "String",
-          "summary": null,
+          "summary": "remove Unicode whitespace from the left",
           "example": "(s/ltrim $1)"
+        },
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "prefix",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": "remove one exact prefix",
+          "example": "(s/ltrim $1 \"v\")"
         }
       ]
     },
@@ -1053,8 +1154,10 @@
       "aliases": [],
       "kind": "function",
       "category": "string",
-      "summary": "remove Unicode whitespace from the right",
-      "notes": [],
+      "summary": "trim right whitespace or an exact suffix",
+      "notes": [
+        "An exact suffix is removed at most once; an empty or absent suffix leaves the value unchanged."
+      ],
       "signatures": [
         {
           "parameters": [
@@ -1065,8 +1168,25 @@
             }
           ],
           "returns": "String",
-          "summary": null,
+          "summary": "remove Unicode whitespace from the right",
           "example": "(s/rtrim $1)"
+        },
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "suffix",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": "remove one exact suffix",
+          "example": "(s/rtrim $1 \"%\")"
         }
       ]
     },

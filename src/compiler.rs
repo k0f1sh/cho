@@ -606,6 +606,10 @@ mod tests {
             parse(r#"(print (-> $1 (re/part /:/ 2)))"#),
             parse(r#"(print (re/part $1 /:/ 2))"#)
         );
+        assert_eq!(
+            parse(r#"(print (-> $1 (s/after "=") (s/before ":")))"#),
+            parse(r#"(print (s/before (s/after $1 "=") ":"))"#)
+        );
     }
 
     #[test]
@@ -652,10 +656,17 @@ mod tests {
 
     #[test]
     fn parses_trim_values_and_threading() {
-        assert!(parse("(print (s/trim $1) (s/ltrim $2) (s/rtrim 42))").is_ok());
+        assert!(
+            parse(r#"(print (s/trim $1) (s/trim $1 "[" "]") (s/ltrim $2 "v") (s/rtrim 42 "%"))"#)
+                .is_ok()
+        );
         assert_eq!(
             parse("(print (-> $1 (s/trim) (s/upper)))"),
             parse("(print (s/upper (s/trim $1)))")
+        );
+        assert_eq!(
+            parse(r#"(print (-> $1 (s/trim "[" "]") (s/upper)))"#),
+            parse(r#"(print (s/upper (s/trim $1 "[" "]")))"#)
         );
     }
 
@@ -872,6 +883,12 @@ mod tests {
             r#"(print (s/part ":"))"#,
             r#"(print (s/part ":" 1))"#,
             r#"(print (s/part ":" 1 $1 $2))"#,
+            "(print (s/before))",
+            "(print (s/before $1))",
+            "(print (s/before $1 $2 $3))",
+            "(print (s/after))",
+            "(print (s/after $1))",
+            "(print (s/after $1 $2 $3))",
             "(print (s/slice))",
             "(print (s/slice 1))",
             "(print (s/slice 1 2 3 4))",
@@ -905,10 +922,11 @@ mod tests {
             "(print (s/upper $1 $2))",
             "(print (s/trim))",
             "(print (s/trim $1 $2))",
+            "(print (s/trim $1 $2 $3 $4))",
             "(print (s/ltrim))",
-            "(print (s/ltrim $1 $2))",
+            "(print (s/ltrim $1 $2 $3))",
             "(print (s/rtrim))",
-            "(print (s/rtrim $1 $2))",
+            "(print (s/rtrim $1 $2 $3))",
             "(print (default))",
             "(print (default $1))",
             "(print (default $1 $2 $3))",

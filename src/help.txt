@@ -94,6 +94,8 @@ Strings:
   (s/replace VALUE FROM TO) -> STRING          replace the first literal match
   (s/replace-all VALUE FROM TO) -> STRING      replace all literal matches
   (s/part VALUE DELIMITER POSITION) -> STRING  take a 1-based literal-delimited part
+  (s/before VALUE DELIMITER) -> STRING         take text before the first literal delimiter
+  (s/after VALUE DELIMITER) -> STRING          take text after the first literal delimiter
   (s/slice VALUE START [LENGTH]) -> STRING     take Unicode characters from a 1-based start
   (s/count VALUE) -> NUMBER                    count Unicode characters
   (s/empty? VALUE) -> BOOLEAN                  test whether a string is empty
@@ -108,8 +110,11 @@ Strings:
   (s/upper VALUE) -> STRING                    uppercase
   (s/reverse VALUE) -> STRING                  reverse Unicode characters
   (s/trim VALUE) -> STRING                     remove Unicode whitespace from both ends
+  (s/trim VALUE PREFIX SUFFIX) -> STRING       remove one exact prefix and suffix
   (s/ltrim VALUE) -> STRING                    remove Unicode whitespace from the left
+  (s/ltrim VALUE PREFIX) -> STRING             remove one exact prefix
   (s/rtrim VALUE) -> STRING                    remove Unicode whitespace from the right
+  (s/rtrim VALUE SUFFIX) -> STRING             remove one exact suffix
   (s/starts-with? VALUE PREFIX) -> BOOLEAN     test a prefix
   (s/ends-with? VALUE SUFFIX) -> BOOLEAN       test a suffix
   (s/contains? VALUE NEEDLE) -> BOOLEAN        test a substring
@@ -127,11 +132,17 @@ Strings:
   s/part preserves empty parts. If no delimiter is found, position 1 returns
   the complete value; a missing position returns an empty string. DELIMITER
   must not be empty.
+  s/before and s/after use the first delimiter and preserve the complete value
+  on the other side. Without a delimiter, s/before returns the complete value
+  and s/after returns empty. DELIMITER must not be empty.
   s/slice without LENGTH returns through the end. An excessive LENGTH stops at
   the end; an excessive START returns empty. START must be positive and LENGTH
   must be non-negative. Both must be whole numbers.
   s/dquote and s/squote escape the enclosing quote, backslashes, tabs, and
   line breaks with a backslash.
+  With explicit affixes, s/trim removes PREFIX and then SUFFIX independently;
+  s/ltrim and s/rtrim remove one exact affix. Each affix is removed at most
+  once. Empty or absent affixes leave that end unchanged.
   s/unquote reverses s/dquote and s/squote. Unquoted values are unchanged;
   mismatched quotes, incomplete escapes, and unsupported escapes are errors.
   shq produces POSIX shell-safe quoting for exactly one argument. Unlike dq,
