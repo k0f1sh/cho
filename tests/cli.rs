@@ -94,6 +94,32 @@ fn parse_errors_explain_function_argument_counts() {
 }
 
 #[test]
+fn parse_errors_explain_ambiguous_top_level_output() {
+    for (program, message) in [
+        (
+            "$1 $2",
+            "cho: invalid program: only one automatic top-level value is allowed\n",
+        ),
+        (
+            "(print $1) $2",
+            "cho: invalid program: cannot combine an automatic top-level value with print\n",
+        ),
+        (
+            "$1 (print $2)",
+            "cho: invalid program: cannot combine an automatic top-level value with print\n",
+        ),
+        (
+            "$1 (filter true)",
+            "cho: invalid program: an automatic top-level value must follow all filters\n",
+        ),
+    ] {
+        let output = run(program, "");
+        assert!(!output.status.success());
+        assert_eq!(String::from_utf8(output.stderr).unwrap(), message);
+    }
+}
+
+#[test]
 fn parse_errors_name_unknown_functions() {
     let output = run_with_args(&["--no-input", r#"(p (ip/v6 "10.0.0.1"))"#], "");
     assert_eq!(output.status.code(), Some(1));
