@@ -8,6 +8,8 @@ mod execution;
 mod network;
 #[path = "runtime/number.rs"]
 mod number;
+#[path = "runtime/path.rs"]
+mod path;
 #[path = "runtime/semver.rs"]
 mod semver;
 #[path = "runtime/string.rs"]

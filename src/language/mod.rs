@@ -151,6 +151,7 @@ pub(crate) enum DocumentationCategory {
     Field,
     Number,
     String,
+    Path,
     Boolean,
     SpecialForm,
     RegularExpression,
@@ -286,6 +287,7 @@ mod datetime;
 mod field;
 mod network;
 mod number;
+mod path;
 mod program;
 mod regex;
 mod semver;
@@ -353,6 +355,10 @@ registry!(
     string::LessThanOrEqual,
     string::Equal,
     string::NotEqual,
+    path::Name,
+    path::Stem,
+    path::Extension,
+    path::Directory,
     boolean::Not,
     boolean::If,
     boolean::Default,

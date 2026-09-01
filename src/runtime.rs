@@ -3,6 +3,7 @@ mod datetime;
 mod eval;
 mod network;
 mod number;
+mod path;
 mod predicate;
 mod runner;
 mod semver;

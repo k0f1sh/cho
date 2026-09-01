@@ -123,6 +123,14 @@ pub enum UrlEncoding {
     Decode,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum PathPart {
+    Name,
+    Stem,
+    Extension,
+    Directory,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StringQuote {
     Double,
@@ -197,6 +205,10 @@ pub enum Value {
     },
     UrlEncoding {
         operation: UrlEncoding,
+        value: Box<Value>,
+    },
+    PathPart {
+        part: PathPart,
         value: Box<Value>,
     },
     UrlQueryGet {

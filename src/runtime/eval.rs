@@ -206,6 +206,11 @@ pub(super) fn evaluate(
                     }),
             }
         }
+        Value::PathPart { part, value } => {
+            let function = super::path::function_name(part);
+            let value = expect_string(evaluate(value, record)?, function, 1)?;
+            Ok(RuntimeValue::String(super::path::part(&value, *part)))
+        }
         Value::UrlQueryGet { name, url } => {
             let input = expect_string(evaluate(url, record)?, "url/query-get", 1)?;
             let url = parse_absolute_url(&input, "url/query-get", 1)?;
