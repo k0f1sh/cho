@@ -198,6 +198,8 @@ DateTime and Duration:
 
 IP and CIDR:
   (ip/version IPADDR) -> NUMBER             return 4 or 6
+  (ip/v4? IPADDR) -> BOOLEAN                test an IPv4 address
+  (ip/v6? IPADDR) -> BOOLEAN                test an IPv6 address
   (ip/= IPADDR IPADDR) -> BOOLEAN           test IP address equality
   (ip/!= IPADDR IPADDR) -> BOOLEAN          test IP address inequality
   (ip/private? IPADDR) -> BOOLEAN           test RFC 1918 IPv4 or fc00::/7 IPv6 ULA

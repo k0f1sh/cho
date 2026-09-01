@@ -74,6 +74,8 @@ pub(super) fn is_private_ipv4(ip: std::net::Ipv4Addr) -> bool {
 
 pub(super) fn matches_ip_class(ip: IpAddr, kind: &IpClass) -> bool {
     match kind {
+        IpClass::V4 => ip.is_ipv4(),
+        IpClass::V6 => ip.is_ipv6(),
         IpClass::Private => match ip {
             IpAddr::V4(ip) => is_private_ipv4(ip),
             IpAddr::V6(ip) => ip.segments()[0] & 0xfe00 == 0xfc00,
@@ -95,6 +97,8 @@ pub(super) fn matches_ip_class(ip: IpAddr, kind: &IpClass) -> bool {
 
 pub(super) fn ip_class_name(kind: &IpClass) -> &'static str {
     match kind {
+        IpClass::V4 => "ip/v4?",
+        IpClass::V6 => "ip/v6?",
         IpClass::Private => "ip/private?",
         IpClass::Loopback => "ip/loopback?",
         IpClass::LinkLocal => "ip/link-local?",

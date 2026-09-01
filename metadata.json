@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.12.0",
+  "cho_version": "0.13.0",
   "callables": [
     {
       "name": "print",
@@ -2304,6 +2304,50 @@
           "returns": "Number",
           "summary": null,
           "example": "(ip/version $1)"
+        }
+      ]
+    },
+    {
+      "name": "ip/v4?",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "test an IPv4 address",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "IpAddr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(ip/v4? $1)"
+        }
+      ]
+    },
+    {
+      "name": "ip/v6?",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "test an IPv6 address",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "IpAddr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(ip/v6? $1)"
         }
       ]
     },

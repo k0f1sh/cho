@@ -27,6 +27,52 @@ fn ip_and_cidr_predicates_are_typed() {
 }
 
 #[test]
+fn ip_version_predicates_distinguish_ipv4_and_ipv6() {
+    assert_eq!(
+        output(
+            "(filter (ip/v4? $1)) (print $1)",
+            "192.0.2.1\n::ffff:192.0.2.1\n2001:db8::1\n"
+        ),
+        "192.0.2.1\n"
+    );
+    assert_eq!(
+        output(
+            "(filter (ip/v6? $1)) (print $1)",
+            "192.0.2.1\n::ffff:192.0.2.1\n2001:db8::1\n"
+        ),
+        "::ffff:192.0.2.1\n2001:db8::1\n"
+    );
+    assert_eq!(
+        output(
+            "(print (if (ip/v4? (cidr/network $1)) \"v4\" \"v6\"))",
+            "10.0.0.0/8\n2001:db8::/32\n"
+        ),
+        "v4\nv6\n"
+    );
+}
+
+#[test]
+fn ip_version_predicates_report_their_own_conversion_errors() {
+    for predicate in ["ip/v4?", "ip/v6?"] {
+        let program = format!("(filter ({predicate} $1))");
+        let error = cho::run(&program, Cursor::new("not-an-ip\n"), Vec::new()).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .starts_with(&format!("record 1: {predicate}: argument 1 expects IpAddr")),
+            "{error}"
+        );
+        assert_eq!(
+            output(
+                &format!("(print (default ({predicate} $2) \"invalid\"))"),
+                "192.0.2.1\n"
+            ),
+            "invalid\n"
+        );
+    }
+}
+
+#[test]
 fn private_ip_predicate_includes_ipv6_unique_local_boundaries() {
     assert_eq!(
         output(

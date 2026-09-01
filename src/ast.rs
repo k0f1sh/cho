@@ -54,6 +54,8 @@ pub enum StringTest {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum IpClass {
+    V4,
+    V6,
     Private,
     Loopback,
     LinkLocal,

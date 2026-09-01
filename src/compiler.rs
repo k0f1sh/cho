@@ -702,6 +702,8 @@ mod tests {
         assert!(parse(r#"(filter (s/= $1 "Alice"))"#).is_ok());
         assert!(parse(r#"(filter (ip/private? $1))"#).is_ok());
         assert!(parse(r#"(print (ip/version $1))"#).is_ok());
+        assert!(parse(r#"(filter (ip/v4? $1))"#).is_ok());
+        assert!(parse(r#"(filter (ip/v6? (cidr/network $1)))"#).is_ok());
         assert!(parse(r#"(filter (ip/loopback? $1))"#).is_ok());
         assert!(parse(r#"(filter (ip/link-local? $1))"#).is_ok());
         assert!(parse(r#"(filter (ip/multicast? $1))"#).is_ok());
@@ -880,6 +882,8 @@ mod tests {
             "(print (dt/fmt $1 $2 $3 $4))",
             "(print (ip/version))",
             "(print (ip/version $1 $2))",
+            "(filter (ip/v4?))",
+            "(filter (ip/v6? $1 $2))",
             "(print (cidr/network))",
             "(print (cidr/network $1 $2))",
             "(print (cidr/prefix))",
