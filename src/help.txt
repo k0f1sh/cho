@@ -141,6 +141,16 @@ Strings:
   Empty prefixes, suffixes, and needles match every string, including empty.
   Example: cho --no-input '(p (dq (s/trim "  hello  ")))'
 
+Paths:
+  (path/name STRING) -> STRING              extract the final path component
+  (path/stem STRING) -> STRING              extract the final component without its extension
+  (path/ext STRING) -> STRING               extract the extension without its dot or an empty string
+  (path/dir STRING) -> STRING               extract the directory or an empty string
+
+  Path functions inspect strings lexically as Unix paths. Only / is a
+  separator; the filesystem, environment variables, ~, ., and .. are not
+  resolved. Trailing separators are ignored when extracting components.
+
 Boolean functions:
   (not BOOLEAN) -> BOOLEAN                  negate
 

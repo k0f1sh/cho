@@ -90,6 +90,13 @@ Strings:
   Empty prefixes, suffixes, and needles match every string, including empty.
   Example: cho --no-input '(p (dq (s/trim "  hello  ")))'
 
+Paths:
+{{callables:path}}
+
+  Path functions inspect strings lexically as Unix paths. Only / is a
+  separator; the filesystem, environment variables, ~, ., and .. are not
+  resolved. Trailing separators are ignored when extracting components.
+
 Boolean functions:
 {{callables:boolean}}
 

@@ -704,6 +704,12 @@ mod tests {
     }
 
     #[test]
+    fn parses_path_component_extraction() {
+        assert!(parse("(print (path/name $1) (path/stem $1) (path/ext $1) (path/dir $1))").is_ok());
+        assert!(parse("(print (-> $1 (path/ext) (s/upper)))").is_ok());
+    }
+
+    #[test]
     fn parses_url_component_encoding() {
         assert!(parse("(print (url/encode $1) (url/decode $2))").is_ok());
         assert!(parse("(print (-> $1 (url/encode) (url/decode)))").is_ok());
@@ -854,6 +860,14 @@ mod tests {
             "(print (url/domain $1))",
             "(print (url/encode))",
             "(print (url/decode $1 $2))",
+            "(print (path/name))",
+            "(print (path/name $1 $2))",
+            "(print (path/stem))",
+            "(print (path/stem $1 $2))",
+            "(print (path/ext))",
+            "(print (path/ext $1 $2))",
+            "(print (path/dir))",
+            "(print (path/dir $1 $2))",
             "(print (s/part))",
             r#"(print (s/part ":"))"#,
             r#"(print (s/part ":" 1))"#,

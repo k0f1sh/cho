@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.14.3",
+  "cho_version": "0.15.0",
   "callables": [
     {
       "name": "print",
@@ -1310,6 +1310,94 @@
           "returns": "Boolean",
           "summary": null,
           "example": "(s/!= \"b\" \"a\")"
+        }
+      ]
+    },
+    {
+      "name": "path/name",
+      "aliases": [],
+      "kind": "function",
+      "category": "path",
+      "summary": "extract the final path component",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(path/name $1)"
+        }
+      ]
+    },
+    {
+      "name": "path/stem",
+      "aliases": [],
+      "kind": "function",
+      "category": "path",
+      "summary": "extract the final component without its extension",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(path/stem $1)"
+        }
+      ]
+    },
+    {
+      "name": "path/ext",
+      "aliases": [],
+      "kind": "function",
+      "category": "path",
+      "summary": "extract the extension without its dot or an empty string",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(path/ext $1)"
+        }
+      ]
+    },
+    {
+      "name": "path/dir",
+      "aliases": [],
+      "kind": "function",
+      "category": "path",
+      "summary": "extract the directory or an empty string",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "String",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(path/dir $1)"
         }
       ]
     },
