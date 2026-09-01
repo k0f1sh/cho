@@ -72,7 +72,8 @@ impl Compiler {
         match expression {
             SExpr::List(_) => {
                 let (operator, arguments) = call_parts(expression)?;
-                let callable = lookup(operator).ok_or(ParseError::InvalidSyntax)?;
+                let callable = lookup(operator)
+                    .ok_or_else(|| ParseError::UnknownFunction(operator.to_owned()))?;
                 let context = if callable.definition().kind == CallableKind::ProgramForm {
                     CompileContext::Form
                 } else {
@@ -132,7 +133,8 @@ impl Compiler {
         arguments: Vec<InputArgument<'syntax>>,
         context: CompileContext,
     ) -> Result<CompiledExpression, ParseError> {
-        let callable = lookup(operator).ok_or(ParseError::InvalidSyntax)?;
+        let callable =
+            lookup(operator).ok_or_else(|| ParseError::UnknownFunction(operator.to_owned()))?;
         let definition = callable.definition();
         let valid_context = match context {
             CompileContext::Form => definition.kind == CallableKind::ProgramForm,
@@ -370,7 +372,9 @@ mod tests {
         assert!(
             matches!(
                 parse(program),
-                Err(ParseError::InvalidSyntax | ParseError::InvalidArity { .. })
+                Err(ParseError::InvalidSyntax
+                    | ParseError::InvalidArity { .. }
+                    | ParseError::UnknownFunction(_))
             ),
             "{program}"
         );
@@ -803,7 +807,10 @@ mod tests {
         assert_invalid("(filter (not))");
         assert_invalid("(filter (and))");
         assert_invalid("(filter (or))");
-        assert_eq!(parse("(print (fmt $1))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(
+            parse("(print (fmt $1))"),
+            Err(ParseError::UnknownFunction("fmt".to_owned()))
+        );
         assert_invalid("(print (s/join))");
         assert_invalid("(print (s/empty?))");
         assert_invalid("(print (s/empty? $1 $2))");
@@ -968,7 +975,7 @@ mod tests {
     fn resolves_operator_and_arity_before_compiling_arguments() {
         assert_eq!(
             parse("(print (unknown $x))"),
-            Err(ParseError::InvalidSyntax)
+            Err(ParseError::UnknownFunction("unknown".to_owned()))
         );
         assert_eq!(
             parse("(print (s/count $1 $x))"),
