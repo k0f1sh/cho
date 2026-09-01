@@ -138,10 +138,6 @@ fn regex_part_rejects_invalid_positions() {
             "record 1: re/part: argument 3 expects Number (positive whole part position)",
         ),
         (
-            r#"(print (re/part $1 /:/ NaN))"#,
-            "record 1: re/part: argument 3 expects finite Number",
-        ),
-        (
             r#"(print (re/part $1 /:/ 1e40))"#,
             "record 1: re/part: argument 3 expects Number (representable part position)",
         ),
@@ -233,10 +229,6 @@ fn part_keeps_invalid_delimiters_and_positions_strict() {
         (
             r#"(print (s/part $1 ":" 1.5))"#,
             "record 1: s/part: argument 3 expects Number (positive whole part position)",
-        ),
-        (
-            r#"(print (s/part $1 ":" NaN))"#,
-            "record 1: s/part: argument 3 expects finite Number",
         ),
         (
             r#"(print (s/part $1 ":" 1e40))"#,

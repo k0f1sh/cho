@@ -120,6 +120,19 @@ fn parse_errors_explain_ambiguous_top_level_output() {
 }
 
 #[test]
+fn parse_errors_reject_non_finite_number_literals() {
+    for literal in ["NaN", "inf", "-inf", "1e309", "-1e309"] {
+        let output = run_with_args(&["--no-input", &format!("(print {literal})")], "");
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        assert_eq!(
+            String::from_utf8(output.stderr).unwrap(),
+            format!("cho: invalid program: non-finite number literal: {literal}\n")
+        );
+    }
+}
+
+#[test]
 fn parse_errors_name_unknown_functions() {
     let output = run_with_args(&["--no-input", r#"(p (ip/v6 "10.0.0.1"))"#], "");
     assert_eq!(output.status.code(), Some(1));

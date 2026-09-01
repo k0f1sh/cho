@@ -105,14 +105,15 @@ impl Compiler {
             "NF" => Ok(Value::FieldCount),
             "true" => Ok(Value::Boolean(true)),
             "false" => Ok(Value::Boolean(false)),
-            _ if symbol.parse::<f64>().is_ok() => {
-                Ok(Value::Number(symbol.parse().expect("number was validated")))
-            }
-            _ => {
-                let field = parse_field(symbol)?;
-                self.contains_field_range |= matches!(field, Value::FieldRange { .. });
-                Ok(field)
-            }
+            _ => match symbol.parse::<f64>() {
+                Ok(number) if number.is_finite() => Ok(Value::Number(number)),
+                Ok(_) => Err(ParseError::NonFiniteNumberLiteral(symbol.to_owned())),
+                Err(_) => {
+                    let field = parse_field(symbol)?;
+                    self.contains_field_range |= matches!(field, Value::FieldRange { .. });
+                    Ok(field)
+                }
+            },
         }
     }
 
@@ -808,6 +809,12 @@ mod tests {
             );
         }
         assert_eq!(parse("print $1"), Err(ParseError::InvalidSyntax));
+        for literal in ["NaN", "inf", "-inf", "1e309", "-1e309"] {
+            assert_eq!(
+                parse(&format!("(print {literal})")),
+                Err(ParseError::NonFiniteNumberLiteral(literal.to_owned()))
+            );
+        }
         assert_invalid("(filter (> $1))");
         assert_invalid("(f)");
         assert_invalid("(f (> $1 0) $2)");
