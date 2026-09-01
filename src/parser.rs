@@ -4,6 +4,9 @@ use std::fmt;
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
     InvalidSyntax,
+    AutomaticValueWithPrint,
+    MultipleAutomaticValues,
+    FilterAfterAutomaticValue,
     UnknownFunction(String),
     InvalidField,
     UnterminatedString,
@@ -21,6 +24,13 @@ impl fmt::Display for ParseError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let message = match self {
             Self::InvalidSyntax => "invalid syntax",
+            Self::AutomaticValueWithPrint => {
+                "cannot combine an automatic top-level value with print"
+            }
+            Self::MultipleAutomaticValues => "only one automatic top-level value is allowed",
+            Self::FilterAfterAutomaticValue => {
+                "an automatic top-level value must follow all filters"
+            }
             Self::UnknownFunction(function) => {
                 return write!(formatter, "no such function: {function}");
             }

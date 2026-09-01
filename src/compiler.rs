@@ -42,18 +42,21 @@ impl Compiler {
             let compiled = self.compile_top_level(expression)?;
             match compiled {
                 CompiledExpression::Form(Form::Print(_)) if has_implicit_print => {
-                    return Err(ParseError::InvalidSyntax);
+                    return Err(ParseError::AutomaticValueWithPrint);
                 }
                 CompiledExpression::Form(Form::Print(values)) => {
                     has_explicit_print = true;
                     forms.push(Form::Print(values));
                 }
                 CompiledExpression::Form(Form::Filter(_)) if has_implicit_print => {
-                    return Err(ParseError::InvalidSyntax);
+                    return Err(ParseError::FilterAfterAutomaticValue);
                 }
                 CompiledExpression::Form(form) => forms.push(form),
-                CompiledExpression::Value(_) if has_explicit_print || has_implicit_print => {
-                    return Err(ParseError::InvalidSyntax);
+                CompiledExpression::Value(_) if has_explicit_print => {
+                    return Err(ParseError::AutomaticValueWithPrint);
+                }
+                CompiledExpression::Value(_) if has_implicit_print => {
+                    return Err(ParseError::MultipleAutomaticValues);
                 }
                 CompiledExpression::Value(value) => {
                     has_implicit_print = true;
@@ -449,14 +452,19 @@ mod tests {
 
     #[test]
     fn rejects_ambiguous_top_level_values() {
-        for program in [
-            "$1 $2",
-            "(print $1) $2",
-            "$1 (print $2)",
-            "$1 (filter (> $2 20))",
-        ] {
-            assert_invalid(program);
-        }
+        assert_eq!(parse("$1 $2"), Err(ParseError::MultipleAutomaticValues));
+        assert_eq!(
+            parse("(print $1) $2"),
+            Err(ParseError::AutomaticValueWithPrint)
+        );
+        assert_eq!(
+            parse("$1 (print $2)"),
+            Err(ParseError::AutomaticValueWithPrint)
+        );
+        assert_eq!(
+            parse("$1 (filter (> $2 20))"),
+            Err(ParseError::FilterAfterAutomaticValue)
+        );
     }
 
     #[test]
