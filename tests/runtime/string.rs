@@ -163,6 +163,49 @@ fn part_extracts_one_literal_delimited_part() {
 }
 
 #[test]
+fn before_and_after_use_the_first_literal_delimiter() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (s/before $1 "=") (s/after $1 "=")) "#,
+                r#"(print (-> $2 (s/after "始") (s/before "終") s/upper))"#,
+            ),
+            "key=value=rest x始alpha終y\n",
+        ),
+        "key value=rest\nALPHA\n"
+    );
+}
+
+#[test]
+fn before_and_after_handle_missing_and_edge_delimiters() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (s/join "|" (s/before $1 ":") (s/after $1 ":"))) "#,
+                r#"(print (s/join "|" (s/before $2 ":") (s/after $2 ":"))) "#,
+                r#"(print (s/join "|" (s/before $3 ":") (s/after $3 ":")))"#,
+            ),
+            "whole :right left:\n",
+        ),
+        "whole|\n|right\nleft|\n"
+    );
+}
+
+#[test]
+fn before_and_after_reject_empty_delimiters() {
+    for function in ["s/before", "s/after"] {
+        let program = format!(r#"(print ({function} $1 ""))"#);
+        let error = cho::run(&program, Cursor::new("value\n"), Vec::new()).unwrap_err();
+        assert!(
+            error.to_string().starts_with(&format!(
+                "record 1: {function}: argument 2 expects a non-empty delimiter"
+            )),
+            "{error}"
+        );
+    }
+}
+
+#[test]
 fn part_preserves_empty_parts_and_returns_the_whole_unsplit_value() {
     assert_eq!(
         output(
@@ -489,6 +532,35 @@ fn trim_operations_remove_unicode_whitespace_and_compose() {
         "ALICE\n\"alice\"\n\n\"\"\n\n\"\"\n"
     );
     assert_eq!(output("(print (s/trim 42))", "x\n"), "42\n");
+}
+
+#[test]
+fn trim_operations_remove_exact_affixes_once() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (s/trim $1 "[" "]") (s/ltrim $2 "v") (s/rtrim $3 "%")) "#,
+                r#"(print (s/ltrim $4 "v") (s/rtrim $5 "%") (s/trim $6 "" "")) "#,
+                r#"(print (-> $1 (s/trim "[" "]") s/upper))"#,
+            ),
+            "[value] vv1 80%% plain value% unchanged\n",
+        ),
+        "value v1 80%\nplain value unchanged\nVALUE\n"
+    );
+}
+
+#[test]
+fn trim_affixes_are_independent_and_stringify_values() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (s/trim "[value" "[" "]") (s/trim "value]" "[" "]")) "#,
+                r#"(print (s/ltrim 123 1) (s/rtrim 123 3) (s/trim "x" "x" "x"))"#,
+            ),
+            "record\n",
+        ),
+        "value value\n23 12 \n"
+    );
 }
 
 #[test]

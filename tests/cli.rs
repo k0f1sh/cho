@@ -190,12 +190,17 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("fields also requires START to be less than or equal to END"));
     assert!(stdout.contains("dt/unix accepts only whole Unix seconds"));
     assert!(stdout.contains("(s/part VALUE DELIMITER POSITION)"));
+    assert!(stdout.contains("(s/before VALUE DELIMITER)"));
+    assert!(stdout.contains("(s/after VALUE DELIMITER)"));
     assert!(stdout.contains("(s/slice VALUE START [LENGTH])"));
     assert!(stdout.contains("(s/replace VALUE FROM TO)"));
     assert!(stdout.contains("(s/replace-all VALUE FROM TO)"));
     assert!(stdout.contains("(s/starts-with? VALUE PREFIX)"));
     assert!(stdout.contains("(s/ends-with? VALUE SUFFIX)"));
     assert!(stdout.contains("(s/contains? VALUE NEEDLE)"));
+    assert!(stdout.contains("(s/trim VALUE PREFIX SUFFIX)"));
+    assert!(stdout.contains("(s/ltrim VALUE PREFIX)"));
+    assert!(stdout.contains("(s/rtrim VALUE SUFFIX)"));
     assert!(stdout.contains("(re/replace VALUE /PATTERN/ REPLACEMENT)"));
     assert!(stdout.contains("(re/replace-all VALUE /PATTERN/ REPLACEMENT)"));
     assert!(stdout.contains("like awk sub(\"\", ...) and gsub(\"\", ...)"));

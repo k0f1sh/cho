@@ -145,6 +145,12 @@ pub enum StringTrim {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StringBoundary {
+    Before,
+    After,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReplaceMode {
     First,
     All,
@@ -289,6 +295,11 @@ pub enum Value {
         delimiter: Box<Value>,
         position: Box<Value>,
     },
+    Boundary {
+        kind: StringBoundary,
+        value: Box<Value>,
+        delimiter: Box<Value>,
+    },
     Slice {
         value: Box<Value>,
         start: Box<Value>,
@@ -313,6 +324,11 @@ pub enum Value {
     Trim {
         kind: StringTrim,
         value: Box<Value>,
+    },
+    TrimAffixes {
+        value: Box<Value>,
+        prefix: Option<Box<Value>>,
+        suffix: Option<Box<Value>>,
     },
     Default {
         value: Box<Value>,

@@ -76,11 +76,17 @@ Strings:
   s/part preserves empty parts. If no delimiter is found, position 1 returns
   the complete value; a missing position returns an empty string. DELIMITER
   must not be empty.
+  s/before and s/after use the first delimiter and preserve the complete value
+  on the other side. Without a delimiter, s/before returns the complete value
+  and s/after returns empty. DELIMITER must not be empty.
   s/slice without LENGTH returns through the end. An excessive LENGTH stops at
   the end; an excessive START returns empty. START must be positive and LENGTH
   must be non-negative. Both must be whole numbers.
   s/dquote and s/squote escape the enclosing quote, backslashes, tabs, and
   line breaks with a backslash.
+  With explicit affixes, s/trim removes PREFIX and then SUFFIX independently;
+  s/ltrim and s/rtrim remove one exact affix. Each affix is removed at most
+  once. Empty or absent affixes leave that end unchanged.
   s/unquote reverses s/dquote and s/squote. Unquoted values are unchanged;
   mismatched quotes, incomplete escapes, and unsupported escapes are errors.
   shq produces POSIX shell-safe quoting for exactly one argument. Unlike dq,

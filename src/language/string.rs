@@ -117,6 +117,49 @@ define_callable!(
     [(None, "(s/part $1 \":\" 2)")]
 );
 
+macro_rules! define_boundary {
+    ($type:ident, $name:literal, $kind:ident, $summary:literal, $example:literal) => {
+        define_callable!(
+            $type,
+            CallableDefinition {
+                name: $name,
+                aliases: &[],
+                kind: CallableKind::Function,
+                signatures: &[
+                    sig!([p!("value", Value, Required), p!("delimiter", Value, Required)] => Some(ValueType::String))
+                ]
+            },
+            |_context, arguments| {
+                let [value_arg, delimiter] = value_array(arguments)?;
+                value(Value::Boundary {
+                    kind: StringBoundary::$kind,
+                    value: Box::new(value_arg),
+                    delimiter: Box::new(delimiter),
+                })
+            },
+            String,
+            $summary,
+            ["DELIMITER must not be empty."],
+            [(None, $example)]
+        );
+    };
+}
+
+define_boundary!(
+    Before,
+    "s/before",
+    Before,
+    "take text before the first literal delimiter",
+    "(s/before $1 \"=\")"
+);
+define_boundary!(
+    After,
+    "s/after",
+    After,
+    "take text after the first literal delimiter",
+    "(s/after $1 \"=\")"
+);
+
 define_callable!(
     Slice,
     CallableDefinition {
@@ -337,19 +380,40 @@ define_callable!(
         name: "s/trim",
         aliases: &[],
         kind: CallableKind::Function,
-        signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::String))]
+        signatures: &[
+            sig!([p!("value", Value, Required)] => Some(ValueType::String)),
+            sig!([p!("value", Value, Required), p!("prefix", Value, Required), p!("suffix", Value, Required)] => Some(ValueType::String))
+        ]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Trim {
-            kind: StringTrim::Both,
-            value: Box::new(value_arg),
-        })
+        let mut arguments = values(arguments)?.into_iter();
+        let value_arg = arguments.next().expect("signature requires value");
+        match (arguments.next(), arguments.next()) {
+            (None, None) => value(Value::Trim {
+                kind: StringTrim::Both,
+                value: Box::new(value_arg),
+            }),
+            (Some(prefix), Some(suffix)) => value(Value::TrimAffixes {
+                value: Box::new(value_arg),
+                prefix: Some(Box::new(prefix)),
+                suffix: Some(Box::new(suffix)),
+            }),
+            _ => Err(ParseError::InvalidSyntax),
+        }
     },
     String,
-    "remove Unicode whitespace from both ends",
-    [],
-    [(None, "(s/trim $1)")]
+    "trim whitespace or exact affixes",
+    ["Exact affixes are removed at most once; empty or absent affixes leave that end unchanged."],
+    [
+        (
+            Some("remove Unicode whitespace from both ends"),
+            "(s/trim $1)"
+        ),
+        (
+            Some("remove one exact prefix and suffix"),
+            "(s/trim $1 \"[\" \"]\")"
+        )
+    ]
 );
 
 define_callable!(
@@ -358,19 +422,38 @@ define_callable!(
         name: "s/ltrim",
         aliases: &[],
         kind: CallableKind::Function,
-        signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::String))]
+        signatures: &[
+            sig!([p!("value", Value, Required)] => Some(ValueType::String)),
+            sig!([p!("value", Value, Required), p!("prefix", Value, Required)] => Some(ValueType::String))
+        ]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Trim {
-            kind: StringTrim::Left,
-            value: Box::new(value_arg),
-        })
+        let mut arguments = values(arguments)?.into_iter();
+        let value_arg = arguments.next().expect("signature requires value");
+        match arguments.next() {
+            None => value(Value::Trim {
+                kind: StringTrim::Left,
+                value: Box::new(value_arg),
+            }),
+            Some(prefix) => value(Value::TrimAffixes {
+                value: Box::new(value_arg),
+                prefix: Some(Box::new(prefix)),
+                suffix: None,
+            }),
+        }
     },
     String,
-    "remove Unicode whitespace from the left",
-    [],
-    [(None, "(s/ltrim $1)")]
+    "trim left whitespace or an exact prefix",
+    [
+        "An exact prefix is removed at most once; an empty or absent prefix leaves the value unchanged."
+    ],
+    [
+        (
+            Some("remove Unicode whitespace from the left"),
+            "(s/ltrim $1)"
+        ),
+        (Some("remove one exact prefix"), "(s/ltrim $1 \"v\")")
+    ]
 );
 
 define_callable!(
@@ -379,19 +462,38 @@ define_callable!(
         name: "s/rtrim",
         aliases: &[],
         kind: CallableKind::Function,
-        signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::String))]
+        signatures: &[
+            sig!([p!("value", Value, Required)] => Some(ValueType::String)),
+            sig!([p!("value", Value, Required), p!("suffix", Value, Required)] => Some(ValueType::String))
+        ]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Trim {
-            kind: StringTrim::Right,
-            value: Box::new(value_arg),
-        })
+        let mut arguments = values(arguments)?.into_iter();
+        let value_arg = arguments.next().expect("signature requires value");
+        match arguments.next() {
+            None => value(Value::Trim {
+                kind: StringTrim::Right,
+                value: Box::new(value_arg),
+            }),
+            Some(suffix) => value(Value::TrimAffixes {
+                value: Box::new(value_arg),
+                prefix: None,
+                suffix: Some(Box::new(suffix)),
+            }),
+        }
     },
     String,
-    "remove Unicode whitespace from the right",
-    [],
-    [(None, "(s/rtrim $1)")]
+    "trim right whitespace or an exact suffix",
+    [
+        "An exact suffix is removed at most once; an empty or absent suffix leaves the value unchanged."
+    ],
+    [
+        (
+            Some("remove Unicode whitespace from the right"),
+            "(s/rtrim $1)"
+        ),
+        (Some("remove one exact suffix"), "(s/rtrim $1 \"%\")")
+    ]
 );
 
 define_callable!(

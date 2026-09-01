@@ -332,6 +332,8 @@ registry!(
     string::Replace,
     string::ReplaceAll,
     string::Part,
+    string::Before,
+    string::After,
     string::Slice,
     string::Count,
     string::Empty,
