@@ -51,7 +51,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::SpecialForm,
         signatures: &[
-            sig!([p!("value", Value, Required), p!("fallback", Value, Required)] => Some(ValueType::Value))
+            sig!([p!("value", Value, Required), p!("fallback", Value, Required, "FALLBACK")] => Some(ValueType::Value))
         ]
     },
     |_context, arguments| {

@@ -29,8 +29,8 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[sig!([
-            p!("start", Number, Required),
-            p!("end", Number, Required)
+            p!("start", Number, Required, "START"),
+            p!("end", Number, Required, "END")
         ] => Some(ValueType::String))]
     },
     |context, arguments| {
@@ -55,7 +55,7 @@ define_callable!(
         name: "fields-from",
         aliases: &[],
         kind: CallableKind::Function,
-        signatures: &[sig!([p!("start", Number, Required)] => Some(ValueType::String))]
+        signatures: &[sig!([p!("start", Number, Required, "START")] => Some(ValueType::String))]
     },
     |context, arguments| {
         let [start] = value_array(arguments)?;
@@ -77,7 +77,7 @@ define_callable!(
         name: "fields-to",
         aliases: &[],
         kind: CallableKind::Function,
-        signatures: &[sig!([p!("end", Number, Required)] => Some(ValueType::String))]
+        signatures: &[sig!([p!("end", Number, Required, "END")] => Some(ValueType::String))]
     },
     |context, arguments| {
         let [end] = value_array(arguments)?;

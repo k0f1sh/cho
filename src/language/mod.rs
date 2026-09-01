@@ -38,6 +38,7 @@ pub(crate) struct Parameter {
     pub(crate) name: &'static str,
     pub(crate) value_type: ValueType,
     pub(crate) cardinality: Cardinality,
+    pub(crate) help_label: Option<&'static str>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -187,6 +188,15 @@ macro_rules! p {
             name: $name,
             value_type: ValueType::$type,
             cardinality: Cardinality::$cardinality,
+            help_label: None,
+        }
+    };
+    ($name:literal, $type:ident, $cardinality:ident, $help_label:literal) => {
+        Parameter {
+            name: $name,
+            value_type: ValueType::$type,
+            cardinality: Cardinality::$cardinality,
+            help_label: Some($help_label),
         }
     };
 }

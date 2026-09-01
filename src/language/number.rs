@@ -234,7 +234,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("value", Number, Required), p!("digits", Number, Required)] => Some(ValueType::String))
+            sig!([p!("value", Number, Required), p!("digits", Number, Required, "DIGITS")] => Some(ValueType::String))
         ]
     },
     |_context, arguments| {

@@ -146,6 +146,8 @@ pub struct Parameter {
     #[serde(rename = "type")]
     pub value_type: ValueType,
     pub cardinality: Cardinality,
+    #[serde(skip)]
+    pub help_label: Option<&'static str>,
 }
 
 pub fn metadata(version: &str) -> Result<Metadata, String> {
@@ -174,6 +176,7 @@ pub fn metadata(version: &str) -> Result<Metadata, String> {
                         name: parameter.name,
                         value_type: parameter.value_type.into(),
                         cardinality: parameter.cardinality.into(),
+                        help_label: parameter.help_label,
                     })
                     .collect(),
                 returns: signature.returns.map(Into::into),
@@ -323,13 +326,10 @@ fn render_signature_syntax(name: &str, signature: &Signature) -> String {
 }
 
 fn help_label(parameter: &Parameter) -> String {
-    match parameter.name {
-        "pattern" => "/PATTERN/".to_owned(),
-        "digits" | "separator" | "from" | "to" | "delimiter" | "position" | "start" | "end"
-        | "length" | "width" | "fill" | "prefix" | "suffix" | "needle" | "fallback"
-        | "replacement" | "timezone" => parameter.name.to_ascii_uppercase(),
-        _ => parameter.value_type.help_name().to_owned(),
-    }
+    parameter
+        .help_label
+        .map(str::to_owned)
+        .unwrap_or_else(|| parameter.value_type.help_name().to_owned())
 }
 
 pub fn validate(metadata: &Metadata) -> Result<(), String> {

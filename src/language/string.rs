@@ -24,7 +24,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("separator", Value, Required), p!("value", Value, ZeroOrMore)] => Some(ValueType::String))
+            sig!([p!("separator", Value, Required, "SEPARATOR"), p!("value", Value, ZeroOrMore)] => Some(ValueType::String))
         ]
     },
     |_context, arguments| {
@@ -48,7 +48,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("value", Value, Required), p!("from", Value, Required), p!("to", Value, Required)] => Some(ValueType::String))
+            sig!([p!("value", Value, Required), p!("from", Value, Required, "FROM"), p!("to", Value, Required, "TO")] => Some(ValueType::String))
         ]
     },
     |_context, arguments| {
@@ -73,7 +73,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("value", Value, Required), p!("from", Value, Required), p!("to", Value, Required)] => Some(ValueType::String))
+            sig!([p!("value", Value, Required), p!("from", Value, Required, "FROM"), p!("to", Value, Required, "TO")] => Some(ValueType::String))
         ]
     },
     |_context, arguments| {
@@ -98,7 +98,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("value", Value, Required), p!("delimiter", Value, Required), p!("position", Number, Required)] => Some(ValueType::String))
+            sig!([p!("value", Value, Required), p!("delimiter", Value, Required, "DELIMITER"), p!("position", Number, Required, "POSITION")] => Some(ValueType::String))
         ]
     },
     |_context, arguments| {
@@ -126,7 +126,7 @@ macro_rules! define_boundary {
                 aliases: &[],
                 kind: CallableKind::Function,
                 signatures: &[
-                    sig!([p!("value", Value, Required), p!("delimiter", Value, Required)] => Some(ValueType::String))
+                    sig!([p!("value", Value, Required), p!("delimiter", Value, Required, "DELIMITER")] => Some(ValueType::String))
                 ]
             },
             |_context, arguments| {
@@ -167,7 +167,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("value", Value, Required), p!("start", Number, Required), p!("length", Number, Optional)] => Some(ValueType::String))
+            sig!([p!("value", Value, Required), p!("start", Number, Required, "START"), p!("length", Number, Optional, "LENGTH")] => Some(ValueType::String))
         ]
     },
     |_context, arguments| {
@@ -195,7 +195,7 @@ macro_rules! define_padding {
                 aliases: &[],
                 kind: CallableKind::Function,
                 signatures: &[
-                    sig!([p!("value", Value, Required), p!("width", Number, Required), p!("fill", Value, Optional)] => Some(ValueType::String))
+                    sig!([p!("value", Value, Required), p!("width", Number, Required, "WIDTH"), p!("fill", Value, Optional, "FILL")] => Some(ValueType::String))
                 ]
             },
             |_context, arguments| {
@@ -428,7 +428,7 @@ define_callable!(
         kind: CallableKind::Function,
         signatures: &[
             sig!([p!("value", Value, Required)] => Some(ValueType::String)),
-            sig!([p!("value", Value, Required), p!("prefix", Value, Required), p!("suffix", Value, Required)] => Some(ValueType::String))
+            sig!([p!("value", Value, Required), p!("prefix", Value, Required, "PREFIX"), p!("suffix", Value, Required, "SUFFIX")] => Some(ValueType::String))
         ]
     },
     |_context, arguments| {
@@ -470,7 +470,7 @@ define_callable!(
         kind: CallableKind::Function,
         signatures: &[
             sig!([p!("value", Value, Required)] => Some(ValueType::String)),
-            sig!([p!("value", Value, Required), p!("prefix", Value, Required)] => Some(ValueType::String))
+            sig!([p!("value", Value, Required), p!("prefix", Value, Required, "PREFIX")] => Some(ValueType::String))
         ]
     },
     |_context, arguments| {
@@ -510,7 +510,7 @@ define_callable!(
         kind: CallableKind::Function,
         signatures: &[
             sig!([p!("value", Value, Required)] => Some(ValueType::String)),
-            sig!([p!("value", Value, Required), p!("suffix", Value, Required)] => Some(ValueType::String))
+            sig!([p!("value", Value, Required), p!("suffix", Value, Required, "SUFFIX")] => Some(ValueType::String))
         ]
     },
     |_context, arguments| {
@@ -549,7 +549,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("value", Value, Required), p!("prefix", Value, Required)] => Some(ValueType::Boolean))
+            sig!([p!("value", Value, Required), p!("prefix", Value, Required, "PREFIX")] => Some(ValueType::Boolean))
         ]
     },
     |_context, arguments| {
@@ -573,7 +573,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("value", Value, Required), p!("suffix", Value, Required)] => Some(ValueType::Boolean))
+            sig!([p!("value", Value, Required), p!("suffix", Value, Required, "SUFFIX")] => Some(ValueType::Boolean))
         ]
     },
     |_context, arguments| {
@@ -597,7 +597,7 @@ define_callable!(
         aliases: &[],
         kind: CallableKind::Function,
         signatures: &[
-            sig!([p!("value", Value, Required), p!("needle", Value, Required)] => Some(ValueType::Boolean))
+            sig!([p!("value", Value, Required), p!("needle", Value, Required, "NEEDLE")] => Some(ValueType::Boolean))
         ]
     },
     |_context, arguments| {
