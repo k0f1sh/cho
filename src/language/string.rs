@@ -586,7 +586,7 @@ define_callable!(
     String,
     "test a prefix",
     [],
-    [(None, "(s/starts-with? $1 \"api-\")")]
+    [(None, "(s/starts-with? $1 \"api-\")", "api-gateway", "true")]
 );
 
 define_callable!(

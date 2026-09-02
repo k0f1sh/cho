@@ -30,8 +30,18 @@ pub(crate) fn render(topic: &str) -> Option<String> {
     }
     output.push_str("\nExamples:\n");
     for signature in documentation.signatures {
-        output.push_str("  cho ");
+        output.push_str("  ");
+        if let Some(input) = signature.input {
+            output.push_str("echo ");
+            output.push_str(&shell_word(input));
+            output.push_str(" | ");
+        }
+        output.push_str("cho ");
         output.push_str(&shell_quote(signature.example));
+        if let Some(expected_output) = signature.expected_output {
+            output.push_str("  # => ");
+            output.push_str(expected_output);
+        }
         output.push('\n');
     }
     if !documentation.notes.is_empty() {
@@ -130,6 +140,18 @@ fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
 
+fn shell_word(value: &str) -> String {
+    if !value.is_empty()
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b'/'))
+    {
+        value.to_owned()
+    } else {
+        shell_quote(value)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -146,6 +168,15 @@ mod tests {
         let canonical = render("s/dquote").unwrap();
         assert_eq!(render("dq"), Some(canonical.clone()));
         assert!(canonical.contains("\nAliases: dq\n"));
+    }
+
+    #[test]
+    fn renders_examples_with_input_and_expected_output() {
+        assert!(
+            render("s/starts-with?")
+                .unwrap()
+                .contains("echo api-gateway | cho '(s/starts-with? $1 \"api-\")'  # => true")
+        );
     }
 
     #[test]
