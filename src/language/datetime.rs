@@ -86,7 +86,7 @@ define_callable!(
     DateTime,
     "current UTC time at second precision",
     [],
-    [(None, "(dt/now)")]
+    [(None, "(dt/now)", "<current UTC datetime>")]
 );
 
 define_callable!(

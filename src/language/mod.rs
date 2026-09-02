@@ -264,6 +264,14 @@ macro_rules! signature_documentation {
             expected_output: None,
         }
     };
+    (($summary:expr, $example:literal, $expected_output:literal)) => {
+        SignatureDocumentation {
+            summary: $summary,
+            example: $example,
+            input: None,
+            expected_output: Some($expected_output),
+        }
+    };
     (($summary:expr, $example:literal, $input:literal, $expected_output:literal)) => {
         SignatureDocumentation {
             summary: $summary,
