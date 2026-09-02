@@ -262,19 +262,40 @@ fn main() -> ExitCode {
         .position(|argument| is_call_option(argument))
         .unwrap_or(arguments.len())];
 
-    if global_arguments
+    if let Some(position) = global_arguments
         .iter()
-        .any(|argument| matches!(argument.as_str(), "-h" | "--help"))
+        .position(|argument| matches!(argument.as_str(), "-h" | "--help"))
     {
+        if let Some(argument) = global_arguments.get(position + 2) {
+            eprintln!(
+                "cho: {}",
+                ArgumentError::UnexpectedArgument(argument.clone())
+            );
+            eprintln!("{USAGE}");
+            return ExitCode::from(2);
+        }
+        let topic = global_arguments.get(position + 1);
+        let topic_help = match topic {
+            Some(topic) => match cho::help(topic) {
+                Some(help) => Some(help),
+                None => {
+                    eprintln!("cho: no such help topic: {topic}");
+                    eprintln!("Try 'cho --help' for all functions and forms.");
+                    return ExitCode::from(2);
+                }
+            },
+            None => None,
+        };
+        let help = topic_help.as_deref().unwrap_or(HELP);
         let stdout = io::stdout();
         if help_color_enabled(
             stdout.is_terminal(),
             env::var_os("NO_COLOR").as_deref(),
             env::var_os("TERM").as_deref(),
         ) {
-            println!("{}", colorize_help(HELP));
+            println!("{}", colorize_help(help));
         } else {
-            println!("{HELP}");
+            println!("{help}");
         }
         return ExitCode::SUCCESS;
     }
