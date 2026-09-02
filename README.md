@@ -86,7 +86,7 @@ Process CSV:
 $ printf 'name,city
 Alice,"Tokyo, Japan"
 Bob,Osaka
-' | cho --csv --skip-header '(p (s/join " -> " $1 $2))'
+' | cho --csv -s '(p (s/join " -> " $1 $2))'
 Alice -> Tokyo, Japan
 Bob -> Osaka
 ```

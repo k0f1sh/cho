@@ -183,6 +183,7 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("true, false"));
     assert!(stdout.contains("(if BOOLEAN VALUE VALUE)"));
     assert!(stdout.contains("--skip-header"));
+    assert!(stdout.contains("-s, --skip-header"));
     assert!(stdout.contains("--no-input"));
     assert!(stdout.contains("-n, --no-input"));
     assert!(stdout.contains("-c, --call"));
@@ -302,7 +303,7 @@ fn skip_header_skips_one_logical_csv_record_and_preserves_nr() {
 #[test]
 fn skip_header_works_in_tsv_mode() {
     let output = run_with_args(
-        &["--tsv", "--skip-header", "(print NR $1 $2)"],
+        &["--tsv", "-s", "(print NR $1 $2)"],
         "name\tage\nAlice\t20\n",
     );
     assert!(output.status.success());
@@ -328,6 +329,7 @@ fn skip_header_accepts_empty_and_header_only_input() {
 fn skip_header_requires_csv_or_tsv_mode() {
     for arguments in [
         vec!["--skip-header", "(print $1)"],
+        vec!["-s", "(print $1)"],
         vec!["-F,", "--skip-header", "(print $1)"],
     ] {
         let output = run_with_args(&arguments, "name,age\nAlice,20\n");

@@ -111,7 +111,7 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
             csv = true;
         } else if argument == "--tsv" {
             tsv = true;
-        } else if argument == "--skip-header" {
+        } else if matches!(argument.as_str(), "-s" | "--skip-header") {
             skip_header = true;
         } else if matches!(argument.as_str(), "-n" | "--no-input") {
             no_input = true;
@@ -347,17 +347,20 @@ mod tests {
         assert!(parse_args(args(&["--tsv", "-F,", "(print $1)"])).is_err());
         assert!(parse_args(args(&["--csv", "--tsv", "(print $1)"])).is_err());
         assert!(parse_args(args(&["--skip-header", "(print $1)"])).is_err());
+        assert!(parse_args(args(&["-s", "(print $1)"])).is_err());
         assert!(parse_args(args(&["-F,", "--skip-header", "(print $1)"])).is_err());
     }
 
     #[test]
     fn parses_csv_mode() {
         assert!(parse_args(args(&["--csv", "(print $1)"])).unwrap().csv);
-        assert!(
-            parse_args(args(&["--csv", "--skip-header", "(print $1)"]))
-                .unwrap()
-                .skip_header
-        );
+        for option in ["-s", "--skip-header"] {
+            assert!(
+                parse_args(args(&["--csv", option, "(print $1)"]))
+                    .unwrap()
+                    .skip_header
+            );
+        }
     }
 
     #[test]
@@ -384,6 +387,7 @@ mod tests {
             vec!["-n", "--tsv", "(print NR)"],
             vec!["--no-input", "-F,", "(print NR)"],
             vec!["-n", "--skip-header", "(print NR)"],
+            vec!["-n", "-s", "(print NR)"],
         ] {
             assert!(parse_args(args(&arguments)).is_err());
         }
