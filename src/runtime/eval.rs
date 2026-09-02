@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::net::IpAddr;
 use std::ops::Deref;
 
@@ -11,6 +12,7 @@ use super::datetime::{
     duration_as_number, duration_from_value, expect_datetime, expect_duration, floor_datetime,
     floor_datetime_in_timezone, floor_name, format_datetime_in_timezone, render_duration,
 };
+use super::identifier::{expect_ulid, expect_uuid, ulid_time, uuid_time};
 use super::network::{cidr_part_name, expect_cidr, expect_ip};
 use super::number;
 use super::predicate::matches;
@@ -39,6 +41,7 @@ pub(super) struct Record<'line> {
 pub(super) struct EvalContext<'record, 'line, 'program> {
     pub(super) record: &'record Record<'line>,
     pub(super) regexes: &'program [Regex],
+    pub(super) ulid_generator: &'program RefCell<ulid::Generator>,
 }
 
 impl<'line> Deref for EvalContext<'_, 'line, '_> {
@@ -260,6 +263,33 @@ pub(super) fn evaluate(
             }
         }
         Value::SemVerPart { part, value } => semver::evaluate_part(part, value, record),
+        Value::NormalizeUuid(value) => {
+            expect_uuid(evaluate(value, record)?, "uuid", 1).map(RuntimeValue::Uuid)
+        }
+        Value::UuidV4 => Ok(RuntimeValue::Uuid(uuid::Uuid::new_v4())),
+        Value::UuidV7 => Ok(RuntimeValue::Uuid(uuid::Uuid::now_v7())),
+        Value::UuidVersion(value) => {
+            let uuid = expect_uuid(evaluate(value, record)?, "uuid/version", 1)?;
+            Ok(RuntimeValue::Number(uuid.get_version_num() as f64))
+        }
+        Value::UuidTime(value) => {
+            let uuid = expect_uuid(evaluate(value, record)?, "uuid/time", 1)?;
+            uuid_time(uuid)
+        }
+        Value::NormalizeUlid(value) => {
+            expect_ulid(evaluate(value, record)?, "ulid", 1).map(RuntimeValue::Ulid)
+        }
+        Value::UlidNew => {
+            let mut generator = record.ulid_generator.borrow_mut();
+            let ulid = generator
+                .generate()
+                .unwrap_or_else(|overflow| overflow.commit_overflow_increment());
+            Ok(RuntimeValue::Ulid(ulid))
+        }
+        Value::UlidTime(value) => {
+            let ulid = expect_ulid(evaluate(value, record)?, "ulid/time", 1)?;
+            ulid_time(ulid)
+        }
         Value::Predicate(predicate) => matches(predicate, record).map(RuntimeValue::Boolean),
         Value::Not(value) => {
             let value = expect_boolean(evaluate(value, record)?, "not", 1)?;

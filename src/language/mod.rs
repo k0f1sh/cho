@@ -21,6 +21,8 @@ pub(crate) enum ValueType {
     Cidr,
     Url,
     SemVer,
+    Uuid,
+    Ulid,
     Regex,
     Step,
 }
@@ -160,6 +162,7 @@ pub(crate) enum DocumentationCategory {
     Network,
     Url,
     SemanticVersion,
+    Identifier,
     Composition,
 }
 
@@ -295,6 +298,7 @@ mod boolean;
 mod composition;
 mod datetime;
 mod field;
+mod identifier;
 mod network;
 mod number;
 mod path;
@@ -449,6 +453,26 @@ registry!(
     semver::Patch,
     semver::Prerelease,
     semver::Build,
+    identifier::UuidNormalize,
+    identifier::UuidV4,
+    identifier::UuidV7,
+    identifier::UuidVersion,
+    identifier::UuidTime,
+    identifier::UuidGreaterThan,
+    identifier::UuidGreaterThanOrEqual,
+    identifier::UuidLessThan,
+    identifier::UuidLessThanOrEqual,
+    identifier::UuidEqual,
+    identifier::UuidNotEqual,
+    identifier::UlidNormalize,
+    identifier::UlidNew,
+    identifier::UlidTime,
+    identifier::UlidGreaterThan,
+    identifier::UlidGreaterThanOrEqual,
+    identifier::UlidLessThan,
+    identifier::UlidLessThanOrEqual,
+    identifier::UlidEqual,
+    identifier::UlidNotEqual,
     composition::ThreadFirst,
     composition::ThreadLast,
 );

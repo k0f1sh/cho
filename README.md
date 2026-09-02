@@ -54,6 +54,20 @@ Combine `--no-input` with `--call` as `-nc` or `-cn` to call a function using
 only command-line arguments. In this mode, the empty `$0` is not added
 automatically.
 
+Generate UUIDs and ULIDs directly, or once for each input record:
+
+```console
+$ cho -nc uuid/v4
+67e55044-10b1-426f-9247-bb680e5fe0c8
+$ seq 1 3 | cho '(p $0 (ulid/new))'
+1 01K5J3Q8Z8W7VX1F3H8B2Y6M4C
+2 01K5J3Q8Z8W7VX1F3H8B2Y6M4D
+3 01K5J3Q8Z8W7VX1F3H8B2Y6M4E
+```
+
+UUIDv7 and ULID values are generated in increasing order within one `cho`
+invocation. Generated values differ on every run.
+
 Filter and format:
 
 ```console
@@ -100,10 +114,10 @@ Bob -> Osaka
 ```
 
 Fields are plain strings, but cho knows about types. When a function
-expects a DateTime, IP address, CIDR, URL, or SemVer, the string is converted
-automatically — no annotations or casts needed. If the value doesn't match the
-expected format, cho stops with an error that pinpoints the record, function,
-and argument:
+expects a DateTime, IP address, CIDR, URL, SemVer, UUID, or ULID, the string is
+converted automatically — no annotations or casts needed. If the value doesn't
+match the expected format, cho stops with an error that pinpoints the record,
+function, and argument:
 
 ```console
 $ printf '%s\n' \
@@ -129,7 +143,8 @@ $ echo '  hello-world  ' | cho '(p (-> $1 s/trim (s/replace "-" "_") s/upper))'
 HELLO_WORLD
 ```
 
-cho handles text, numbers, datetime, duration, IP/CIDR, URLs, and semver.
+cho handles text, numbers, datetime, duration, IP/CIDR, URLs, semver, UUIDs,
+and ULIDs.
 Run `cho --help` for the complete syntax, functions, and special forms.
 
 ## Documentation

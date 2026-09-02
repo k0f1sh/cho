@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::io::{self, BufRead, Write};
 use std::time::SystemTime;
 
@@ -16,6 +17,7 @@ pub fn run<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::
 
 pub fn run_no_input<W: Write>(program: &str, mut output: W) -> io::Result<()> {
     let program = compile_program(program)?;
+    let ulid_generator = RefCell::new(ulid::Generator::new());
     let record = Record {
         line: "",
         number: 1,
@@ -26,6 +28,7 @@ pub fn run_no_input<W: Write>(program: &str, mut output: W) -> io::Result<()> {
     let context = EvalContext {
         record: &record,
         regexes: &program.regexes,
+        ulid_generator: &ulid_generator,
     };
     execute(&program.program.forms, &context, &mut output)
 }
@@ -42,6 +45,7 @@ pub fn run_csv<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> 
     let mut raw = Vec::new();
     let mut number = 0;
     let now = current_datetime();
+    let ulid_generator = RefCell::new(ulid::Generator::new());
 
     while read_csv_record(&mut input, &mut raw)? {
         number += 1;
@@ -58,6 +62,7 @@ pub fn run_csv<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> 
         let context = EvalContext {
             record: &record,
             regexes: &program.regexes,
+            ulid_generator: &ulid_generator,
         };
         execute(&program.program.forms, &context, &mut output)?;
     }
@@ -73,6 +78,7 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
     let program = compile_program(program)?;
     let field_separator = compile_field_separator(field_separator)?;
     let now = current_datetime();
+    let ulid_generator = RefCell::new(ulid::Generator::new());
 
     for (index, line) in input.lines().enumerate() {
         let line = line?;
@@ -87,6 +93,7 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
         let context = EvalContext {
             record: &record,
             regexes: &program.regexes,
+            ulid_generator: &ulid_generator,
         };
         execute(&program.program.forms, &context, &mut output)?;
     }

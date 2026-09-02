@@ -4,6 +4,8 @@ mod composition;
 mod datetime;
 #[path = "runtime/execution.rs"]
 mod execution;
+#[path = "runtime/identifier.rs"]
+mod identifier;
 #[path = "runtime/network.rs"]
 mod network;
 #[path = "runtime/number.rs"]

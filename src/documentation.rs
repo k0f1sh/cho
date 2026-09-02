@@ -29,11 +29,12 @@ pub enum Category {
     Network,
     Url,
     SemanticVersion,
+    Identifier,
     Composition,
 }
 
 impl Category {
-    const ALL: [Self; 13] = [
+    const ALL: [Self; 14] = [
         Self::Program,
         Self::Field,
         Self::Number,
@@ -46,6 +47,7 @@ impl Category {
         Self::Network,
         Self::Url,
         Self::SemanticVersion,
+        Self::Identifier,
         Self::Composition,
     ];
 
@@ -63,6 +65,7 @@ impl Category {
             Self::Network => "network",
             Self::Url => "url",
             Self::SemanticVersion => "semantic_version",
+            Self::Identifier => "identifier",
             Self::Composition => "composition",
         }
     }
@@ -89,6 +92,8 @@ pub enum ValueType {
     Cidr,
     Url,
     SemVer,
+    Uuid,
+    Ulid,
     Regex,
     Step,
 }
@@ -106,6 +111,8 @@ impl ValueType {
             Self::Cidr => "CIDR",
             Self::Url => "URL",
             Self::SemVer => "SEMVER",
+            Self::Uuid => "UUID",
+            Self::Ulid => "ULID",
             Self::Regex => "/PATTERN/",
             Self::Step => "STEP",
         }
@@ -217,6 +224,7 @@ impl From<DocumentationCategory> for Category {
             DocumentationCategory::Network => Self::Network,
             DocumentationCategory::Url => Self::Url,
             DocumentationCategory::SemanticVersion => Self::SemanticVersion,
+            DocumentationCategory::Identifier => Self::Identifier,
             DocumentationCategory::Composition => Self::Composition,
         }
     }
@@ -383,6 +391,8 @@ impl From<LanguageValueType> for ValueType {
             LanguageValueType::Cidr => Self::Cidr,
             LanguageValueType::Url => Self::Url,
             LanguageValueType::SemVer => Self::SemVer,
+            LanguageValueType::Uuid => Self::Uuid,
+            LanguageValueType::Ulid => Self::Ulid,
             LanguageValueType::Regex => Self::Regex,
             LanguageValueType::Step => Self::Step,
         }

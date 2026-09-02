@@ -69,6 +69,8 @@ pub enum ComparisonType {
     DateTime,
     IpAddr,
     SemVer,
+    Uuid,
+    Ulid,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -243,6 +245,14 @@ pub enum Value {
         part: SemVerPart,
         value: Box<Value>,
     },
+    NormalizeUuid(Box<Value>),
+    UuidV4,
+    UuidV7,
+    UuidVersion(Box<Value>),
+    UuidTime(Box<Value>),
+    NormalizeUlid(Box<Value>),
+    UlidNew,
+    UlidTime(Box<Value>),
     Predicate(Box<Predicate>),
     Not(Box<Value>),
     And(Vec<Value>),

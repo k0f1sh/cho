@@ -1,15 +1,16 @@
 ---
 name: cho-process-text
-description: Use cho when a shell one-liner or script needs to handle typed data — RFC 3339 datetimes, IP addresses, CIDR ranges, URLs, SemVer — embedded in line-oriented text. Basic shell commands (grep, cut, awk, sed) treat these as opaque strings; cho parses them in context and rejects malformed input instead of silently passing it through. Reach for this skill when the task involves comparing timestamps, testing CIDR membership, extracting URL components, or filtering by version range inside a Unix pipeline.
+description: Use cho when a shell one-liner or script needs to handle typed data — RFC 3339 datetimes, IP addresses, CIDR ranges, URLs, SemVer, UUIDs, and ULIDs — embedded in line-oriented text, or generate UUIDv4, UUIDv7, and ULID values. Basic shell commands (grep, cut, awk, sed) treat these as opaque strings; cho parses them in context and rejects malformed input instead of silently passing it through. Reach for this skill when the task involves comparing timestamps, testing CIDR membership, extracting URL components, filtering by version range, or validating, comparing, inspecting, or generating identifiers inside a Unix pipeline.
 ---
 
 # Process typed data in shell pipelines with cho
 
 cho is a small line-oriented tool that slots into Unix pipelines. Use it when
 the data in a field carries meaning that plain string comparison gets wrong:
-date ordering, IP classification, CIDR membership, URL parsing, or SemVer
-precedence. cho converts fields to the right type in context and treats
-invalid input as an error, not a silent mismatch.
+date ordering, IP classification, CIDR membership, URL parsing, SemVer
+precedence, or identifier validation and ordering. cho converts fields to the
+right type in context and treats invalid input as an error, not a silent
+mismatch. It can also generate UUIDv4, UUIDv7, and ULID values without input.
 
 If the task only needs pattern matching, field extraction, or string
 manipulation that grep / cut / awk / sed already handle well, prefer those
@@ -23,6 +24,10 @@ would otherwise require a heavier language.
   (`ip/private?`, `ip/loopback?`, `cidr/contains?`).
 - Extracting or encoding URL components (`url/host`, `url/path`, `url/encode`).
 - Comparing version strings by SemVer precedence (`semver/>=`, `semver/<`).
+- Validating, normalizing, comparing, or extracting time from UUIDs and ULIDs
+  (`uuid`, `uuid/>=`, `uuid/time`, `ulid`, `ulid/time`).
+- Generating an identifier once (`cho -nc uuid/v4`) or once per input record
+  (`cho '(ulid/new)'`).
 - Arithmetic or fixed-point formatting on numeric fields (`+`, `-`, `n/fixed`).
 - Combining the above with field selection, string join, regex match, and
   defaults — all in a single composable expression.
@@ -37,7 +42,8 @@ would otherwise require a heavier language.
    the actual file. Add `--skip-header` for CSV or TSV input with a header.
 4. Compose a small program from values and predicates shown in help. Typed
    expressions (`dt/>=`, `cidr/contains?`, etc.) convert string arguments in
-   context — do not invent constructors such as `dt`, `num`, `ip`, or `cidr`.
+   context. UUID and ULID deliberately provide `uuid` and `ulid` normalization
+   expressions; do not infer equivalent constructors for other types.
 5. Run the command against a small representative sample before the full stream.
    Verify stdout, stderr, and the exit status separately.
 6. Run the full command only after the sample proves the column numbers, types,

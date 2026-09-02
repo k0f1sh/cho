@@ -2,6 +2,8 @@ use std::fmt;
 use std::net::IpAddr;
 
 use chrono::{DateTime, SecondsFormat, TimeDelta, Utc};
+use ulid::Ulid;
+use uuid::Uuid;
 
 use super::datetime::render_duration;
 
@@ -16,6 +18,8 @@ pub(super) enum RuntimeValue {
     DateTime(DateTime<Utc>),
     Duration(TimeDelta),
     IpAddr(IpAddr),
+    Uuid(Uuid),
+    Ulid(Ulid),
 }
 
 impl RuntimeValue {
@@ -27,6 +31,8 @@ impl RuntimeValue {
             Self::DateTime(value) => value.to_rfc3339_opts(SecondsFormat::AutoSi, true),
             Self::Duration(value) => render_duration(value),
             Self::IpAddr(value) => value.to_string(),
+            Self::Uuid(value) => value.to_string(),
+            Self::Ulid(value) => value.to_string(),
         }
     }
 
@@ -38,6 +44,8 @@ impl RuntimeValue {
             Self::DateTime(_) => "DateTime",
             Self::Duration(_) => "Duration",
             Self::IpAddr(_) => "IpAddr",
+            Self::Uuid(_) => "UUID",
+            Self::Ulid(_) => "ULID",
         }
     }
 
