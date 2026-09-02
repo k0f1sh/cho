@@ -16,6 +16,7 @@ Common recipes:
   Read TSV                cho --tsv '(p $1 $2)'
   Run without input       cho -n '(p (dt/now))'
   Call one function       cho -c s/upper
+  Find a function         cho -k trim
 
 Input and options:
   -F SEPARATOR       split fields using this regular expression
@@ -26,6 +27,7 @@ Input and options:
   -n, --no-input     do not read input; run once with an empty record
   -c, --call         call FUNCTION with $0 followed by ARG values
   -nc, -cn           call FUNCTION without input, using only ARG values
+  -k, --apropos QUERY search function and form names
   -h, --help [TOPIC] print full help or help for one function or form
   -V, --version      print version
 

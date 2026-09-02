@@ -152,6 +152,7 @@ Run `cho --help` for the complete syntax, functions, and special forms.
 `cho --help` contains the complete syntax and short command examples.
 Use `cho --help s/trim` to show the signatures, examples, and notes for one
 function or form.
+Use `cho -k trim` to search function and form names and show their summaries.
 
 [`metadata.json`](metadata.json) is the machine-readable index of functions and
 forms. Its `schema_version` changes when the JSON structure makes an

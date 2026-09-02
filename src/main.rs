@@ -33,6 +33,8 @@ enum ArgumentError {
     MissingCallFunction,
     InvalidCallFunction,
     CallExpression,
+    MissingAproposQuery,
+    EmptyAproposQuery,
 }
 
 impl std::fmt::Display for ArgumentError {
@@ -60,6 +62,8 @@ impl std::fmt::Display for ArgumentError {
             Self::CallExpression => formatter.write_str(
                 "--call expects FUNCTION without parentheses; use -n 'PROGRAM' to evaluate an expression without input",
             ),
+            Self::MissingAproposQuery => formatter.write_str("--apropos expects QUERY"),
+            Self::EmptyAproposQuery => formatter.write_str("--apropos expects a non-empty QUERY"),
         }
     }
 }
@@ -257,6 +261,48 @@ fn main() -> ExitCode {
     let mut arguments = env::args();
     let _command = arguments.next();
     let arguments = arguments.collect::<Vec<_>>();
+
+    if arguments
+        .first()
+        .is_some_and(|argument| matches!(argument.as_str(), "-k" | "--apropos"))
+    {
+        let query = match arguments.get(1) {
+            Some(query) if query.is_empty() => {
+                eprintln!("cho: {}", ArgumentError::EmptyAproposQuery);
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+            Some(query) => query,
+            None => {
+                eprintln!("cho: {}", ArgumentError::MissingAproposQuery);
+                eprintln!("{USAGE}");
+                return ExitCode::from(2);
+            }
+        };
+        if let Some(argument) = arguments.get(2) {
+            eprintln!(
+                "cho: {}",
+                ArgumentError::UnexpectedArgument(argument.clone())
+            );
+            eprintln!("{USAGE}");
+            return ExitCode::from(2);
+        }
+        let Some(output) = cho::apropos(query) else {
+            eprintln!("cho: no function or form names match: {query}");
+            return ExitCode::FAILURE;
+        };
+        let stdout = io::stdout();
+        if help_color_enabled(
+            stdout.is_terminal(),
+            env::var_os("NO_COLOR").as_deref(),
+            env::var_os("TERM").as_deref(),
+        ) {
+            println!("{}", colorize_apropos(&output));
+        } else {
+            println!("{output}");
+        }
+        return ExitCode::SUCCESS;
+    }
     let global_arguments = &arguments[..arguments
         .iter()
         .position(|argument| is_call_option(argument))
@@ -345,6 +391,17 @@ fn main() -> ExitCode {
     }
 }
 
+fn colorize_apropos(output: &str) -> String {
+    output
+        .lines()
+        .map(|line| {
+            let name_end = line.find("  ").unwrap_or(line.len());
+            format!("{CYAN}{}{RESET}{}", &line[..name_end], &line[name_end..])
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -387,6 +444,15 @@ mod tests {
         assert!(colored.contains("\x1b[2m    cho '(p $1)'\x1b[0m"));
         assert_eq!(strip_ansi(&colored), plain);
         assert_eq!(strip_ansi(&colorize_help(HELP)), HELP);
+    }
+
+    #[test]
+    fn colored_apropos_styles_names_without_changing_text() {
+        let plain = "s/dquote (dq)  stringify and quote\ns/unquote      remove quotes";
+        let colored = colorize_apropos(plain);
+        assert!(colored.contains("\x1b[36ms/dquote (dq)\x1b[0m"));
+        assert!(colored.contains("\x1b[36ms/unquote\x1b[0m"));
+        assert_eq!(strip_ansi(&colored), plain);
     }
 
     fn strip_ansi(value: &str) -> String {

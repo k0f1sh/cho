@@ -188,6 +188,7 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("-n, --no-input"));
     assert!(stdout.contains("-c, --call"));
     assert!(stdout.contains("-h, --help [TOPIC]"));
+    assert!(stdout.contains("-k, --apropos QUERY"));
     assert!(stdout.contains("cannot pass NR or NF as record values"));
     assert!(stdout.contains("-F separator must be a valid regular expression"));
     assert!(stdout.contains("It must not match an\n  empty string"));
@@ -240,6 +241,73 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("fc00::/7"));
     assert!(!stdout.contains("(dur/m NUMBER)"));
     assert!(stdout.contains("(cidr/contains? CIDR IPADDR)"));
+}
+
+#[test]
+fn apropos_searches_callable_names_and_aliases() {
+    for option in ["-k", "--apropos"] {
+        let output = run_with_args(&[option, "QUOTE"], "");
+        assert!(output.status.success());
+        assert!(output.stderr.is_empty());
+        assert_eq!(
+            String::from_utf8(output.stdout).unwrap(),
+            concat!(
+                "s/dquote (dq)  stringify and wrap in escaped double quotes\n",
+                "s/squote (sq)  stringify and wrap in escaped single quotes\n",
+                "s/unquote      remove matching quotes and decode backslash escapes\n",
+            )
+        );
+    }
+
+    let alias = run_with_args(&["-k", "dq"], "");
+    assert!(alias.status.success());
+    assert!(
+        String::from_utf8(alias.stdout)
+            .unwrap()
+            .starts_with("s/dquote (dq)")
+    );
+}
+
+#[test]
+fn apropos_does_not_search_descriptions() {
+    let output = run_with_args(&["-k", "fractional digits"], "");
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "cho: no function or form names match: fractional digits\n"
+    );
+}
+
+#[test]
+fn apropos_reports_missing_empty_extra_and_unmatched_queries() {
+    for (arguments, status, message) in [
+        (
+            vec!["--apropos"],
+            2,
+            "cho: --apropos expects QUERY\nUsage: cho [OPTIONS] 'PROGRAM'\n",
+        ),
+        (
+            vec!["-k", ""],
+            2,
+            "cho: --apropos expects a non-empty QUERY\nUsage: cho [OPTIONS] 'PROGRAM'\n",
+        ),
+        (
+            vec!["-k", "trim", "extra"],
+            2,
+            "cho: unexpected argument: extra\nUsage: cho [OPTIONS] 'PROGRAM'\n",
+        ),
+        (
+            vec!["-k", "not-a-callable"],
+            1,
+            "cho: no function or form names match: not-a-callable\n",
+        ),
+    ] {
+        let output = run_with_args(&arguments, "");
+        assert_eq!(output.status.code(), Some(status));
+        assert!(output.stdout.is_empty());
+        assert_eq!(String::from_utf8(output.stderr).unwrap(), message);
+    }
 }
 
 #[test]
@@ -333,6 +401,8 @@ fn call_mode_calls_one_function_with_record_then_string_arguments() {
         (vec!["-nc", "str", "-h"], "", "-h\n"),
         (vec!["-nc", "str", "--version"], "", "--version\n"),
         (vec!["-nc", "str", "-V"], "", "-V\n"),
+        (vec!["-nc", "str", "-k"], "", "-k\n"),
+        (vec!["-nc", "str", "--apropos"], "", "--apropos\n"),
         (vec!["-c", "str", "--help"], "hoge\n", "hoge--help\n"),
     ] {
         let output = run_with_args(&arguments, input);
