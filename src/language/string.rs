@@ -42,6 +42,29 @@ define_callable!(
 );
 
 define_callable!(
+    Repeat,
+    CallableDefinition {
+        name: "s/repeat",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[
+            sig!([p!("value", Value, Required), p!("count", Number, Required, "COUNT")] => Some(ValueType::String))
+        ]
+    },
+    |_context, arguments| {
+        let [value_arg, count] = value_array(arguments)?;
+        value(Value::Repeat {
+            value: Box::new(value_arg),
+            count: Box::new(count),
+        })
+    },
+    String,
+    "repeat a value",
+    ["COUNT must be a non-negative whole number."],
+    [(None, "(s/repeat $1 3)")]
+);
+
+define_callable!(
     Replace,
     CallableDefinition {
         name: "s/replace",

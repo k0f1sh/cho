@@ -21,6 +21,24 @@ define_callable!(
 );
 
 define_callable!(
+    ToUnix,
+    CallableDefinition {
+        name: "dt/to-unix",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[sig!([p!("datetime", DateTime, Required)] => Some(ValueType::Number))]
+    },
+    |_context, arguments| {
+        let [value_arg] = value_array(arguments)?;
+        value(Value::DateTimeToUnix(Box::new(value_arg)))
+    },
+    DateTime,
+    "convert a datetime to Unix seconds",
+    ["Fractional seconds are preserved when representable as Number."],
+    [(None, "(dt/to-unix $1)")]
+);
+
+define_callable!(
     Format,
     CallableDefinition {
         name: "dt/fmt",

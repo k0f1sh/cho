@@ -87,6 +87,9 @@ Numbers:
   (n/round NUMBER) -> NUMBER                round to nearest, halves away from zero
   (n/abs NUMBER) -> NUMBER                  absolute value
   (n/fixed NUMBER DIGITS) -> STRING         format with 0 to 100 fractional digits
+  (n/min NUMBER NUMBER ...) -> NUMBER       return the smallest number
+  (n/max NUMBER NUMBER ...) -> NUMBER       return the largest number
+  (n/clamp NUMBER MIN MAX) -> NUMBER        limit a number to an inclusive range
   (> NUMBER NUMBER) -> BOOLEAN              greater than
   (>= NUMBER NUMBER) -> BOOLEAN             greater than or equal
   (< NUMBER NUMBER) -> BOOLEAN              less than
@@ -101,6 +104,7 @@ Numbers:
 Strings:
   (str VALUE ...) -> STRING                    concatenate values
   (s/join SEPARATOR VALUE ...) -> STRING       join values
+  (s/repeat VALUE COUNT) -> STRING             repeat a value
   (s/replace VALUE FROM TO) -> STRING          replace the first literal match
   (s/replace-all VALUE FROM TO) -> STRING      replace all literal matches
   (s/part VALUE DELIMITER POSITION) -> STRING  take a 1-based literal-delimited part
@@ -209,6 +213,7 @@ Regular expressions:
 
 DateTime and Duration:
   (dt/unix NUMBER) -> DATETIME                 convert Unix seconds
+  (dt/to-unix DATETIME) -> NUMBER              convert a datetime to Unix seconds
   (dt/fmt DATETIME STRING) -> STRING           format in UTC
   (dt/fmt DATETIME STRING TIMEZONE) -> STRING  format in the specified timezone
   (dt/now) -> DATETIME                         current UTC time at second precision

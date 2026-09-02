@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.19.0",
+  "cho_version": "0.20.0",
   "callables": [
     {
       "name": "print",
@@ -430,6 +430,84 @@
       ]
     },
     {
+      "name": "n/min",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "return the smallest number",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "number",
+              "type": "Number",
+              "cardinality": "one_or_more"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(n/min $1 $2 0)"
+        }
+      ]
+    },
+    {
+      "name": "n/max",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "return the largest number",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "number",
+              "type": "Number",
+              "cardinality": "one_or_more"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(n/max $1 $2 0)"
+        }
+      ]
+    },
+    {
+      "name": "n/clamp",
+      "aliases": [],
+      "kind": "function",
+      "category": "number",
+      "summary": "limit a number to an inclusive range",
+      "notes": [
+        "MIN must be less than or equal to MAX."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "minimum",
+              "type": "Number",
+              "cardinality": "required"
+            },
+            {
+              "name": "maximum",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(n/clamp $1 0 100)"
+        }
+      ]
+    },
+    {
       "name": ">",
       "aliases": [],
       "kind": "function",
@@ -637,6 +715,35 @@
           "returns": "String",
           "summary": null,
           "example": "(s/join \",\" $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "s/repeat",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "repeat a value",
+      "notes": [
+        "COUNT must be a non-negative whole number."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "count",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(s/repeat $1 3)"
         }
       ]
     },
@@ -1874,6 +1981,30 @@
           "returns": "DateTime",
           "summary": null,
           "example": "(dt/unix 0)"
+        }
+      ]
+    },
+    {
+      "name": "dt/to-unix",
+      "aliases": [],
+      "kind": "function",
+      "category": "date_time",
+      "summary": "convert a datetime to Unix seconds",
+      "notes": [
+        "Fractional seconds are preserved when representable as Number."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "datetime",
+              "type": "DateTime",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(dt/to-unix $1)"
         }
       ]
     },

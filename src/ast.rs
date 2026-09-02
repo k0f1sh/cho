@@ -211,6 +211,13 @@ pub enum Value {
         value: Box<Value>,
         digits: Box<Value>,
     },
+    NumberMinimum(Vec<Value>),
+    NumberMaximum(Vec<Value>),
+    ClampNumber {
+        value: Box<Value>,
+        minimum: Box<Value>,
+        maximum: Box<Value>,
+    },
     UrlPart {
         part: UrlPart,
         value: Box<Value>,
@@ -241,6 +248,7 @@ pub enum Value {
     And(Vec<Value>),
     Or(Vec<Value>),
     DateTimeFromUnix(Box<Value>),
+    DateTimeToUnix(Box<Value>),
     FormatDateTime {
         value: Box<Value>,
         format: Box<Value>,
@@ -278,6 +286,10 @@ pub enum Value {
     Join {
         separator: Box<Value>,
         values: Vec<Value>,
+    },
+    Repeat {
+        value: Box<Value>,
+        count: Box<Value>,
     },
     Replace {
         mode: ReplaceMode,

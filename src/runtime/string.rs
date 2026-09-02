@@ -104,6 +104,62 @@ pub(super) fn evaluate_string_padding(
     Ok(RuntimeValue::String(result))
 }
 
+pub(super) fn evaluate_string_repeat(
+    value: &Value,
+    count: &Value,
+    record: &EvalContext<'_, '_, '_>,
+) -> EvalResult<RuntimeValue> {
+    let value = evaluate(value, record)?.render();
+    let count = expect_number(evaluate(count, record)?, "s/repeat", 2)?;
+    if count.fract() != 0.0 || count < 0.0 {
+        return Err(EvalError::conversion(
+            "s/repeat",
+            2,
+            "Number (non-negative whole repeat count)",
+            count.to_string(),
+            "is not a non-negative whole number",
+        ));
+    }
+    let count_input = count.to_string();
+    let count = count as u128;
+    if count > usize::MAX as u128 {
+        return Err(EvalError::conversion(
+            "s/repeat",
+            2,
+            "Number (representable repeat count)",
+            count_input,
+            "is outside the supported repeat range",
+        ));
+    }
+    let count = count as usize;
+    if value.is_empty() || count == 0 {
+        return Ok(RuntimeValue::String(String::new()));
+    }
+    let capacity = value.len().checked_mul(count).ok_or_else(|| {
+        EvalError::conversion(
+            "s/repeat",
+            2,
+            "Number (representable repeated string length)",
+            count.to_string(),
+            "is outside the supported repeat range",
+        )
+    })?;
+    let mut result = String::new();
+    result.try_reserve(capacity).map_err(|_| {
+        EvalError::conversion(
+            "s/repeat",
+            2,
+            "Number (allocatable repeated string length)",
+            count.to_string(),
+            "is too large",
+        )
+    })?;
+    for _ in 0..count {
+        result.push_str(&value);
+    }
+    Ok(RuntimeValue::String(result))
+}
+
 fn expect_padding_width(
     value: &Value,
     function: &'static str,

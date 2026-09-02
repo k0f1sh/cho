@@ -20,6 +20,35 @@ fn datetime_values_normalize_format_and_compare() {
 }
 
 #[test]
+fn datetime_to_unix_preserves_offsets_and_fractional_seconds() {
+    assert_eq!(
+        output(
+            "(print (dt/to-unix $1) (dt/to-unix $2) (dt/to-unix $3))",
+            "1970-01-01T09:00:00+09:00 1969-12-31T23:59:59.5Z 1970-01-01T00:00:00.25Z\n",
+        ),
+        "0 -0.5 0.25\n"
+    );
+    assert_eq!(
+        output("(print (+ (dt/to-unix $1) 1))", "1970-01-01T00:00:00Z\n"),
+        "1\n"
+    );
+}
+
+#[test]
+fn datetime_to_unix_reports_its_own_conversion_error() {
+    let error = cho::run(
+        "(print (dt/to-unix $1))",
+        Cursor::new("not-a-date\n"),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        r#"record 1: dt/to-unix: argument 1 expects DateTime, but "not-a-date" is not valid RFC 3339"#
+    );
+}
+
+#[test]
 fn datetime_format_reports_timezone_and_datetime_arguments() {
     let error = cho::run(
         r#"(print (dt/fmt $2 "%Y" $1))"#,
