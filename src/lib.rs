@@ -22,6 +22,11 @@ pub fn apropos(query: &str) -> Option<String> {
     help::apropos(query)
 }
 
+/// Lists every function and form with its summary.
+pub fn catalog() -> String {
+    help::catalog()
+}
+
 pub fn parse(program: &str) -> Result<Program, ParseError> {
     compiler::compile(parser::parse(program)?)
 }

@@ -152,7 +152,8 @@ Run `cho --help` for the complete syntax, functions, and special forms.
 `cho --help` contains the complete syntax and short command examples.
 Use `cho --help s/trim` to show the signatures, examples, and notes for one
 function or form.
-Use `cho -k trim` to search function and form names and show their summaries.
+Use `cho -k` to list function and form names, or `cho -k trim` to search them
+and show matching summaries.
 Help, apropos, and version are standalone commands; execution options and
 programs are not combined with them.
 
