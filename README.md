@@ -46,8 +46,8 @@ $ echo 'hello' | cho -c s/upper
 HELLO
 $ echo 'foo-bar' | cho -c s/replace - _
 foo_bar
-$ cho -nc s/upper hogehoge
-HOGEHOGE
+$ cho -nc s/upper production
+PRODUCTION
 ```
 
 Combine `--no-input` with `--call` as `-nc` or `-cn` to call a function using

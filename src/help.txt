@@ -52,7 +52,7 @@ Input and options:
   call. Use the regular program syntax to select another primary input.
   Examples: printf 'hoge\n' | cho -c s/upper
             printf 'foo-bar\n' | cho -c s/replace - _
-            cho -nc s/upper hogehoge
+            cho -nc s/upper production
   The -F separator must be a valid regular expression. It must not match an
   empty string.
 
