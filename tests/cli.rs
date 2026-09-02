@@ -332,7 +332,7 @@ fn help_describes_one_callable_by_name_or_alias() {
     assert!(stdout.starts_with("s/trim — trim whitespace or exact affixes\n"));
     assert!(stdout.contains("\nSignatures:\n"));
     assert!(stdout.contains("(s/trim VALUE) -> STRING"));
-    assert!(stdout.contains("\nExamples:\n  cho '(s/trim $1)'"));
+    assert!(stdout.contains("\nExamples:\n  echo '  hello  ' | cho '(s/trim $1)'  # => hello"));
     assert!(stdout.contains("\nNotes:\n"));
     assert!(!stdout.contains("Common recipes:"));
 
