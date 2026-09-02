@@ -349,3 +349,14 @@ fn skip_header_requires_csv_or_tsv_mode() {
         );
     }
 }
+
+#[test]
+fn call_mode_explains_that_parenthesized_programs_need_no_input_mode() {
+    let output = run_with_args(&["-nc", "(ulid/new)"], "");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "cho: --call expects FUNCTION without parentheses; use -n 'PROGRAM' to evaluate an expression without input\nUsage: cho [OPTIONS] 'PROGRAM'\n"
+    );
+}

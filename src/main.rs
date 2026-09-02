@@ -21,6 +21,25 @@ struct Options {
     program: String,
 }
 
+#[derive(Debug, PartialEq)]
+struct ArgumentError {
+    message: Option<&'static str>,
+}
+
+impl ArgumentError {
+    const fn usage() -> Self {
+        Self { message: None }
+    }
+
+    const fn call_expression() -> Self {
+        Self {
+            message: Some(
+                "--call expects FUNCTION without parentheses; use -n 'PROGRAM' to evaluate an expression without input",
+            ),
+        }
+    }
+}
+
 fn help_color_enabled(
     stdout_is_terminal: bool,
     no_color: Option<&OsStr>,
@@ -97,7 +116,7 @@ fn split_type_definition(line: &str) -> Option<(&str, &str)> {
     .then_some((name, &definition[name_end..]))
 }
 
-fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()> {
+fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ArgumentError> {
     let mut arguments = arguments.into_iter();
     let mut field_separator = None;
     let mut csv = false;
@@ -117,23 +136,23 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
             no_input = true;
         } else if matches!(argument.as_str(), "-c" | "--call" | "-nc" | "-cn") {
             if program.is_some() {
-                return Err(());
+                return Err(ArgumentError::usage());
             }
             if matches!(argument.as_str(), "-nc" | "-cn") {
                 no_input = true;
             }
-            let function = arguments.next().ok_or(())?;
+            let function = arguments.next().ok_or_else(ArgumentError::usage)?;
             program = Some(call_program(&function, arguments, !no_input)?);
             break;
         } else if argument == "-F" {
-            field_separator = Some(arguments.next().ok_or(())?);
+            field_separator = Some(arguments.next().ok_or_else(ArgumentError::usage)?);
         } else if let Some(separator) = argument.strip_prefix("-F") {
             if separator.is_empty() {
-                return Err(());
+                return Err(ArgumentError::usage());
             }
             field_separator = Some(separator.to_owned());
         } else if program.replace(argument).is_some() {
-            return Err(());
+            return Err(ArgumentError::usage());
         }
     }
 
@@ -142,7 +161,7 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
         || (skip_header && !(csv || tsv))
         || (no_input && (csv || tsv || field_separator.is_some() || skip_header))
     {
-        return Err(());
+        return Err(ArgumentError::usage());
     }
     Ok(Options {
         field_separator,
@@ -150,7 +169,7 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
         tsv,
         skip_header,
         no_input,
-        program: program.ok_or(())?,
+        program: program.ok_or_else(ArgumentError::usage)?,
     })
 }
 
@@ -158,13 +177,16 @@ fn call_program(
     function: &str,
     arguments: impl IntoIterator<Item = String>,
     include_record: bool,
-) -> Result<String, ()> {
+) -> Result<String, ArgumentError> {
+    if function.starts_with('(') || function.ends_with(')') {
+        return Err(ArgumentError::call_expression());
+    }
     if function.is_empty()
         || function
             .chars()
             .any(|character| character.is_whitespace() || matches!(character, '(' | ')' | '"'))
     {
-        return Err(());
+        return Err(ArgumentError::usage());
     }
 
     let mut program = format!("({function}");
@@ -228,9 +250,15 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
-    let Ok(options) = parse_args(arguments) else {
-        eprintln!("{USAGE}");
-        return ExitCode::from(2);
+    let options = match parse_args(arguments) {
+        Ok(options) => options,
+        Err(error) => {
+            if let Some(message) = error.message {
+                eprintln!("cho: {message}");
+            }
+            eprintln!("{USAGE}");
+            return ExitCode::from(2);
+        }
     };
 
     let program = if options.skip_header {
@@ -428,5 +456,9 @@ mod tests {
         assert!(parse_args(args(&["-c", "s/upper $1"])).is_err());
         assert!(parse_args(args(&["(p $0)", "-c", "s/upper"])).is_err());
         assert!(parse_args(args(&["-s", "s/upper"])).is_err());
+        assert_eq!(
+            parse_args(args(&["-nc", "(ulid/new)"])),
+            Err(ArgumentError::call_expression())
+        );
     }
 }
