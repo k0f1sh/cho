@@ -16,8 +16,8 @@ use super::number;
 use super::predicate::matches;
 use super::semver;
 use super::string::{
-    escape, evaluate_string_padding, evaluate_string_slice, expect_part_position, quote,
-    shell_quote, unquote,
+    escape, evaluate_string_padding, evaluate_string_repeat, evaluate_string_slice,
+    expect_part_position, quote, shell_quote, unquote,
 };
 use super::url::{
     decode_url_component, encode_url_component, parse_absolute_url, url_encoding_name,
@@ -173,6 +173,13 @@ pub(super) fn evaluate(
             number::evaluate_operation(operator, value, record)
         }
         Value::FormatNumberFixed { digits, value } => number::format_fixed(value, digits, record),
+        Value::NumberMinimum(values) => number::evaluate_extreme(values, "n/min", f64::min, record),
+        Value::NumberMaximum(values) => number::evaluate_extreme(values, "n/max", f64::max, record),
+        Value::ClampNumber {
+            value,
+            minimum,
+            maximum,
+        } => number::clamp(value, minimum, maximum, record),
         Value::UrlPart { part, value } => {
             let function = url_part_name(part);
             let input = expect_string(evaluate(value, record)?, function, 1)?;
@@ -297,6 +304,13 @@ pub(super) fn evaluate(
                     )
                 })
         }
+        Value::DateTimeToUnix(value) => {
+            let datetime = expect_datetime(evaluate(value, record)?, "dt/to-unix", 1)?;
+            Ok(RuntimeValue::Number(
+                datetime.timestamp() as f64
+                    + f64::from(datetime.timestamp_subsec_nanos()) / 1_000_000_000.0,
+            ))
+        }
         Value::FormatDateTime {
             format,
             timezone,
@@ -414,6 +428,7 @@ pub(super) fn evaluate(
                 .collect::<EvalResult<Vec<_>>>()?;
             Ok(RuntimeValue::String(values.join(&separator)))
         }
+        Value::Repeat { value, count } => evaluate_string_repeat(value, count, record),
         Value::Replace {
             mode,
             value,

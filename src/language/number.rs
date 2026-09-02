@@ -251,6 +251,60 @@ define_callable!(
 );
 
 define_callable!(
+    Minimum,
+    CallableDefinition {
+        name: "n/min",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[sig!([p!("number", Number, OneOrMore)] => Some(ValueType::Number))]
+    },
+    |_context, arguments| { value(Value::NumberMinimum(values(arguments)?)) },
+    Number,
+    "return the smallest number",
+    [],
+    [(None, "(n/min $1 $2 0)")]
+);
+
+define_callable!(
+    Maximum,
+    CallableDefinition {
+        name: "n/max",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[sig!([p!("number", Number, OneOrMore)] => Some(ValueType::Number))]
+    },
+    |_context, arguments| { value(Value::NumberMaximum(values(arguments)?)) },
+    Number,
+    "return the largest number",
+    [],
+    [(None, "(n/max $1 $2 0)")]
+);
+
+define_callable!(
+    Clamp,
+    CallableDefinition {
+        name: "n/clamp",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[
+            sig!([p!("value", Number, Required), p!("minimum", Number, Required, "MIN"), p!("maximum", Number, Required, "MAX")] => Some(ValueType::Number))
+        ]
+    },
+    |_context, arguments| {
+        let [value_arg, minimum, maximum] = value_array(arguments)?;
+        value(Value::ClampNumber {
+            value: Box::new(value_arg),
+            minimum: Box::new(minimum),
+            maximum: Box::new(maximum),
+        })
+    },
+    Number,
+    "limit a number to an inclusive range",
+    ["MIN must be less than or equal to MAX."],
+    [(None, "(n/clamp $1 0 100)")]
+);
+
+define_callable!(
     GreaterThan,
     CallableDefinition {
         name: ">",

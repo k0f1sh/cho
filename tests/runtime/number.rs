@@ -32,6 +32,36 @@ fn numbers_follow_ieee_754_precision() {
 }
 
 #[test]
+fn minimum_maximum_and_clamp_convert_and_compose() {
+    assert_eq!(
+        output(
+            "(print (n/min $1 $2 0) (n/max $1 $2 0) (n/clamp $1 0 100) (+ (n/min $1 $2) 1))",
+            "-5 20\n50 120\n",
+        ),
+        "-5 20 0 -4\n0 120 50 51\n"
+    );
+}
+
+#[test]
+fn number_range_functions_report_argument_errors() {
+    for (program, input, expected) in [
+        (
+            "(print (n/min $1 $2))",
+            "1 nope\n",
+            r#"record 1: n/min: argument 2 expects Number, but "nope" cannot be parsed as a number"#,
+        ),
+        (
+            "(print (n/clamp $1 $2 $3))",
+            "5 10 0\n",
+            r#"record 1: n/clamp: argument 3 expects Number greater than or equal to MIN, but "0" is less than MIN"#,
+        ),
+    ] {
+        let error = cho::run(program, Cursor::new(input), Vec::new()).unwrap_err();
+        assert_eq!(error.to_string(), expected);
+    }
+}
+
+#[test]
 fn non_numeric_values_are_runtime_errors() {
     let error = cho::run(
         "(filter (> $2 20)) (print $1)",

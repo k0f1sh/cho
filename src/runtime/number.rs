@@ -104,3 +104,52 @@ pub(super) fn format_fixed(
         digits = digits as usize
     )))
 }
+
+pub(super) fn evaluate_extreme(
+    values: &[Value],
+    function: &'static str,
+    choose: impl Fn(f64, f64) -> f64,
+    record: &EvalContext<'_, '_, '_>,
+) -> EvalResult<RuntimeValue> {
+    let mut numbers = values
+        .iter()
+        .enumerate()
+        .map(|(index, value)| expect_number(evaluate(value, record)?, function, index + 1));
+    let first = numbers
+        .next()
+        .expect("n/min and n/max require at least one argument")?;
+    let result = numbers.try_fold(first, |result, number| {
+        number.map(|number| choose(result, number))
+    })?;
+    Ok(RuntimeValue::Number(if result == 0.0 {
+        0.0
+    } else {
+        result
+    }))
+}
+
+pub(super) fn clamp(
+    value: &Value,
+    minimum: &Value,
+    maximum: &Value,
+    record: &EvalContext<'_, '_, '_>,
+) -> EvalResult<RuntimeValue> {
+    let value = expect_number(evaluate(value, record)?, "n/clamp", 1)?;
+    let minimum = expect_number(evaluate(minimum, record)?, "n/clamp", 2)?;
+    let maximum = expect_number(evaluate(maximum, record)?, "n/clamp", 3)?;
+    if minimum > maximum {
+        return Err(EvalError::conversion(
+            "n/clamp",
+            3,
+            "Number greater than or equal to MIN",
+            maximum.to_string(),
+            "is less than MIN",
+        ));
+    }
+    let result = value.clamp(minimum, maximum);
+    Ok(RuntimeValue::Number(if result == 0.0 {
+        0.0
+    } else {
+        result
+    }))
+}

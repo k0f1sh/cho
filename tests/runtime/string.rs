@@ -26,6 +26,34 @@ fn joins_values_with_a_separator() {
 }
 
 #[test]
+fn repeat_handles_values_zero_empty_and_composition() {
+    assert_eq!(
+        output(
+            r#"(print (s/repeat $1 $2) (s/repeat "x" 0) (s/repeat $3 3) (s/upper (s/repeat $1 2)))"#,
+            "ab 3\n東京 2 x\n",
+        ),
+        "ababab   ABAB\n東京東京  xxx 東京東京\n"
+    );
+    assert_eq!(
+        output(r#"(s/repeat "" 1000000000000000000)"#, "record\n"),
+        "\n"
+    );
+}
+
+#[test]
+fn repeat_rejects_invalid_counts() {
+    for count in ["-1", "1.5", "invalid", "100000000000000000000"] {
+        let error = cho::run(
+            "(print (s/repeat $1 $2))",
+            Cursor::new(format!("x {count}\n")),
+            Vec::new(),
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("s/repeat: argument 2"));
+    }
+}
+
+#[test]
 fn literal_replace_handles_first_all_empty_and_nested_values() {
     assert_eq!(
         output(
