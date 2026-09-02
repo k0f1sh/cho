@@ -4,7 +4,7 @@ use std::io::{self, IsTerminal};
 use std::process::ExitCode;
 
 const USAGE: &str =
-    "Usage: cho [--no-input | -F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'";
+    "Usage: cho [-n | --no-input | -F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'";
 const HELP: &str = include_str!("help.txt");
 const RESET: &str = "\x1b[0m";
 const BOLD: &str = "\x1b[1m";
@@ -114,7 +114,7 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
             tsv = true;
         } else if argument == "--skip-header" {
             skip_header = true;
-        } else if argument == "--no-input" {
+        } else if matches!(argument.as_str(), "-n" | "--no-input") {
             no_input = true;
         } else if argument == "-F" {
             field_separator = Some(arguments.next().ok_or(())?);
@@ -323,16 +323,18 @@ mod tests {
 
     #[test]
     fn parses_no_input_mode_and_rejects_input_options() {
-        assert!(
-            parse_args(args(&["--no-input", "(print NR NF)"]))
-                .unwrap()
-                .no_input
-        );
+        for option in ["-n", "--no-input"] {
+            assert!(
+                parse_args(args(&[option, "(print NR NF)"]))
+                    .unwrap()
+                    .no_input
+            );
+        }
         for arguments in [
             vec!["--no-input", "--csv", "(print NR)"],
-            vec!["--no-input", "--tsv", "(print NR)"],
+            vec!["-n", "--tsv", "(print NR)"],
             vec!["--no-input", "-F,", "(print NR)"],
-            vec!["--no-input", "--skip-header", "(print NR)"],
+            vec!["-n", "--skip-header", "(print NR)"],
         ] {
             assert!(parse_args(args(&arguments)).is_err());
         }
