@@ -25,6 +25,7 @@ Input and options:
   -s, --skip-header  skip the first CSV or TSV record
   -n, --no-input     do not read input; run once with an empty record
   -c, --call         call FUNCTION with $0 followed by ARG values
+  -nc, -cn           call FUNCTION without input, using only ARG values
   -h, --help         print help
   -V, --version      print version
 
@@ -33,14 +34,16 @@ Input and options:
   NF is the field count. Missing fields are empty strings. With --skip-header,
   the first data record keeps its input position and therefore has NR 2.
   With --no-input, $0 is empty, NR is 1, and NF is 0.
-  With --call, $0 is always the first function argument. Following arguments
-  named $0, $1, ... are field references; all others are Strings and become the
-  second and later function arguments. You cannot pass NR or NF as record values;
+  With --call, $0 is the first function argument unless --no-input is also used.
+  With --no-input, only the following ARG values are passed; -nc and -cn are
+  shorthand for this combination. Arguments named $0, $1, ... are field
+  references; all others are Strings. You cannot pass NR or NF as record values;
   both are treated as Strings. Quote field references such as $1 from the shell.
   Options must precede --call because every following argument belongs to the
   call. Use the regular program syntax to select another primary input.
   Examples: printf 'hoge\n' | cho -c s/upper
             printf 'foo-bar\n' | cho -c s/replace - _
+            cho -nc s/upper hogehoge
   The -F separator must be a valid regular expression. It must not match an
   empty string.
 
