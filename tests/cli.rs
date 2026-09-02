@@ -6,7 +6,7 @@ const USAGE: &str = concat!(
     "  cho [INPUT OPTIONS] 'PROGRAM'\n",
     "  cho [INPUT OPTIONS] --call FUNCTION [ARG ...]\n",
     "  cho --help [TOPIC]\n",
-    "  cho --apropos QUERY\n",
+    "  cho --apropos [QUERY]\n",
     "  cho --version",
 );
 
@@ -201,7 +201,7 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("-n, --no-input"));
     assert!(stdout.contains("-c, --call"));
     assert!(stdout.contains("-h, --help [TOPIC]"));
-    assert!(stdout.contains("-k, --apropos QUERY"));
+    assert!(stdout.contains("-k, --apropos [QUERY]"));
     assert!(stdout.contains("cannot pass NR or NF as record values"));
     assert!(stdout.contains("-F separator must be a valid regular expression"));
     assert!(stdout.contains("It must not match an\n  empty string"));
@@ -282,6 +282,21 @@ fn apropos_searches_callable_names_and_aliases() {
 }
 
 #[test]
+fn apropos_without_a_query_lists_every_callable() {
+    for option in ["-k", "--apropos"] {
+        let output = run_with_args(&[option], "");
+        assert!(output.status.success());
+        assert!(output.stderr.is_empty());
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert!(stdout.starts_with("print (p)"));
+        assert!(stdout.contains("\ns/trim "));
+        assert!(stdout.contains("\ndt/fmt "));
+        assert!(stdout.contains("\nuuid/v4 "));
+        assert!(stdout.ends_with("insert a value as each step's last argument\n"));
+    }
+}
+
+#[test]
 fn apropos_does_not_search_descriptions() {
     let output = run_with_args(&["-k", "fractional digits"], "");
     assert_eq!(output.status.code(), Some(1));
@@ -293,13 +308,8 @@ fn apropos_does_not_search_descriptions() {
 }
 
 #[test]
-fn apropos_reports_missing_empty_extra_and_unmatched_queries() {
+fn apropos_reports_empty_extra_and_unmatched_queries() {
     for (arguments, status, message) in [
-        (
-            vec!["--apropos"],
-            2,
-            command_line_error("--apropos expects QUERY"),
-        ),
         (
             vec!["-k", ""],
             2,

@@ -4,7 +4,7 @@ Usage:
   cho [INPUT OPTIONS] 'PROGRAM'
   cho [INPUT OPTIONS] --call FUNCTION [ARG ...]
   cho --help [TOPIC]
-  cho --apropos QUERY
+  cho --apropos [QUERY]
   cho --version
 
 Common recipes:
@@ -32,7 +32,7 @@ Input and options:
   -n, --no-input     do not read input; run once with an empty record
   -c, --call         call FUNCTION with $0 followed by ARG values
   -nc, -cn           call FUNCTION without input, using only ARG values
-  -k, --apropos QUERY search function and form names
+  -k, --apropos [QUERY] list all function and form names, or search names
   -h, --help [TOPIC] print full help or help for one function or form
   -V, --version      print version
 

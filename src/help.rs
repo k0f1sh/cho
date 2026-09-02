@@ -220,16 +220,25 @@ pub(crate) fn apropos(query: &str) -> Option<String> {
         return None;
     }
     let query = query.to_ascii_lowercase();
-    let matches = DOCUMENTED_CALLABLES
-        .iter()
-        .copied()
-        .filter(|callable| {
-            let definition = callable.definition();
-            std::iter::once(definition.name)
-                .chain(definition.aliases.iter().copied())
-                .any(|name| name.to_ascii_lowercase().contains(&query))
-        })
-        .collect::<Vec<_>>();
+    render_apropos(
+        DOCUMENTED_CALLABLES
+            .iter()
+            .copied()
+            .filter(|callable| {
+                let definition = callable.definition();
+                std::iter::once(definition.name)
+                    .chain(definition.aliases.iter().copied())
+                    .any(|name| name.to_ascii_lowercase().contains(&query))
+            })
+            .collect::<Vec<_>>(),
+    )
+}
+
+pub(crate) fn catalog() -> String {
+    render_apropos(DOCUMENTED_CALLABLES.to_vec()).expect("the callable registry is not empty")
+}
+
+fn render_apropos(matches: Vec<&'static dyn crate::language::ToDoc>) -> Option<String> {
     if matches.is_empty() {
         return None;
     }

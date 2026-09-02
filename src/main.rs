@@ -8,7 +8,7 @@ const USAGE: &str = concat!(
     "  cho [INPUT OPTIONS] 'PROGRAM'\n",
     "  cho [INPUT OPTIONS] --call FUNCTION [ARG ...]\n",
     "  cho --help [TOPIC]\n",
-    "  cho --apropos QUERY\n",
+    "  cho --apropos [QUERY]\n",
     "  cho --version",
 );
 const HELP: &str = include_str!("help.txt");
@@ -33,7 +33,7 @@ enum Command {
     Run(Options),
     Help(Option<String>),
     Version,
-    Apropos(String),
+    Apropos(Option<String>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -48,7 +48,6 @@ enum ArgumentError {
     MissingCallFunction,
     InvalidCallFunction,
     CallExpression,
-    MissingAproposQuery,
     EmptyAproposQuery,
     InformationCommandCannotBeCombined(String),
 }
@@ -78,7 +77,6 @@ impl std::fmt::Display for ArgumentError {
             Self::CallExpression => formatter.write_str(
                 "--call expects FUNCTION without parentheses; use -n 'PROGRAM' to evaluate an expression without input",
             ),
-            Self::MissingAproposQuery => formatter.write_str("--apropos expects QUERY"),
             Self::EmptyAproposQuery => formatter.write_str("--apropos expects a non-empty QUERY"),
             Self::InformationCommandCannotBeCombined(option) => write!(
                 formatter,
@@ -250,8 +248,8 @@ fn parse_command(arguments: Vec<String>) -> Result<Command, ArgumentError> {
             Ok(Command::Version)
         }
         "-k" | "--apropos" => {
-            let query = arguments.next().ok_or(ArgumentError::MissingAproposQuery)?;
-            if query.is_empty() {
+            let query = arguments.next();
+            if query.as_deref() == Some("") {
                 return Err(ArgumentError::EmptyAproposQuery);
             }
             if let Some(argument) = arguments.next() {
@@ -374,9 +372,15 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
     if let Command::Apropos(query) = &command {
-        let Some(output) = cho::apropos(query) else {
-            eprintln!("cho: no function or form names match: {query}");
-            return ExitCode::FAILURE;
+        let output = match query {
+            Some(query) => {
+                let Some(output) = cho::apropos(query) else {
+                    eprintln!("cho: no function or form names match: {query}");
+                    return ExitCode::FAILURE;
+                };
+                output
+            }
+            None => cho::catalog(),
         };
         let stdout = io::stdout();
         if help_color_enabled(
@@ -518,8 +522,9 @@ mod tests {
         assert_eq!(parse_command(args(&["--version"])), Ok(Command::Version));
         assert_eq!(
             parse_command(args(&["-k", "trim"])),
-            Ok(Command::Apropos("trim".into()))
+            Ok(Command::Apropos(Some("trim".into())))
         );
+        assert_eq!(parse_command(args(&["-k"])), Ok(Command::Apropos(None)));
     }
 
     #[test]
