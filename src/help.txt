@@ -50,9 +50,9 @@ Input and options:
   both are treated as Strings. Quote field references such as $1 from the shell.
   Options must precede --call because every following argument belongs to the
   call. Use the regular program syntax to select another primary input.
-  Examples: printf 'hoge\n' | cho -c s/upper
-            printf 'foo-bar\n' | cho -c s/replace - _
-            cho -nc s/upper production
+  Examples: echo production | cho -c s/upper  # => PRODUCTION
+            echo api-server | cho -c s/replace - _  # => api_server
+            cho -nc s/upper production  # => PRODUCTION
   The -F separator must be a valid regular expression. It must not match an
   empty string.
 
@@ -182,7 +182,7 @@ Strings:
   An empty FROM inserts TO at the start with s/replace, or at every character
   boundary with s/replace-all, like awk sub("", ...) and gsub("", ...).
   Empty prefixes, suffixes, and needles match every string, including empty.
-  Example: cho --no-input '(p (dq (s/trim "  hello  ")))'
+  Example: cho --no-input '(p (dq (s/trim "  hello  ")))'  # => "hello"
 
 Paths:
   (path/name STRING) -> STRING              extract the final path component
@@ -221,7 +221,7 @@ Regular expressions:
   returns the complete value; a missing position returns an empty string.
   In replacements, empty and zero-width matches insert text, following awk behavior.
   The -F pattern is passed directly: cho -F '\s+' '(p $1)'
-  Example: cho --no-input '(p (re/replace "id=42" /(?P<n>\d+)/ "[${n}]"))'
+  Example: cho --no-input '(p (re/replace "id=42" /(?P<n>\d+)/ "[${n}]"))'  # => id=[42]
 
 DateTime and Duration:
   (dt/unix NUMBER) -> DATETIME                 convert Unix seconds
@@ -374,10 +374,10 @@ Composition:
 
 More examples:
   Extract a log message while preserving its original whitespace:
-    printf '2026-08-24 INFO service started successfully\n' | cho '(p $3..)'
+    echo '2026-08-24 INFO service started successfully' | cho '(p $3..)'  # => service started successfully
 
   Format an RFC 3339 timestamp in Tokyo time:
-    cho '(p (dt/fmt $1 "%Y-%m-%d %H:%M" "Asia/Tokyo"))'
+    echo '2026-08-24T01:30:00Z' | cho '(p (dt/fmt $1 "%Y-%m-%d %H:%M" "Asia/Tokyo"))'  # => 2026-08-24 10:30
 
   Join transformed fields, with a fallback for a missing third field:
-    cho '(p (s/join ":" (s/upper $1) (default $3 "UNKNOWN")))'
+    echo 'api active' | cho '(p (s/join ":" (s/upper $1) (default $3 "UNKNOWN")))'  # => API:UNKNOWN
