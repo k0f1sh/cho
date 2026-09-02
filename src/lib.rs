@@ -17,6 +17,11 @@ pub fn help(topic: &str) -> Option<String> {
     help::render(topic)
 }
 
+/// Searches function and form names and renders matching names and summaries.
+pub fn apropos(query: &str) -> Option<String> {
+    help::apropos(query)
+}
+
 pub fn parse(program: &str) -> Result<Program, ParseError> {
     compiler::compile(parser::parse(program)?)
 }

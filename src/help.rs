@@ -45,6 +45,46 @@ pub(crate) fn render(topic: &str) -> Option<String> {
     Some(output.trim_end().to_owned())
 }
 
+pub(crate) fn apropos(query: &str) -> Option<String> {
+    if query.is_empty() {
+        return None;
+    }
+    let query = query.to_ascii_lowercase();
+    let matches = DOCUMENTED_CALLABLES
+        .iter()
+        .copied()
+        .filter(|callable| {
+            let definition = callable.definition();
+            std::iter::once(definition.name)
+                .chain(definition.aliases.iter().copied())
+                .any(|name| name.to_ascii_lowercase().contains(&query))
+        })
+        .collect::<Vec<_>>();
+    if matches.is_empty() {
+        return None;
+    }
+    let labels = matches
+        .iter()
+        .map(|callable| {
+            let definition = callable.definition();
+            if definition.aliases.is_empty() {
+                definition.name.to_owned()
+            } else {
+                format!("{} ({})", definition.name, definition.aliases.join(", "))
+            }
+        })
+        .collect::<Vec<_>>();
+    let description_column = labels.iter().map(String::len).max().unwrap_or(0) + 2;
+    let mut output = String::new();
+    for (callable, label) in matches.iter().zip(labels) {
+        output.push_str(&label);
+        output.push_str(&" ".repeat(description_column.saturating_sub(label.len())));
+        output.push_str(callable.to_doc().summary);
+        output.push('\n');
+    }
+    Some(output.trim_end().to_owned())
+}
+
 fn render_signature(name: &str, parameters: &[Parameter], returns: Option<ValueType>) -> String {
     let mut syntax = format!("({name}");
     for parameter in parameters {
@@ -130,5 +170,25 @@ mod tests {
                 .unwrap()
                 .contains(r#"cho '(shq "it'\''s good")'"#)
         );
+    }
+
+    #[test]
+    fn apropos_searches_names_and_aliases_case_insensitively_in_registry_order() {
+        assert_eq!(
+            apropos("QUOTE").unwrap(),
+            concat!(
+                "s/dquote (dq)  stringify and wrap in escaped double quotes\n",
+                "s/squote (sq)  stringify and wrap in escaped single quotes\n",
+                "s/unquote      remove matching quotes and decode backslash escapes",
+            )
+        );
+        assert!(apropos("dq").unwrap().starts_with("s/dquote (dq)"));
+    }
+
+    #[test]
+    fn apropos_does_not_search_descriptions_and_rejects_empty_or_missing_matches() {
+        assert_eq!(apropos("fractional digits"), None);
+        assert_eq!(apropos(""), None);
+        assert_eq!(apropos("not-a-callable"), None);
     }
 }
