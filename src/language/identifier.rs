@@ -35,7 +35,7 @@ define_callable!(
     Identifier,
     "generate a random UUID version 4",
     [],
-    [(None, "(uuid/v4)")]
+    [(None, "(uuid/v4)", "<random UUID v4>")]
 );
 
 define_callable!(
@@ -53,7 +53,7 @@ define_callable!(
     Identifier,
     "generate a time-ordered UUID version 7",
     ["Generation order is preserved within one cho invocation."],
-    [(None, "(uuid/v7)")]
+    [(None, "(uuid/v7)", "<time-ordered UUID v7>")]
 );
 
 define_callable!(
@@ -125,7 +125,7 @@ define_callable!(
     Identifier,
     "generate a monotonic ULID",
     ["Generation order is preserved within one cho invocation."],
-    [(None, "(ulid/new)")]
+    [(None, "(ulid/new)", "<monotonic ULID>")]
 );
 
 define_callable!(
