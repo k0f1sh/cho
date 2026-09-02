@@ -1,4 +1,4 @@
 interface:
   display_name: "Process Typed Data with cho"
-  short_description: "Handle datetimes, IPs, URLs, and versions safely in shell one-liners"
+  short_description: "Handle typed data and generate UUIDs or ULIDs in shell one-liners"
   default_prompt: "Use $cho-process-text to build a cho one-liner that handles the typed data in this input safely."

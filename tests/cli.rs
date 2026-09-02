@@ -232,6 +232,10 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("(url/query-has? URL STRING)"));
     assert!(stdout.contains("(semver/major SEMVER)"));
     assert!(stdout.contains("(semver/prerelease SEMVER)"));
+    assert!(stdout.contains("(uuid/v4) -> UUID"));
+    assert!(stdout.contains("(uuid/time UUID) -> DATETIME"));
+    assert!(stdout.contains("(ulid/new) -> ULID"));
+    assert!(stdout.contains("(ulid/< ULID ULID) -> BOOLEAN"));
     assert!(stdout.contains("fc00::/7"));
     assert!(!stdout.contains("(dur/m NUMBER)"));
     assert!(stdout.contains("(cidr/contains? CIDR IPADDR)"));

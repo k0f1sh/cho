@@ -302,12 +302,41 @@ Semantic versions:
   (semver/prerelease SEMVER) -> STRING      return prerelease text or an empty string
   (semver/build SEMVER) -> STRING           return build metadata or an empty string
 
+UUIDs and ULIDs:
+  (uuid UUID) -> UUID                       validate and normalize a UUID
+  (uuid/v4) -> UUID                         generate a random UUID version 4
+  (uuid/v7) -> UUID                         generate a time-ordered UUID version 7
+  (uuid/version UUID) -> NUMBER             return the UUID version number
+  (uuid/time UUID) -> DATETIME              extract the timestamp from a UUID
+  (uuid/> UUID UUID) -> BOOLEAN             greater than
+  (uuid/>= UUID UUID) -> BOOLEAN            greater than or equal
+  (uuid/< UUID UUID) -> BOOLEAN             less than
+  (uuid/<= UUID UUID) -> BOOLEAN            less than or equal
+  (uuid/= UUID UUID) -> BOOLEAN             equal
+  (uuid/!= UUID UUID) -> BOOLEAN            not equal
+  (ulid ULID) -> ULID                       validate and normalize a ULID
+  (ulid/new) -> ULID                        generate a monotonic ULID
+  (ulid/time ULID) -> DATETIME              extract the timestamp from a ULID
+  (ulid/> ULID ULID) -> BOOLEAN             greater than
+  (ulid/>= ULID ULID) -> BOOLEAN            greater than or equal
+  (ulid/< ULID ULID) -> BOOLEAN             less than
+  (ulid/<= ULID ULID) -> BOOLEAN            less than or equal
+  (ulid/= ULID ULID) -> BOOLEAN             equal
+  (ulid/!= ULID ULID) -> BOOLEAN            not equal
+
+  UUID comparison uses the unsigned 128-bit value in network byte order. This
+  is chronological for UUIDv7, but not for every UUID version. ULID comparison
+  matches its canonical string order. UUIDv7 and ULID generation is strictly
+  increasing within one cho invocation. uuid/time accepts UUID versions 1, 6, and
+  7. Generators read the system clock when evaluated; extracted times render UTC.
+
 Types and errors:
   String      fields and quoted literals    DateTime  RFC 3339 timestamps
   Number      numeric literals, NR, NF       Duration  signed seconds
   Boolean     true, false, predicates        IpAddr    IPv4 or IPv6
   Cidr        IPv4 or IPv6 networks          Url       absolute URLs
-  SemVer      MAJOR.MINOR.PATCH versions
+  SemVer      MAJOR.MINOR.PATCH versions     UUID      universally unique ID
+  ULID        lexicographically sortable ID
 
   Functions convert Strings when they require another type. Failed conversion
   reports the record, function, and argument number. Boolean values never

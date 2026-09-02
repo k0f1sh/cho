@@ -164,12 +164,22 @@ URLs:
 Semantic versions:
 {{callables:semantic_version}}
 
+UUIDs and ULIDs:
+{{callables:identifier}}
+
+  UUID comparison uses the unsigned 128-bit value in network byte order. This
+  is chronological for UUIDv7, but not for every UUID version. ULID comparison
+  matches its canonical string order. UUIDv7 and ULID generation is strictly
+  increasing within one cho invocation. uuid/time accepts UUID versions 1, 6, and
+  7. Generators read the system clock when evaluated; extracted times render UTC.
+
 Types and errors:
   String      fields and quoted literals    DateTime  RFC 3339 timestamps
   Number      numeric literals, NR, NF       Duration  signed seconds
   Boolean     true, false, predicates        IpAddr    IPv4 or IPv6
   Cidr        IPv4 or IPv6 networks          Url       absolute URLs
-  SemVer      MAJOR.MINOR.PATCH versions
+  SemVer      MAJOR.MINOR.PATCH versions     UUID      universally unique ID
+  ULID        lexicographically sortable ID
 
   Functions convert Strings when they require another type. Failed conversion
   reports the record, function, and argument number. Boolean values never

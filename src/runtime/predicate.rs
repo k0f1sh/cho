@@ -2,6 +2,7 @@ use crate::ast::{ComparisonOperator, ComparisonType, Predicate, StringTest, Valu
 
 use super::datetime::expect_datetime;
 use super::eval::{EvalContext, evaluate};
+use super::identifier::{compare_ulid, compare_uuid};
 use super::network::{expect_cidr, expect_ip, ip_class_name, matches_ip_class};
 use super::semver;
 use super::url::parse_absolute_url;
@@ -85,6 +86,8 @@ pub(super) fn compare(
             })
         }
         ComparisonType::SemVer => semver::compare(operator, left, right, record),
+        ComparisonType::Uuid => compare_uuid(operator, left, right, record),
+        ComparisonType::Ulid => compare_ulid(operator, left, right, record),
     }
 }
 
@@ -135,5 +138,17 @@ pub(super) fn comparison_name(
         (ComparisonType::SemVer, ComparisonOperator::LessThanOrEqual) => "semver/<=",
         (ComparisonType::SemVer, ComparisonOperator::Equal) => "semver/=",
         (ComparisonType::SemVer, ComparisonOperator::NotEqual) => "semver/!=",
+        (ComparisonType::Uuid, ComparisonOperator::GreaterThan) => "uuid/>",
+        (ComparisonType::Uuid, ComparisonOperator::GreaterThanOrEqual) => "uuid/>=",
+        (ComparisonType::Uuid, ComparisonOperator::LessThan) => "uuid/<",
+        (ComparisonType::Uuid, ComparisonOperator::LessThanOrEqual) => "uuid/<=",
+        (ComparisonType::Uuid, ComparisonOperator::Equal) => "uuid/=",
+        (ComparisonType::Uuid, ComparisonOperator::NotEqual) => "uuid/!=",
+        (ComparisonType::Ulid, ComparisonOperator::GreaterThan) => "ulid/>",
+        (ComparisonType::Ulid, ComparisonOperator::GreaterThanOrEqual) => "ulid/>=",
+        (ComparisonType::Ulid, ComparisonOperator::LessThan) => "ulid/<",
+        (ComparisonType::Ulid, ComparisonOperator::LessThanOrEqual) => "ulid/<=",
+        (ComparisonType::Ulid, ComparisonOperator::Equal) => "ulid/=",
+        (ComparisonType::Ulid, ComparisonOperator::NotEqual) => "ulid/!=",
     }
 }

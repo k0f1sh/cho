@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.21.0",
+  "cho_version": "0.22.0",
   "callables": [
     {
       "name": "print",
@@ -3536,6 +3536,498 @@
           "returns": "String",
           "summary": null,
           "example": "(semver/build $1)"
+        }
+      ]
+    },
+    {
+      "name": "uuid",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "validate and normalize a UUID",
+      "notes": [
+        "Accepts simple, hyphenated, braced, and URN forms; renders lowercase hyphenated."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Uuid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Uuid",
+          "summary": null,
+          "example": "(uuid $1)"
+        }
+      ]
+    },
+    {
+      "name": "uuid/v4",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "generate a random UUID version 4",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [],
+          "returns": "Uuid",
+          "summary": null,
+          "example": "(uuid/v4)"
+        }
+      ]
+    },
+    {
+      "name": "uuid/v7",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "generate a time-ordered UUID version 7",
+      "notes": [
+        "Generation order is preserved within one cho invocation."
+      ],
+      "signatures": [
+        {
+          "parameters": [],
+          "returns": "Uuid",
+          "summary": null,
+          "example": "(uuid/v7)"
+        }
+      ]
+    },
+    {
+      "name": "uuid/version",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "return the UUID version number",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Uuid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(uuid/version $1)"
+        }
+      ]
+    },
+    {
+      "name": "uuid/time",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "extract the timestamp from a UUID",
+      "notes": [
+        "The UUID must be version 1, 6, or 7."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Uuid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "DateTime",
+          "summary": null,
+          "example": "(uuid/time $1)"
+        }
+      ]
+    },
+    {
+      "name": "uuid/>",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "greater than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Uuid",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Uuid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(uuid/> $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "uuid/>=",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "greater than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Uuid",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Uuid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(uuid/>= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "uuid/<",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "less than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Uuid",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Uuid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(uuid/< $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "uuid/<=",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "less than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Uuid",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Uuid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(uuid/<= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "uuid/=",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Uuid",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Uuid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(uuid/= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "uuid/!=",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "not equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Uuid",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Uuid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(uuid/!= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "ulid",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "validate and normalize a ULID",
+      "notes": [
+        "Accepts upper- or lowercase Crockford Base32; renders uppercase."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Ulid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Ulid",
+          "summary": null,
+          "example": "(ulid $1)"
+        }
+      ]
+    },
+    {
+      "name": "ulid/new",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "generate a monotonic ULID",
+      "notes": [
+        "Generation order is preserved within one cho invocation."
+      ],
+      "signatures": [
+        {
+          "parameters": [],
+          "returns": "Ulid",
+          "summary": null,
+          "example": "(ulid/new)"
+        }
+      ]
+    },
+    {
+      "name": "ulid/time",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "extract the timestamp from a ULID",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Ulid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "DateTime",
+          "summary": null,
+          "example": "(ulid/time $1)"
+        }
+      ]
+    },
+    {
+      "name": "ulid/>",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "greater than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Ulid",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Ulid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(ulid/> $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "ulid/>=",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "greater than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Ulid",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Ulid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(ulid/>= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "ulid/<",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "less than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Ulid",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Ulid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(ulid/< $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "ulid/<=",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "less than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Ulid",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Ulid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(ulid/<= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "ulid/=",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Ulid",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Ulid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(ulid/= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "ulid/!=",
+      "aliases": [],
+      "kind": "function",
+      "category": "identifier",
+      "summary": "not equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Ulid",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Ulid",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(ulid/!= $1 $2)"
         }
       ]
     },

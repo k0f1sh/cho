@@ -1,6 +1,6 @@
 [package]
 name = "cho"
-version = "0.21.0"
+version = "0.22.0"
 edition = "2024"
 description = "A small, type-aware text processor for the command line"
 license = "MIT"
@@ -17,6 +17,8 @@ ipnet = "2.11"
 regex = "1.11"
 semver = "1.0"
 url = "2.5"
+uuid = { version = "1.26", features = ["v4", "v7"] }
+ulid = "3.0"
 serde = { version = "1.0", features = ["derive"], optional = true }
 
 [dev-dependencies]
