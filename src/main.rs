@@ -160,28 +160,24 @@ fn call_program(function: &str, arguments: impl IntoIterator<Item = String>) -> 
         return Err(());
     }
 
-    let arguments = arguments.into_iter().collect::<Vec<_>>();
     let mut program = format!("({function}");
-    if arguments.is_empty() {
-        program.push_str(" $0");
-    } else {
-        for argument in arguments {
-            program.push(' ');
-            if is_call_reference(&argument) {
-                program.push_str(&argument);
-            } else {
-                program.push('"');
-                for character in argument.chars() {
-                    match character {
-                        '\\' => program.push_str("\\\\"),
-                        '"' => program.push_str("\\\""),
-                        '\n' => program.push_str("\\n"),
-                        '\t' => program.push_str("\\t"),
-                        other => program.push(other),
-                    }
+    program.push_str(" $0");
+    for argument in arguments {
+        program.push(' ');
+        if is_call_reference(&argument) {
+            program.push_str(&argument);
+        } else {
+            program.push('"');
+            for character in argument.chars() {
+                match character {
+                    '\\' => program.push_str("\\\\"),
+                    '"' => program.push_str("\\\""),
+                    '\n' => program.push_str("\\n"),
+                    '\t' => program.push_str("\\t"),
+                    other => program.push(other),
                 }
-                program.push('"');
             }
+            program.push('"');
         }
     }
     program.push(')');
@@ -398,17 +394,17 @@ mod tests {
         assert_eq!(call_program("s/upper", []).unwrap(), "(s/upper $0)");
         assert_eq!(
             call_program("str", args(&["$1", "$2", "NR", "NF"])).unwrap(),
-            r#"(str $1 $2 "NR" "NF")"#
+            r#"(str $0 $1 $2 "NR" "NF")"#
         );
         assert_eq!(
             call_program("str", args(&["a b", "a\\b", "a\"b", "a\nb", "a\tb"])).unwrap(),
-            r#"(str "a b" "a\\b" "a\"b" "a\nb" "a\tb")"#
+            r#"(str $0 "a b" "a\\b" "a\"b" "a\nb" "a\tb")"#
         );
         assert_eq!(
             parse_args(args(&["-n", "--call", "s/upper", "hoge"]))
                 .unwrap()
                 .program,
-            r#"(s/upper "hoge")"#
+            r#"(s/upper $0 "hoge")"#
         );
     }
 
