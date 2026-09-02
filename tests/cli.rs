@@ -275,12 +275,37 @@ fn call_mode_calls_one_function_with_record_then_string_arguments() {
         (vec!["-nc", "s/upper", "hoge"], "", "HOGE\n"),
         (vec!["-cn", "s/upper", "hoge"], "", "HOGE\n"),
         (vec!["-n", "-c", "str", "NF"], "", "NF\n"),
+        (vec!["-nc", "str", "--help"], "", "--help\n"),
+        (vec!["-nc", "str", "-h"], "", "-h\n"),
+        (vec!["-nc", "str", "--version"], "", "--version\n"),
+        (vec!["-nc", "str", "-V"], "", "-V\n"),
+        (vec!["-c", "str", "--help"], "hoge\n", "hoge--help\n"),
     ] {
         let output = run_with_args(&arguments, input);
         assert!(output.status.success());
         assert_eq!(String::from_utf8(output.stdout).unwrap(), expected);
         assert!(output.stderr.is_empty());
     }
+}
+
+#[test]
+fn help_and_version_before_call_remain_global_options() {
+    let help = run_with_args(&["--help", "-nc", "str", "literal"], "");
+    assert!(help.status.success());
+    assert!(
+        String::from_utf8(help.stdout)
+            .unwrap()
+            .starts_with("cho — a small, type-aware text processor for the command line\n")
+    );
+    assert!(help.stderr.is_empty());
+
+    let version = run_with_args(&["--version", "-nc", "str", "literal"], "");
+    assert!(version.status.success());
+    assert_eq!(
+        String::from_utf8(version.stdout).unwrap(),
+        format!("cho {}\n", env!("CARGO_PKG_VERSION"))
+    );
+    assert!(version.stderr.is_empty());
 }
 
 #[test]
@@ -342,10 +367,47 @@ fn skip_header_requires_csv_or_tsv_mode() {
         let output = run_with_args(&arguments, "name,age\nAlice,20\n");
         assert_eq!(output.status.code(), Some(2));
         assert!(output.stdout.is_empty());
-        assert!(
-            String::from_utf8(output.stderr)
-                .unwrap()
-                .starts_with("Usage: cho")
+        assert_eq!(
+            String::from_utf8(output.stderr).unwrap(),
+            "cho: --skip-header requires --csv or --tsv\nUsage: cho [OPTIONS] 'PROGRAM'\n"
+        );
+    }
+}
+
+#[test]
+fn argument_errors_explain_the_invalid_arguments() {
+    for (arguments, message) in [
+        (vec![], "missing PROGRAM"),
+        (vec!["-F"], "-F expects SEPARATOR"),
+        (vec!["(print $1)", "extra"], "unexpected argument: extra"),
+        (
+            vec!["--csv", "--tsv", "(print $1)"],
+            "--csv, --tsv, and -F are mutually exclusive",
+        ),
+        (
+            vec!["--csv", "-F,", "(print $1)"],
+            "--csv, --tsv, and -F are mutually exclusive",
+        ),
+        (
+            vec!["--no-input", "--csv", "(print $1)"],
+            "--no-input cannot be combined with -F, --csv, --tsv, or --skip-header",
+        ),
+        (
+            vec!["(print $1)", "--call", "s/upper"],
+            "--call must precede PROGRAM",
+        ),
+        (vec!["--call"], "--call expects FUNCTION"),
+        (
+            vec!["--call", "s/upper $1"],
+            "--call expects a function name without whitespace, parentheses, or quotes",
+        ),
+    ] {
+        let output = run_with_args(&arguments, "");
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert_eq!(
+            String::from_utf8(output.stderr).unwrap(),
+            format!("cho: {message}\nUsage: cho [OPTIONS] 'PROGRAM'\n")
         );
     }
 }
