@@ -113,6 +113,9 @@ Alice -> Tokyo, Japan
 Bob -> Osaka
 ```
 
+CSV input is validated strictly. Invalid quoting reports the logical record,
+physical line, and field instead of silently changing the input.
+
 Fields are plain strings, but cho knows about types. When a function
 expects a DateTime, IP address, CIDR, URL, SemVer, UUID, or ULID, the string is
 converted automatically — no annotations or casts needed. If the value doesn't

@@ -44,10 +44,11 @@ pub fn run_csv<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> 
     let mut input = input;
     let mut raw = Vec::new();
     let mut number = 0;
+    let mut physical_line = 1;
     let now = current_datetime();
     let ulid_generator = RefCell::new(ulid::Generator::new());
 
-    while read_csv_record(&mut input, &mut raw)? {
+    while read_csv_record(&mut input, &mut raw, number + 1, &mut physical_line)? {
         number += 1;
         let line = std::str::from_utf8(&raw)
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
@@ -177,39 +178,161 @@ fn execute<W: Write>(
     Ok(())
 }
 
-fn read_csv_record<R: BufRead>(input: &mut R, record: &mut Vec<u8>) -> io::Result<bool> {
+fn read_csv_record<R: BufRead>(
+    input: &mut R,
+    record: &mut Vec<u8>,
+    record_number: usize,
+    physical_line: &mut usize,
+) -> io::Result<bool> {
     record.clear();
+    let start_line = *physical_line;
     loop {
         let bytes_read = input.read_until(b'\n', record)?;
         if bytes_read == 0 {
-            return Ok(!record.is_empty());
-        }
-        if !csv_record_has_open_quote(record) {
-            if record.last() == Some(&b'\n') {
-                record.pop();
-                if record.last() == Some(&b'\r') {
-                    record.pop();
-                }
+            if record.is_empty() {
+                return Ok(false);
             }
-            return Ok(true);
+            return match validate_csv_record(record) {
+                CsvRecordStatus::Complete => Ok(true),
+                CsvRecordStatus::OpenQuote { field } => Err(csv_syntax_error(
+                    record_number,
+                    start_line + record.iter().filter(|byte| **byte == b'\n').count(),
+                    field,
+                    "quoted field is not closed before end of input",
+                )),
+                CsvRecordStatus::Invalid {
+                    offset,
+                    field,
+                    message,
+                } => Err(csv_syntax_error(
+                    record_number,
+                    start_line
+                        + record[..offset]
+                            .iter()
+                            .filter(|byte| **byte == b'\n')
+                            .count(),
+                    field,
+                    message,
+                )),
+            };
+        }
+        *physical_line += 1;
+        match validate_csv_record(record) {
+            CsvRecordStatus::OpenQuote { .. } => continue,
+            CsvRecordStatus::Invalid {
+                offset,
+                field,
+                message,
+            } => {
+                return Err(csv_syntax_error(
+                    record_number,
+                    start_line
+                        + record[..offset]
+                            .iter()
+                            .filter(|byte| **byte == b'\n')
+                            .count(),
+                    field,
+                    message,
+                ));
+            }
+            CsvRecordStatus::Complete => {
+                if record.last() == Some(&b'\n') {
+                    record.pop();
+                    if record.last() == Some(&b'\r') {
+                        record.pop();
+                    }
+                }
+                return Ok(true);
+            }
         }
     }
 }
 
-fn csv_record_has_open_quote(record: &[u8]) -> bool {
-    let mut quoted = false;
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum CsvFieldState {
+    Start,
+    Unquoted,
+    Quoted,
+    AfterQuote,
+}
+
+enum CsvRecordStatus {
+    Complete,
+    OpenQuote {
+        field: usize,
+    },
+    Invalid {
+        offset: usize,
+        field: usize,
+        message: &'static str,
+    },
+}
+
+fn validate_csv_record(record: &[u8]) -> CsvRecordStatus {
+    let mut state = CsvFieldState::Start;
+    let mut field = 1;
     let mut index = 0;
     while index < record.len() {
-        if record[index] == b'"' {
-            if quoted && record.get(index + 1) == Some(&b'"') {
-                index += 2;
-                continue;
+        let byte = record[index];
+        let record_end = byte == b'\n' && state != CsvFieldState::Quoted;
+        if record_end {
+            return CsvRecordStatus::Complete;
+        }
+        match state {
+            CsvFieldState::Start => match byte {
+                b',' => field += 1,
+                b'"' => state = CsvFieldState::Quoted,
+                _ => state = CsvFieldState::Unquoted,
+            },
+            CsvFieldState::Unquoted => match byte {
+                b',' => {
+                    field += 1;
+                    state = CsvFieldState::Start;
+                }
+                b'"' => {
+                    return CsvRecordStatus::Invalid {
+                        offset: index,
+                        field,
+                        message: "quote is only allowed at the start of a field",
+                    };
+                }
+                _ => {}
+            },
+            CsvFieldState::Quoted => {
+                if byte == b'"' {
+                    state = CsvFieldState::AfterQuote;
+                }
             }
-            quoted = !quoted;
+            CsvFieldState::AfterQuote => match byte {
+                b'"' => state = CsvFieldState::Quoted,
+                b',' => {
+                    field += 1;
+                    state = CsvFieldState::Start;
+                }
+                b'\r' if record.get(index + 1) == Some(&b'\n') => {}
+                _ => {
+                    return CsvRecordStatus::Invalid {
+                        offset: index,
+                        field,
+                        message: "expected a comma or end of record after closing quote",
+                    };
+                }
+            },
         }
         index += 1;
     }
-    quoted
+    if state == CsvFieldState::Quoted {
+        CsvRecordStatus::OpenQuote { field }
+    } else {
+        CsvRecordStatus::Complete
+    }
+}
+
+fn csv_syntax_error(record: usize, line: usize, field: usize, message: &str) -> io::Error {
+    io::Error::new(
+        io::ErrorKind::InvalidData,
+        format!("CSV record {record}, line {line}, field {field}: {message}"),
+    )
 }
 
 fn parse_csv_fields(record: &[u8]) -> io::Result<Vec<String>> {
