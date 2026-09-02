@@ -267,6 +267,9 @@ fn call_mode_calls_one_function_with_record_then_string_arguments() {
             "",
             "a b\\\"\n",
         ),
+        (vec!["-n", "-c", "s/upper", "hoge"], "", "HOGE\n"),
+        (vec!["-nc", "s/upper", "hoge"], "", "HOGE\n"),
+        (vec!["-cn", "s/upper", "hoge"], "", "HOGE\n"),
         (vec!["-n", "-c", "str", "NF"], "", "NF\n"),
     ] {
         let output = run_with_args(&arguments, input);

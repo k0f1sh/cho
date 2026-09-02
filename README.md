@@ -46,7 +46,13 @@ $ echo 'hello' | cho -c s/upper
 HELLO
 $ echo 'foo-bar' | cho -c s/replace - _
 foo_bar
+$ cho -nc s/upper hogehoge
+HOGEHOGE
 ```
+
+Combine `--no-input` with `--call` as `-nc` or `-cn` to call a function using
+only command-line arguments. In this mode, the empty `$0` is not added
+automatically.
 
 Filter and format:
 

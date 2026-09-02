@@ -115,12 +115,15 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
             skip_header = true;
         } else if matches!(argument.as_str(), "-n" | "--no-input") {
             no_input = true;
-        } else if matches!(argument.as_str(), "-c" | "--call") {
+        } else if matches!(argument.as_str(), "-c" | "--call" | "-nc" | "-cn") {
             if program.is_some() {
                 return Err(());
             }
+            if matches!(argument.as_str(), "-nc" | "-cn") {
+                no_input = true;
+            }
             let function = arguments.next().ok_or(())?;
-            program = Some(call_program(&function, arguments)?);
+            program = Some(call_program(&function, arguments, !no_input)?);
             break;
         } else if argument == "-F" {
             field_separator = Some(arguments.next().ok_or(())?);
@@ -151,7 +154,11 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
     })
 }
 
-fn call_program(function: &str, arguments: impl IntoIterator<Item = String>) -> Result<String, ()> {
+fn call_program(
+    function: &str,
+    arguments: impl IntoIterator<Item = String>,
+    include_record: bool,
+) -> Result<String, ()> {
     if function.is_empty()
         || function
             .chars()
@@ -161,7 +168,9 @@ fn call_program(function: &str, arguments: impl IntoIterator<Item = String>) -> 
     }
 
     let mut program = format!("({function}");
-    program.push_str(" $0");
+    if include_record {
+        program.push_str(" $0");
+    }
     for argument in arguments {
         program.push(' ');
         if is_call_reference(&argument) {
@@ -391,21 +400,26 @@ mod tests {
 
     #[test]
     fn call_mode_builds_one_function_call() {
-        assert_eq!(call_program("s/upper", []).unwrap(), "(s/upper $0)");
+        assert_eq!(call_program("s/upper", [], true).unwrap(), "(s/upper $0)");
         assert_eq!(
-            call_program("str", args(&["$1", "$2", "NR", "NF"])).unwrap(),
+            call_program("str", args(&["$1", "$2", "NR", "NF"]), true).unwrap(),
             r#"(str $0 $1 $2 "NR" "NF")"#
         );
         assert_eq!(
-            call_program("str", args(&["a b", "a\\b", "a\"b", "a\nb", "a\tb"])).unwrap(),
+            call_program("str", args(&["a b", "a\\b", "a\"b", "a\nb", "a\tb"]), true,).unwrap(),
             r#"(str $0 "a b" "a\\b" "a\"b" "a\nb" "a\tb")"#
         );
         assert_eq!(
             parse_args(args(&["-n", "--call", "s/upper", "hoge"]))
                 .unwrap()
                 .program,
-            r#"(s/upper $0 "hoge")"#
+            r#"(s/upper "hoge")"#
         );
+        for option in ["-nc", "-cn"] {
+            let options = parse_args(args(&[option, "s/upper", "hoge"])).unwrap();
+            assert!(options.no_input);
+            assert_eq!(options.program, r#"(s/upper "hoge")"#);
+        }
     }
 
     #[test]
