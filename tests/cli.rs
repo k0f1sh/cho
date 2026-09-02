@@ -1,6 +1,19 @@
 use std::io::Write;
 use std::process::{Command, Output, Stdio};
 
+const USAGE: &str = concat!(
+    "Usage:\n",
+    "  cho [INPUT OPTIONS] 'PROGRAM'\n",
+    "  cho [INPUT OPTIONS] --call FUNCTION [ARG ...]\n",
+    "  cho --help [TOPIC]\n",
+    "  cho --apropos QUERY\n",
+    "  cho --version",
+);
+
+fn command_line_error(message: &str) -> String {
+    format!("cho: {message}\n{USAGE}\n")
+}
+
 fn run(program: &str, input: &str) -> Output {
     run_with_args(&[program], input)
 }
@@ -285,22 +298,22 @@ fn apropos_reports_missing_empty_extra_and_unmatched_queries() {
         (
             vec!["--apropos"],
             2,
-            "cho: --apropos expects QUERY\nUsage: cho [OPTIONS] 'PROGRAM'\n",
+            command_line_error("--apropos expects QUERY"),
         ),
         (
             vec!["-k", ""],
             2,
-            "cho: --apropos expects a non-empty QUERY\nUsage: cho [OPTIONS] 'PROGRAM'\n",
+            command_line_error("--apropos expects a non-empty QUERY"),
         ),
         (
             vec!["-k", "trim", "extra"],
             2,
-            "cho: unexpected argument: extra\nUsage: cho [OPTIONS] 'PROGRAM'\n",
+            command_line_error("unexpected argument: extra"),
         ),
         (
             vec!["-k", "not-a-callable"],
             1,
-            "cho: no function or form names match: not-a-callable\n",
+            "cho: no function or form names match: not-a-callable\n".to_owned(),
         ),
     ] {
         let output = run_with_args(&arguments, "");
@@ -359,7 +372,7 @@ fn help_topics_reject_extra_arguments() {
     assert!(output.stdout.is_empty());
     assert_eq!(
         String::from_utf8(output.stderr).unwrap(),
-        "cho: unexpected argument: extra\nUsage: cho [OPTIONS] 'PROGRAM'\n"
+        command_line_error("unexpected argument: extra")
     );
 }
 
@@ -413,23 +426,47 @@ fn call_mode_calls_one_function_with_record_then_string_arguments() {
 }
 
 #[test]
-fn help_and_version_before_call_remain_global_options() {
-    let help = run_with_args(&["--help", "-nc", "str", "literal"], "");
-    assert!(help.status.success());
-    assert!(
-        String::from_utf8(help.stdout)
-            .unwrap()
-            .starts_with("cho — a small, type-aware text processor for the command line\n")
-    );
-    assert!(help.stderr.is_empty());
+fn information_commands_reject_execution_options_and_programs() {
+    for (arguments, option) in [
+        (vec!["--help", "-nc", "str", "literal"], "--help"),
+        (vec!["--version", "(print $1)"], "--version"),
+        (vec!["--csv", "--help"], "--help"),
+        (vec!["(print $1)", "--version"], "--version"),
+    ] {
+        let output = run_with_args(&arguments, "");
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert_eq!(
+            String::from_utf8(output.stderr).unwrap(),
+            command_line_error(&format!(
+                "{option} must be used without PROGRAM or input options"
+            ))
+        );
+    }
+}
 
-    let version = run_with_args(&["--version", "-nc", "str", "literal"], "");
-    assert!(version.status.success());
-    assert_eq!(
-        String::from_utf8(version.stdout).unwrap(),
-        format!("cho {}\n", env!("CARGO_PKG_VERSION"))
-    );
-    assert!(version.stderr.is_empty());
+#[test]
+fn version_is_a_standalone_command() {
+    for option in ["-V", "--version"] {
+        let output = run_with_args(&[option], "");
+        assert!(output.status.success());
+        assert_eq!(
+            String::from_utf8(output.stdout).unwrap(),
+            format!("cho {}\n", env!("CARGO_PKG_VERSION"))
+        );
+        assert!(output.stderr.is_empty());
+    }
+}
+
+#[test]
+fn field_separator_values_are_not_interpreted_as_information_options() {
+    for separator in ["--help", "--version", "--apropos"] {
+        let input = format!("left{separator}right\n");
+        let output = run_with_args(&["-F", separator, "(print $1 $2)"], &input);
+        assert!(output.status.success());
+        assert_eq!(String::from_utf8(output.stdout).unwrap(), "left right\n");
+        assert!(output.stderr.is_empty());
+    }
 }
 
 #[test]
@@ -493,7 +530,7 @@ fn skip_header_requires_csv_or_tsv_mode() {
         assert!(output.stdout.is_empty());
         assert_eq!(
             String::from_utf8(output.stderr).unwrap(),
-            "cho: --skip-header requires --csv or --tsv\nUsage: cho [OPTIONS] 'PROGRAM'\n"
+            command_line_error("--skip-header requires --csv or --tsv")
         );
     }
 }
@@ -531,7 +568,7 @@ fn argument_errors_explain_the_invalid_arguments() {
         assert!(output.stdout.is_empty());
         assert_eq!(
             String::from_utf8(output.stderr).unwrap(),
-            format!("cho: {message}\nUsage: cho [OPTIONS] 'PROGRAM'\n")
+            command_line_error(message)
         );
     }
 }
@@ -543,6 +580,8 @@ fn call_mode_explains_that_parenthesized_programs_need_no_input_mode() {
     assert!(output.stdout.is_empty());
     assert_eq!(
         String::from_utf8(output.stderr).unwrap(),
-        "cho: --call expects FUNCTION without parentheses; use -n 'PROGRAM' to evaluate an expression without input\nUsage: cho [OPTIONS] 'PROGRAM'\n"
+        command_line_error(
+            "--call expects FUNCTION without parentheses; use -n 'PROGRAM' to evaluate an expression without input"
+        )
     );
 }

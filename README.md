@@ -153,6 +153,8 @@ Run `cho --help` for the complete syntax, functions, and special forms.
 Use `cho --help s/trim` to show the signatures, examples, and notes for one
 function or form.
 Use `cho -k trim` to search function and form names and show their summaries.
+Help, apropos, and version are standalone commands; execution options and
+programs are not combined with them.
 
 [`metadata.json`](metadata.json) is the machine-readable index of functions and
 forms. Its `schema_version` changes when the JSON structure makes an

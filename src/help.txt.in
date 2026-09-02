@@ -1,6 +1,11 @@
 cho — a small, type-aware text processor for the command line
 
-Usage: cho [OPTIONS] 'PROGRAM'
+Usage:
+  cho [INPUT OPTIONS] 'PROGRAM'
+  cho [INPUT OPTIONS] --call FUNCTION [ARG ...]
+  cho --help [TOPIC]
+  cho --apropos QUERY
+  cho --version
 
 Common recipes:
   Pick fields             cho '(p $1 $3)'
@@ -31,6 +36,8 @@ Input and options:
   -h, --help [TOPIC] print full help or help for one function or form
   -V, --version      print version
 
+  Help, apropos, and version are standalone commands and cannot be combined
+  with PROGRAM or input options.
   PROGRAM runs once per input record. Whitespace splits fields by default.
   $0 is the complete record; $1, $2, ... are fields. NR is the record number;
   NF is the field count. Missing fields are empty strings. With --skip-header,

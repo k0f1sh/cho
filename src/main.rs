@@ -3,7 +3,14 @@ use std::ffi::OsStr;
 use std::io::{self, IsTerminal};
 use std::process::ExitCode;
 
-const USAGE: &str = "Usage: cho [OPTIONS] 'PROGRAM'";
+const USAGE: &str = concat!(
+    "Usage:\n",
+    "  cho [INPUT OPTIONS] 'PROGRAM'\n",
+    "  cho [INPUT OPTIONS] --call FUNCTION [ARG ...]\n",
+    "  cho --help [TOPIC]\n",
+    "  cho --apropos QUERY\n",
+    "  cho --version",
+);
 const HELP: &str = include_str!("help.txt");
 const RESET: &str = "\x1b[0m";
 const BOLD: &str = "\x1b[1m";
@@ -22,6 +29,14 @@ struct Options {
 }
 
 #[derive(Debug, PartialEq)]
+enum Command {
+    Run(Options),
+    Help(Option<String>),
+    Version,
+    Apropos(String),
+}
+
+#[derive(Debug, PartialEq)]
 enum ArgumentError {
     MissingProgram,
     MissingSeparator,
@@ -35,6 +50,7 @@ enum ArgumentError {
     CallExpression,
     MissingAproposQuery,
     EmptyAproposQuery,
+    InformationCommandCannotBeCombined(String),
 }
 
 impl std::fmt::Display for ArgumentError {
@@ -64,6 +80,10 @@ impl std::fmt::Display for ArgumentError {
             ),
             Self::MissingAproposQuery => formatter.write_str("--apropos expects QUERY"),
             Self::EmptyAproposQuery => formatter.write_str("--apropos expects a non-empty QUERY"),
+            Self::InformationCommandCannotBeCombined(option) => write!(
+                formatter,
+                "{option} must be used without PROGRAM or input options"
+            ),
         }
     }
 }
@@ -179,6 +199,8 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, Ar
                 return Err(ArgumentError::MissingSeparator);
             }
             field_separator = Some(separator.to_owned());
+        } else if is_information_option(&argument) {
+            return Err(ArgumentError::InformationCommandCannotBeCombined(argument));
         } else if program.is_some() {
             return Err(ArgumentError::UnexpectedArgument(argument));
         } else {
@@ -203,6 +225,59 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, Ar
         no_input,
         program: program.ok_or(ArgumentError::MissingProgram)?,
     })
+}
+
+fn parse_command(arguments: Vec<String>) -> Result<Command, ArgumentError> {
+    let mut arguments = arguments.into_iter();
+    let Some(first) = arguments.next() else {
+        return Err(ArgumentError::MissingProgram);
+    };
+    match first.as_str() {
+        "-h" | "--help" => {
+            let topic = arguments.next();
+            if topic.as_deref().is_some_and(is_cli_option) {
+                return Err(ArgumentError::InformationCommandCannotBeCombined(first));
+            }
+            if let Some(argument) = arguments.next() {
+                return Err(ArgumentError::UnexpectedArgument(argument));
+            }
+            Ok(Command::Help(topic))
+        }
+        "-V" | "--version" => {
+            if arguments.next().is_some() {
+                return Err(ArgumentError::InformationCommandCannotBeCombined(first));
+            }
+            Ok(Command::Version)
+        }
+        "-k" | "--apropos" => {
+            let query = arguments.next().ok_or(ArgumentError::MissingAproposQuery)?;
+            if query.is_empty() {
+                return Err(ArgumentError::EmptyAproposQuery);
+            }
+            if let Some(argument) = arguments.next() {
+                return Err(ArgumentError::UnexpectedArgument(argument));
+            }
+            Ok(Command::Apropos(query))
+        }
+        _ => parse_args(std::iter::once(first).chain(arguments)).map(Command::Run),
+    }
+}
+
+fn is_information_option(argument: &str) -> bool {
+    matches!(
+        argument,
+        "-h" | "--help" | "-V" | "--version" | "-k" | "--apropos"
+    )
+}
+
+fn is_cli_option(argument: &str) -> bool {
+    is_information_option(argument)
+        || is_call_option(argument)
+        || matches!(
+            argument,
+            "--csv" | "--tsv" | "-s" | "--skip-header" | "-n" | "--no-input" | "-F"
+        )
+        || argument.starts_with("-F")
 }
 
 fn is_call_option(argument: &str) -> bool {
@@ -260,67 +335,16 @@ fn is_call_reference(argument: &str) -> bool {
 fn main() -> ExitCode {
     let mut arguments = env::args();
     let _command = arguments.next();
-    let arguments = arguments.collect::<Vec<_>>();
-
-    if arguments
-        .first()
-        .is_some_and(|argument| matches!(argument.as_str(), "-k" | "--apropos"))
-    {
-        let query = match arguments.get(1) {
-            Some(query) if query.is_empty() => {
-                eprintln!("cho: {}", ArgumentError::EmptyAproposQuery);
-                eprintln!("{USAGE}");
-                return ExitCode::from(2);
-            }
-            Some(query) => query,
-            None => {
-                eprintln!("cho: {}", ArgumentError::MissingAproposQuery);
-                eprintln!("{USAGE}");
-                return ExitCode::from(2);
-            }
-        };
-        if let Some(argument) = arguments.get(2) {
-            eprintln!(
-                "cho: {}",
-                ArgumentError::UnexpectedArgument(argument.clone())
-            );
+    let command = match parse_command(arguments.collect()) {
+        Ok(command) => command,
+        Err(error) => {
+            eprintln!("cho: {error}");
             eprintln!("{USAGE}");
             return ExitCode::from(2);
         }
-        let Some(output) = cho::apropos(query) else {
-            eprintln!("cho: no function or form names match: {query}");
-            return ExitCode::FAILURE;
-        };
-        let stdout = io::stdout();
-        if help_color_enabled(
-            stdout.is_terminal(),
-            env::var_os("NO_COLOR").as_deref(),
-            env::var_os("TERM").as_deref(),
-        ) {
-            println!("{}", colorize_apropos(&output));
-        } else {
-            println!("{output}");
-        }
-        return ExitCode::SUCCESS;
-    }
-    let global_arguments = &arguments[..arguments
-        .iter()
-        .position(|argument| is_call_option(argument))
-        .unwrap_or(arguments.len())];
+    };
 
-    if let Some(position) = global_arguments
-        .iter()
-        .position(|argument| matches!(argument.as_str(), "-h" | "--help"))
-    {
-        if let Some(argument) = global_arguments.get(position + 2) {
-            eprintln!(
-                "cho: {}",
-                ArgumentError::UnexpectedArgument(argument.clone())
-            );
-            eprintln!("{USAGE}");
-            return ExitCode::from(2);
-        }
-        let topic = global_arguments.get(position + 1);
+    if let Command::Help(topic) = &command {
         let topic_help = match topic {
             Some(topic) => match cho::help(topic) {
                 Some(help) => Some(help),
@@ -345,21 +369,29 @@ fn main() -> ExitCode {
         }
         return ExitCode::SUCCESS;
     }
-    if global_arguments
-        .iter()
-        .any(|argument| matches!(argument.as_str(), "-V" | "--version"))
-    {
+    if command == Command::Version {
         println!("cho {}", env!("CARGO_PKG_VERSION"));
         return ExitCode::SUCCESS;
     }
-
-    let options = match parse_args(arguments) {
-        Ok(options) => options,
-        Err(error) => {
-            eprintln!("cho: {error}");
-            eprintln!("{USAGE}");
-            return ExitCode::from(2);
+    if let Command::Apropos(query) = &command {
+        let Some(output) = cho::apropos(query) else {
+            eprintln!("cho: no function or form names match: {query}");
+            return ExitCode::FAILURE;
+        };
+        let stdout = io::stdout();
+        if help_color_enabled(
+            stdout.is_terminal(),
+            env::var_os("NO_COLOR").as_deref(),
+            env::var_os("TERM").as_deref(),
+        ) {
+            println!("{}", colorize_apropos(&output));
+        } else {
+            println!("{output}");
         }
+        return ExitCode::SUCCESS;
+    }
+    let Command::Run(options) = command else {
+        unreachable!("information commands returned above");
     };
 
     let program = if options.skip_header {
@@ -473,6 +505,20 @@ mod tests {
                 no_input: false,
                 program: "(print $1)".into(),
             })
+        );
+    }
+
+    #[test]
+    fn parses_standalone_information_commands() {
+        assert_eq!(parse_command(args(&["--help"])), Ok(Command::Help(None)));
+        assert_eq!(
+            parse_command(args(&["-h", "s/trim"])),
+            Ok(Command::Help(Some("s/trim".into())))
+        );
+        assert_eq!(parse_command(args(&["--version"])), Ok(Command::Version));
+        assert_eq!(
+            parse_command(args(&["-k", "trim"])),
+            Ok(Command::Apropos("trim".into()))
         );
     }
 
