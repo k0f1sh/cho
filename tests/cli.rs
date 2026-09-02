@@ -187,6 +187,7 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("--no-input"));
     assert!(stdout.contains("-n, --no-input"));
     assert!(stdout.contains("-c, --call"));
+    assert!(stdout.contains("-h, --help [TOPIC]"));
     assert!(stdout.contains("cannot pass NR or NF as record values"));
     assert!(stdout.contains("-F separator must be a valid regular expression"));
     assert!(stdout.contains("It must not match an\n  empty string"));
@@ -239,6 +240,59 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("fc00::/7"));
     assert!(!stdout.contains("(dur/m NUMBER)"));
     assert!(stdout.contains("(cidr/contains? CIDR IPADDR)"));
+}
+
+#[test]
+fn help_describes_one_callable_by_name_or_alias() {
+    let canonical = run_with_args(&["--help", "s/trim"], "");
+    assert!(canonical.status.success());
+    assert!(canonical.stderr.is_empty());
+    let stdout = String::from_utf8(canonical.stdout).unwrap();
+    assert!(stdout.starts_with("s/trim — trim whitespace or exact affixes\n"));
+    assert!(stdout.contains("\nSignatures:\n"));
+    assert!(stdout.contains("(s/trim VALUE) -> STRING"));
+    assert!(stdout.contains("\nExamples:\n  cho '(s/trim $1)'"));
+    assert!(stdout.contains("\nNotes:\n"));
+    assert!(!stdout.contains("Common recipes:"));
+
+    let name = run_with_args(&["--help", "s/dquote"], "");
+    let alias = run_with_args(&["-h", "dq"], "");
+    assert!(name.status.success());
+    assert!(alias.status.success());
+    assert_eq!(alias.stdout, name.stdout);
+    assert!(alias.stderr.is_empty());
+}
+
+#[test]
+fn help_topics_include_every_callable_kind() {
+    for topic in ["print", "if", "->", "s/upper"] {
+        let output = run_with_args(&["--help", topic], "");
+        assert!(output.status.success(), "missing help for {topic}");
+        assert!(!output.stdout.is_empty());
+        assert!(output.stderr.is_empty());
+    }
+}
+
+#[test]
+fn unknown_help_topics_are_command_line_errors() {
+    let output = run_with_args(&["--help", "s/not-a-function"], "");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "cho: no such help topic: s/not-a-function\nTry 'cho --help' for all functions and forms.\n"
+    );
+}
+
+#[test]
+fn help_topics_reject_extra_arguments() {
+    let output = run_with_args(&["--help", "s/trim", "extra"], "");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "cho: unexpected argument: extra\nUsage: cho [OPTIONS] 'PROGRAM'\n"
+    );
 }
 
 #[test]

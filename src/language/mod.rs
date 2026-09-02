@@ -147,7 +147,6 @@ pub(crate) trait ToAst: Sync {
     ) -> Result<CompiledExpression, ParseError>;
 }
 
-#[cfg(any(test, feature = "documentation"))]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum DocumentationCategory {
     Program,
@@ -166,21 +165,19 @@ pub(crate) enum DocumentationCategory {
     Composition,
 }
 
-#[cfg(any(test, feature = "documentation"))]
 pub(crate) struct SignatureDocumentation {
     pub(crate) summary: Option<&'static str>,
     pub(crate) example: &'static str,
 }
 
-#[cfg(any(test, feature = "documentation"))]
 pub(crate) struct CallableDocumentation {
+    #[allow(dead_code)] // Read by the feature-gated metadata generator.
     pub(crate) category: DocumentationCategory,
     pub(crate) summary: &'static str,
     pub(crate) notes: &'static [&'static str],
     pub(crate) signatures: &'static [SignatureDocumentation],
 }
 
-#[cfg(any(test, feature = "documentation"))]
 pub(crate) trait ToDoc: ToAst {
     fn to_doc(&self) -> CallableDocumentation;
 }
@@ -241,7 +238,6 @@ macro_rules! define_callable {
             ) -> Result<CompiledExpression, ParseError> $body
         }
 
-        #[cfg(any(test, feature = "documentation"))]
         impl ToDoc for $type {
             fn to_doc(&self) -> CallableDocumentation {
                 CallableDocumentation {
@@ -312,7 +308,6 @@ macro_rules! registry {
     ($($module:ident::$type:ident),+ $(,)?) => {
         pub(crate) static CALLABLES: &[&dyn ToAst] = &[$(&$module::$type),+];
 
-        #[cfg(any(test, feature = "documentation"))]
         pub(crate) static DOCUMENTED_CALLABLES: &[&dyn ToDoc] = &[$(&$module::$type),+];
     };
 }
