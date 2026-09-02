@@ -3,8 +3,7 @@ use std::ffi::OsStr;
 use std::io::{self, IsTerminal};
 use std::process::ExitCode;
 
-const USAGE: &str =
-    "Usage: cho [-n | --no-input | -F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'";
+const USAGE: &str = "Usage: cho [OPTIONS] 'PROGRAM'";
 const HELP: &str = include_str!("help.txt");
 const RESET: &str = "\x1b[0m";
 const BOLD: &str = "\x1b[1m";
@@ -116,6 +115,13 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
             skip_header = true;
         } else if matches!(argument.as_str(), "-n" | "--no-input") {
             no_input = true;
+        } else if matches!(argument.as_str(), "-c" | "--call") {
+            if program.is_some() {
+                return Err(());
+            }
+            let function = arguments.next().ok_or(())?;
+            program = Some(call_program(&function, arguments)?);
+            break;
         } else if argument == "-F" {
             field_separator = Some(arguments.next().ok_or(())?);
         } else if let Some(separator) = argument.strip_prefix("-F") {
@@ -142,6 +148,49 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, ()
         skip_header,
         no_input,
         program: program.ok_or(())?,
+    })
+}
+
+fn call_program(function: &str, arguments: impl IntoIterator<Item = String>) -> Result<String, ()> {
+    if function.is_empty()
+        || function
+            .chars()
+            .any(|character| character.is_whitespace() || matches!(character, '(' | ')' | '"'))
+    {
+        return Err(());
+    }
+
+    let arguments = arguments.into_iter().collect::<Vec<_>>();
+    let mut program = format!("({function}");
+    if arguments.is_empty() {
+        program.push_str(" $0");
+    } else {
+        for argument in arguments {
+            program.push(' ');
+            if is_call_reference(&argument) {
+                program.push_str(&argument);
+            } else {
+                program.push('"');
+                for character in argument.chars() {
+                    match character {
+                        '\\' => program.push_str("\\\\"),
+                        '"' => program.push_str("\\\""),
+                        '\n' => program.push_str("\\n"),
+                        '\t' => program.push_str("\\t"),
+                        other => program.push(other),
+                    }
+                }
+                program.push('"');
+            }
+        }
+    }
+    program.push(')');
+    Ok(program)
+}
+
+fn is_call_reference(argument: &str) -> bool {
+    argument.strip_prefix('$').is_some_and(|index| {
+        !index.is_empty() && index.chars().all(|character| character.is_ascii_digit())
     })
 }
 
@@ -338,5 +387,32 @@ mod tests {
         ] {
             assert!(parse_args(args(&arguments)).is_err());
         }
+    }
+
+    #[test]
+    fn call_mode_builds_one_function_call() {
+        assert_eq!(call_program("s/upper", []).unwrap(), "(s/upper $0)");
+        assert_eq!(
+            call_program("str", args(&["$1", "$2", "NR", "NF"])).unwrap(),
+            r#"(str $1 $2 "NR" "NF")"#
+        );
+        assert_eq!(
+            call_program("str", args(&["a b", "a\\b", "a\"b", "a\nb", "a\tb"])).unwrap(),
+            r#"(str "a b" "a\\b" "a\"b" "a\nb" "a\tb")"#
+        );
+        assert_eq!(
+            parse_args(args(&["-n", "--call", "s/upper", "hoge"]))
+                .unwrap()
+                .program,
+            r#"(s/upper "hoge")"#
+        );
+    }
+
+    #[test]
+    fn call_mode_rejects_a_missing_or_invalid_function_name() {
+        assert!(parse_args(args(&["-c"])).is_err());
+        assert!(parse_args(args(&["-c", "s/upper $1"])).is_err());
+        assert!(parse_args(args(&["(p $0)", "-c", "s/upper"])).is_err());
+        assert!(parse_args(args(&["-s", "s/upper"])).is_err());
     }
 }

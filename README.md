@@ -38,6 +38,14 @@ $ echo 'Alice 30 tokyo' | cho '(p $1 $3)'
 Alice tokyo
 ```
 
+Call one function without writing parentheses. With no explicit argument,
+`--call` passes the complete record as `$0`:
+
+```console
+$ echo 'hello' | cho -c s/upper
+HELLO
+```
+
 Filter and format:
 
 ```console

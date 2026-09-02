@@ -185,6 +185,8 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("--skip-header"));
     assert!(stdout.contains("--no-input"));
     assert!(stdout.contains("-n, --no-input"));
+    assert!(stdout.contains("-c, --call"));
+    assert!(stdout.contains("NR and NF cannot be passed as record values"));
     assert!(stdout.contains("-F separator must be a valid regular expression"));
     assert!(stdout.contains("It must not match an\n  empty string"));
     assert!(stdout.contains("field accepts a non-negative whole number"));
@@ -251,6 +253,26 @@ fn short_no_input_option_runs_once_with_an_empty_record() {
     assert!(output.status.success());
     assert_eq!(String::from_utf8(output.stdout).unwrap(), "1 0\n");
     assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn call_mode_calls_one_function_with_default_explicit_and_string_arguments() {
+    for (arguments, input, expected) in [
+        (vec!["-c", "s/upper"], "hoge\n", "HOGE\n"),
+        (vec!["-c", "str", "$1", "$2"], "hoge fuga\n", "hogefuga\n"),
+        (vec!["-n", "-c", "s/upper", "hoge"], "ignored\n", "HOGE\n"),
+        (
+            vec!["-n", "--call", "str", "a b", "\\", "\""],
+            "",
+            "a b\\\"\n",
+        ),
+        (vec!["-n", "-c", "s/upper", "NF"], "", "NF\n"),
+    ] {
+        let output = run_with_args(&arguments, input);
+        assert!(output.status.success());
+        assert_eq!(String::from_utf8(output.stdout).unwrap(), expected);
+        assert!(output.stderr.is_empty());
+    }
 }
 
 #[test]

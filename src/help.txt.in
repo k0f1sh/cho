@@ -1,6 +1,6 @@
 cho — a small, type-aware text processor for the command line
 
-Usage: cho [-n | --no-input | -F SEPARATOR | --csv | --tsv] [--skip-header] 'PROGRAM'
+Usage: cho [OPTIONS] 'PROGRAM'
 
 Common recipes:
   Pick fields             cho '(p $1 $3)'
@@ -15,6 +15,7 @@ Common recipes:
   Read CSV with a header  cho --csv --skip-header '(p $1 $3)'
   Read TSV                cho --tsv '(p $1 $2)'
   Run without input       cho -n '(p (dt/now))'
+  Call one function       cho -c s/upper
 
 Input and options:
   -F SEPARATOR       split fields using this regular expression
@@ -23,6 +24,7 @@ Input and options:
   --tsv              split fields on tabs
   --skip-header      skip the first CSV or TSV record
   -n, --no-input     do not read input; run once with an empty record
+  -c, --call         call FUNCTION with ARG values; default to $0 when omitted
   -h, --help         print help
   -V, --version      print version
 
@@ -31,6 +33,13 @@ Input and options:
   NF is the field count. Missing fields are empty strings. With --skip-header,
   the first data record keeps its input position and therefore has NR 2.
   With --no-input, $0 is empty, NR is 1, and NF is 0.
+  With --call, arguments named $0, $1, ... are field references; all other
+  arguments are Strings. NR and NF cannot be passed as record values in this
+  mode; they are treated as Strings. Quote $ references from the shell. Options
+  must precede --call because every following argument belongs to the call.
+  Examples: printf 'hoge\n' | cho -c s/upper
+            printf 'hoge fuga\n' | cho -c str '$1' '$2'
+            cho -n -c s/upper hoge
   The -F separator must be a valid regular expression. It must not match an
   empty string.
 
