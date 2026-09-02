@@ -184,6 +184,7 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("(if BOOLEAN VALUE VALUE)"));
     assert!(stdout.contains("--skip-header"));
     assert!(stdout.contains("--no-input"));
+    assert!(stdout.contains("-n, --no-input"));
     assert!(stdout.contains("-F separator must be a valid regular expression"));
     assert!(stdout.contains("It must not match an\n  empty string"));
     assert!(stdout.contains("field accepts a non-negative whole number"));
@@ -241,6 +242,14 @@ fn no_input_runs_once_with_an_empty_record() {
     );
     assert!(output.status.success());
     assert_eq!(String::from_utf8(output.stdout).unwrap(), ",,1,0\n");
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn short_no_input_option_runs_once_with_an_empty_record() {
+    let output = run_with_args(&["-n", "(print NR NF)"], "ignored\ninput\n");
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8(output.stdout).unwrap(), "1 0\n");
     assert!(output.stderr.is_empty());
 }
 
