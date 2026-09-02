@@ -241,6 +241,48 @@ fn csv_mode_preserves_a_final_record_without_a_newline() {
 }
 
 #[test]
+fn csv_mode_rejects_invalid_quotes_with_record_line_and_field() {
+    for (input, prior_output, message) in [
+        (
+            "name,value\nfirst,valid\nsecond,\"value\"trailing\n",
+            "name value\nfirst valid\n",
+            "CSV record 3, line 3, field 2: expected a comma or end of record after closing quote",
+        ),
+        (
+            "name,value\nfirst,un\"quoted\n",
+            "name value\n",
+            "CSV record 2, line 2, field 2: quote is only allowed at the start of a field",
+        ),
+        (
+            "name,value\nfirst,\"line one\nline two",
+            "name value\n",
+            "CSV record 2, line 3, field 2: quoted field is not closed before end of input",
+        ),
+    ] {
+        let mut output = Vec::new();
+        let error = cho::run_csv("(print $1 $2)", Cursor::new(input), &mut output).unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+        assert_eq!(error.to_string(), message);
+        assert_eq!(String::from_utf8(output).unwrap(), prior_output);
+    }
+}
+
+#[test]
+fn csv_mode_accepts_escaped_quotes_and_multiline_fields() {
+    let mut output = Vec::new();
+    cho::run_csv(
+        "(print $1 (s/escape $2) $3)",
+        Cursor::new("first,\"line one\nline \"\"two\"\"\",last\r\n"),
+        &mut output,
+    )
+    .unwrap();
+    assert_eq!(
+        String::from_utf8(output).unwrap(),
+        "first line one\\nline \"two\" last\n"
+    );
+}
+
+#[test]
 fn output_before_a_runtime_error_is_preserved() {
     let mut result = Vec::new();
     let error = cho::run(
