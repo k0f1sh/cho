@@ -5,6 +5,54 @@
 - 直接依存と推移依存を含むすべての第三者ライセンスを再確認し、
   `THIRD_PARTY_LICENSES`または`THIRD_PARTY_NOTICES`を生成して配布物へ同梱する。
 
+## 優先して対応するもの
+
+### URLクエリの不正なpercent escape
+
+`url/query-get`と`url/query-has?`は、クエリに不正なpercent escapeやUTF-8が含まれる
+場合の挙動を`url/decode`と揃える。現在は`%ZZ`のような値を文字列として返すため、
+不正なescapeを拒否すると説明しているhelpと一致していない。
+
+```console
+$ echo 'https://example.com/?q=%ZZ' | cho '(url/query-get $1 "q")'
+%ZZ
+```
+
+URL全体を引数の型へ変換する段階で検証するか、クエリを取得する段階で検証するかを
+決める。`url/query-get`と`url/query-has?`で同じ規則を使い、関数名、引数位置、
+不正なbyte位置を含む実行時エラーにする。
+
+### CSVを安全に出力する値式
+
+CSV入力から取り出した値を、カンマ、引用符、改行を保ったままCSVへ戻せる値式を
+検討する。`s/dquote`はCSVの引用規則とは異なり、`s/join`だけでは安全なCSV行を
+組み立てられない。
+
+候補：
+
+```lisp
+(csv/quote VALUE)
+(csv/join VALUE ...)
+```
+
+専用の出力モードや`print`の特例ではなく、他の値式とネストできる形を優先する。
+区切り文字、`"`の二重化、改行、空文字、複数値、末尾改行の責務を決めてから実装する。
+
+### helpとaproposの概念検索
+
+関数名を知らない利用者が、`csv`、`date`、`timezone`などの概念語から関連する関数や
+入力オプションへ到達できるようにする。現在のaproposは関数名とaliasだけを検索し、
+入力形式は関数別helpの対象ではない。
+
+検討するもの：
+
+- summary、型名、関連語をaproposの検索対象に含める
+- `cho --help csv`、`cho --help input`、`cho --help errors`などの概念別トピック
+- 検索結果から関数、入力オプション、概念トピックを区別できる表示
+- 引数なしの`cho -k`を索引として保ち、検索結果の並び順を安定させる
+
+新しいコマンドを増やさず、全体helpの自己完結性と関数別helpの簡潔さを維持する。
+
 ## 実例が集まったら検討するもの
 
 ### Durationの任意表示
