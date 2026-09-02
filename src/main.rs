@@ -22,18 +22,42 @@ struct Options {
 }
 
 #[derive(Debug, PartialEq)]
-struct ArgumentError {
-    message: Option<&'static str>,
+enum ArgumentError {
+    MissingProgram,
+    MissingSeparator,
+    UnexpectedArgument(String),
+    ConflictingInputFormats,
+    SkipHeaderWithoutDelimitedInput,
+    NoInputWithInputOptions,
+    CallAfterProgram,
+    MissingCallFunction,
+    InvalidCallFunction,
+    CallExpression,
 }
 
-impl ArgumentError {
-    const fn usage() -> Self {
-        Self { message: None }
-    }
-
-    const fn call_expression() -> Self {
-        Self {
-            message: Some(
+impl std::fmt::Display for ArgumentError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MissingProgram => formatter.write_str("missing PROGRAM"),
+            Self::MissingSeparator => formatter.write_str("-F expects SEPARATOR"),
+            Self::UnexpectedArgument(argument) => {
+                write!(formatter, "unexpected argument: {argument}")
+            }
+            Self::ConflictingInputFormats => {
+                formatter.write_str("--csv, --tsv, and -F are mutually exclusive")
+            }
+            Self::SkipHeaderWithoutDelimitedInput => {
+                formatter.write_str("--skip-header requires --csv or --tsv")
+            }
+            Self::NoInputWithInputOptions => formatter.write_str(
+                "--no-input cannot be combined with -F, --csv, --tsv, or --skip-header",
+            ),
+            Self::CallAfterProgram => formatter.write_str("--call must precede PROGRAM"),
+            Self::MissingCallFunction => formatter.write_str("--call expects FUNCTION"),
+            Self::InvalidCallFunction => formatter.write_str(
+                "--call expects a function name without whitespace, parentheses, or quotes",
+            ),
+            Self::CallExpression => formatter.write_str(
                 "--call expects FUNCTION without parentheses; use -n 'PROGRAM' to evaluate an expression without input",
             ),
         }
@@ -134,34 +158,38 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, Ar
             skip_header = true;
         } else if matches!(argument.as_str(), "-n" | "--no-input") {
             no_input = true;
-        } else if matches!(argument.as_str(), "-c" | "--call" | "-nc" | "-cn") {
+        } else if is_call_option(&argument) {
             if program.is_some() {
-                return Err(ArgumentError::usage());
+                return Err(ArgumentError::CallAfterProgram);
             }
             if matches!(argument.as_str(), "-nc" | "-cn") {
                 no_input = true;
             }
-            let function = arguments.next().ok_or_else(ArgumentError::usage)?;
+            let function = arguments.next().ok_or(ArgumentError::MissingCallFunction)?;
             program = Some(call_program(&function, arguments, !no_input)?);
             break;
         } else if argument == "-F" {
-            field_separator = Some(arguments.next().ok_or_else(ArgumentError::usage)?);
+            field_separator = Some(arguments.next().ok_or(ArgumentError::MissingSeparator)?);
         } else if let Some(separator) = argument.strip_prefix("-F") {
             if separator.is_empty() {
-                return Err(ArgumentError::usage());
+                return Err(ArgumentError::MissingSeparator);
             }
             field_separator = Some(separator.to_owned());
-        } else if program.replace(argument).is_some() {
-            return Err(ArgumentError::usage());
+        } else if program.is_some() {
+            return Err(ArgumentError::UnexpectedArgument(argument));
+        } else {
+            program = Some(argument);
         }
     }
 
-    if (csv && tsv)
-        || ((csv || tsv) && field_separator.is_some())
-        || (skip_header && !(csv || tsv))
-        || (no_input && (csv || tsv || field_separator.is_some() || skip_header))
-    {
-        return Err(ArgumentError::usage());
+    if no_input && (csv || tsv || field_separator.is_some() || skip_header) {
+        return Err(ArgumentError::NoInputWithInputOptions);
+    }
+    if (csv && tsv) || ((csv || tsv) && field_separator.is_some()) {
+        return Err(ArgumentError::ConflictingInputFormats);
+    }
+    if skip_header && !(csv || tsv) {
+        return Err(ArgumentError::SkipHeaderWithoutDelimitedInput);
     }
     Ok(Options {
         field_separator,
@@ -169,8 +197,12 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, Ar
         tsv,
         skip_header,
         no_input,
-        program: program.ok_or_else(ArgumentError::usage)?,
+        program: program.ok_or(ArgumentError::MissingProgram)?,
     })
+}
+
+fn is_call_option(argument: &str) -> bool {
+    matches!(argument, "-c" | "--call" | "-nc" | "-cn")
 }
 
 fn call_program(
@@ -179,14 +211,14 @@ fn call_program(
     include_record: bool,
 ) -> Result<String, ArgumentError> {
     if function.starts_with('(') || function.ends_with(')') {
-        return Err(ArgumentError::call_expression());
+        return Err(ArgumentError::CallExpression);
     }
     if function.is_empty()
         || function
             .chars()
             .any(|character| character.is_whitespace() || matches!(character, '(' | ')' | '"'))
     {
-        return Err(ArgumentError::usage());
+        return Err(ArgumentError::InvalidCallFunction);
     }
 
     let mut program = format!("({function}");
@@ -225,8 +257,12 @@ fn main() -> ExitCode {
     let mut arguments = env::args();
     let _command = arguments.next();
     let arguments = arguments.collect::<Vec<_>>();
+    let global_arguments = &arguments[..arguments
+        .iter()
+        .position(|argument| is_call_option(argument))
+        .unwrap_or(arguments.len())];
 
-    if arguments
+    if global_arguments
         .iter()
         .any(|argument| matches!(argument.as_str(), "-h" | "--help"))
     {
@@ -242,7 +278,7 @@ fn main() -> ExitCode {
         }
         return ExitCode::SUCCESS;
     }
-    if arguments
+    if global_arguments
         .iter()
         .any(|argument| matches!(argument.as_str(), "-V" | "--version"))
     {
@@ -253,9 +289,7 @@ fn main() -> ExitCode {
     let options = match parse_args(arguments) {
         Ok(options) => options,
         Err(error) => {
-            if let Some(message) = error.message {
-                eprintln!("cho: {message}");
-            }
+            eprintln!("cho: {error}");
             eprintln!("{USAGE}");
             return ExitCode::from(2);
         }
@@ -458,7 +492,7 @@ mod tests {
         assert!(parse_args(args(&["-s", "s/upper"])).is_err());
         assert_eq!(
             parse_args(args(&["-nc", "(ulid/new)"])),
-            Err(ArgumentError::call_expression())
+            Err(ArgumentError::CallExpression)
         );
     }
 }
