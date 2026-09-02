@@ -345,6 +345,18 @@ fn help_describes_one_callable_by_name_or_alias() {
 }
 
 #[test]
+fn help_examples_can_show_input_and_expected_output() {
+    let output = run_with_args(&["--help", "s/starts-with?"], "");
+    assert!(output.status.success());
+    assert!(output.stderr.is_empty());
+    assert!(
+        String::from_utf8(output.stdout)
+            .unwrap()
+            .contains("echo api-gateway | cho '(s/starts-with? $1 \"api-\")'  # => true")
+    );
+}
+
+#[test]
 fn help_topics_include_every_callable_kind() {
     for topic in ["print", "if", "->", "s/upper"] {
         let output = run_with_args(&["--help", topic], "");

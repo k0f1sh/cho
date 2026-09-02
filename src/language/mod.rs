@@ -168,6 +168,8 @@ pub(crate) enum DocumentationCategory {
 pub(crate) struct SignatureDocumentation {
     pub(crate) summary: Option<&'static str>,
     pub(crate) example: &'static str,
+    pub(crate) input: Option<&'static str>,
+    pub(crate) expected_output: Option<&'static str>,
 }
 
 pub(crate) struct CallableDocumentation {
@@ -218,7 +220,7 @@ macro_rules! define_callable {
         $category:ident,
         $summary:literal,
         [$($note:literal),* $(,)?],
-        [$(($signature_summary:expr, $example:literal)),+ $(,)?]
+        [$($signature:tt),+ $(,)?]
     ) => {
         pub(super) struct $type;
 
@@ -245,13 +247,29 @@ macro_rules! define_callable {
                     summary: $summary,
                     notes: &[$($note),*],
                     signatures: &[
-                        $(SignatureDocumentation {
-                            summary: $signature_summary,
-                            example: $example,
-                        }),+
+                        $(signature_documentation!($signature)),+
                     ],
                 }
             }
+        }
+    };
+}
+
+macro_rules! signature_documentation {
+    (($summary:expr, $example:literal)) => {
+        SignatureDocumentation {
+            summary: $summary,
+            example: $example,
+            input: None,
+            expected_output: None,
+        }
+    };
+    (($summary:expr, $example:literal, $input:literal, $expected_output:literal)) => {
+        SignatureDocumentation {
+            summary: $summary,
+            example: $example,
+            input: Some($input),
+            expected_output: Some($expected_output),
         }
     };
 }
