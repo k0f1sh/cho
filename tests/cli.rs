@@ -26,12 +26,14 @@ fn run_with_args(arguments: &[&str], input: &str) -> Output {
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(input.as_bytes())
-        .unwrap();
+    let write_result = child.stdin.take().unwrap().write_all(input.as_bytes());
+    if let Err(e) = write_result {
+        assert_eq!(
+            e.kind(),
+            std::io::ErrorKind::BrokenPipe,
+            "unexpected write error: {e}"
+        );
+    }
     child.wait_with_output().unwrap()
 }
 
