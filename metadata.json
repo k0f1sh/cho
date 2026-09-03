@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.28.0",
+  "cho_version": "0.29.0",
   "callables": [
     {
       "name": "print",
@@ -2192,6 +2192,365 @@
           "returns": "String",
           "summary": null,
           "example": "(re/part $1 /[,:]+/ 2)"
+        }
+      ]
+    },
+    {
+      "name": "date",
+      "aliases": [],
+      "kind": "function",
+      "category": "date",
+      "summary": "validate a calendar date",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Date",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Date",
+          "summary": null,
+          "example": "(date $1)"
+        }
+      ]
+    },
+    {
+      "name": "d/year",
+      "aliases": [],
+      "kind": "function",
+      "category": "date",
+      "summary": "extract the year",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "date",
+              "type": "Date",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(d/year $1)"
+        }
+      ]
+    },
+    {
+      "name": "d/month",
+      "aliases": [],
+      "kind": "function",
+      "category": "date",
+      "summary": "extract the month number",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "date",
+              "type": "Date",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(d/month $1)"
+        }
+      ]
+    },
+    {
+      "name": "d/day",
+      "aliases": [],
+      "kind": "function",
+      "category": "date",
+      "summary": "extract the day of the month",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "date",
+              "type": "Date",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(d/day $1)"
+        }
+      ]
+    },
+    {
+      "name": "d/weekday",
+      "aliases": [],
+      "kind": "function",
+      "category": "date",
+      "summary": "extract the ISO weekday number",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "date",
+              "type": "Date",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(d/weekday $1)"
+        }
+      ]
+    },
+    {
+      "name": "d/add",
+      "aliases": [],
+      "kind": "function",
+      "category": "date",
+      "summary": "add whole calendar days",
+      "notes": [
+        "DAYS may be negative."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "date",
+              "type": "Date",
+              "cardinality": "required"
+            },
+            {
+              "name": "days",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Date",
+          "summary": null,
+          "example": "(d/add $1 7)"
+        }
+      ]
+    },
+    {
+      "name": "d/sub",
+      "aliases": [],
+      "kind": "function",
+      "category": "date",
+      "summary": "subtract whole calendar days",
+      "notes": [
+        "DAYS may be negative."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "date",
+              "type": "Date",
+              "cardinality": "required"
+            },
+            {
+              "name": "days",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Date",
+          "summary": null,
+          "example": "(d/sub $1 7)"
+        }
+      ]
+    },
+    {
+      "name": "d/diff",
+      "aliases": [],
+      "kind": "function",
+      "category": "date",
+      "summary": "difference in calendar days",
+      "notes": [
+        "Returns LEFT minus RIGHT."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Date",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Date",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(d/diff $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "d/>",
+      "aliases": [],
+      "kind": "function",
+      "category": "date",
+      "summary": "later than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Date",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Date",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(d/> $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "d/>=",
+      "aliases": [],
+      "kind": "function",
+      "category": "date",
+      "summary": "later than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Date",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Date",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(d/>= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "d/<",
+      "aliases": [],
+      "kind": "function",
+      "category": "date",
+      "summary": "earlier than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Date",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Date",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(d/< $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "d/<=",
+      "aliases": [],
+      "kind": "function",
+      "category": "date",
+      "summary": "earlier than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Date",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Date",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(d/<= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "d/=",
+      "aliases": [],
+      "kind": "function",
+      "category": "date",
+      "summary": "equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Date",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Date",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(d/= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "d/!=",
+      "aliases": [],
+      "kind": "function",
+      "category": "date",
+      "summary": "not equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "Date",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "Date",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(d/!= $1 $2)"
         }
       ]
     },

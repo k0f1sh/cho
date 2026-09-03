@@ -66,12 +66,21 @@ pub enum IpClass {
 pub enum ComparisonType {
     Number,
     String,
+    Date,
     DateTime,
     ByteSize,
     IpAddr,
     SemVer,
     Uuid,
     Ulid,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum DatePart {
+    Year,
+    Month,
+    Day,
+    Weekday,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -260,6 +269,23 @@ pub enum Value {
     Not(Box<Value>),
     And(Vec<Value>),
     Or(Vec<Value>),
+    NormalizeDate(Box<Value>),
+    DatePart {
+        part: DatePart,
+        value: Box<Value>,
+    },
+    AddDate {
+        date: Box<Value>,
+        days: Box<Value>,
+    },
+    SubtractDate {
+        date: Box<Value>,
+        days: Box<Value>,
+    },
+    DifferenceDate {
+        left: Box<Value>,
+        right: Box<Value>,
+    },
     DateTimeFromUnix(Box<Value>),
     DateTimeToUnix(Box<Value>),
     FormatDateTime {

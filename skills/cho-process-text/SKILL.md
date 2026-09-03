@@ -1,13 +1,13 @@
 ---
 name: cho-process-text
-description: Use cho when a shell one-liner or script needs to handle typed data — RFC 3339 datetimes, IP addresses, CIDR ranges, URLs, SemVer, UUIDs, and ULIDs — embedded in line-oriented text, or generate UUIDv4, UUIDv7, and ULID values. Basic shell commands (grep, cut, awk, sed) treat these as opaque strings; cho parses them in context and rejects malformed input instead of silently passing it through. Reach for this skill when the task involves comparing timestamps, testing CIDR membership, extracting URL components, filtering by version range, or validating, comparing, inspecting, or generating identifiers inside a Unix pipeline.
+description: Use cho when a shell one-liner or script needs to handle typed data — calendar dates, RFC 3339 datetimes, IP addresses, CIDR ranges, URLs, SemVer, UUIDs, and ULIDs — embedded in line-oriented text, or generate UUIDv4, UUIDv7, and ULID values. Basic shell commands (grep, cut, awk, sed) treat these as opaque strings; cho parses them in context and rejects malformed input instead of silently passing it through. Reach for this skill when the task involves comparing or calculating dates, comparing timestamps, testing CIDR membership, extracting URL components, filtering by version range, or validating, comparing, inspecting, or generating identifiers inside a Unix pipeline.
 ---
 
 # Process typed data in shell pipelines with cho
 
 cho is a small line-oriented tool that slots into Unix pipelines. Use it when
 the data in a field carries meaning that plain string comparison gets wrong:
-date ordering, IP classification, CIDR membership, URL parsing, SemVer
+calendar-date comparison and arithmetic, timestamp ordering, IP classification, CIDR membership, URL parsing, SemVer
 precedence, or identifier validation and ordering. cho converts fields to the
 right type in context and treats invalid input as an error, not a silent
 mismatch. It can also generate UUIDv4, UUIDv7, and ULID values without input.
@@ -20,6 +20,8 @@ would otherwise require a heavier language.
 ## When to use cho
 
 - Filtering log lines by an RFC 3339 timestamp range (`dt/>=`, `dt/<`).
+- Comparing `YYYY-MM-DD` dates, adding whole days, or extracting ISO weekdays
+  (`d/>=`, `d/add`, `d/weekday`).
 - Testing whether an IP address is private, loopback, or inside a CIDR block
   (`ip/private?`, `ip/loopback?`, `cidr/contains?`).
 - Extracting or encoding URL components (`url/host`, `url/path`, `url/encode`).

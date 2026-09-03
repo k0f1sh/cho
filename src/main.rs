@@ -152,6 +152,7 @@ fn split_type_definition(line: &str) -> Option<(&str, &str)> {
         "String"
             | "Number"
             | "Boolean"
+            | "Date"
             | "DateTime"
             | "Duration"
             | "IpAddr"

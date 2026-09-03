@@ -8,6 +8,7 @@ use regex::Regex;
 
 use crate::ast::{CidrPart, ReplaceMode, StringBoundary, StringTrim, UrlEncoding, UrlPart, Value};
 
+use super::date::{checked_result, expect_date, expect_days, part as date_part, part_name};
 use super::datetime::{
     duration_as_number, duration_from_value, expect_datetime, expect_duration, floor_datetime,
     floor_datetime_in_timezone, floor_name, format_datetime_in_timezone, render_duration,
@@ -310,6 +311,31 @@ pub(super) fn evaluate(
                 }
             }
             Ok(RuntimeValue::Boolean(false))
+        }
+        Value::NormalizeDate(value) => {
+            expect_date(evaluate(value, record)?, "date", 1).map(RuntimeValue::Date)
+        }
+        Value::DatePart { part, value } => {
+            let function = part_name(part);
+            let date = expect_date(evaluate(value, record)?, function, 1)?;
+            Ok(date_part(date, part))
+        }
+        Value::AddDate { date, days } => {
+            let date = expect_date(evaluate(date, record)?, "d/add", 1)?;
+            let days = expect_days(evaluate(days, record)?, "d/add")?;
+            checked_result(date.checked_add_signed(days), "d/add", &days)
+        }
+        Value::SubtractDate { date, days } => {
+            let date = expect_date(evaluate(date, record)?, "d/sub", 1)?;
+            let days = expect_days(evaluate(days, record)?, "d/sub")?;
+            checked_result(date.checked_sub_signed(days), "d/sub", &days)
+        }
+        Value::DifferenceDate { left, right } => {
+            let left = expect_date(evaluate(left, record)?, "d/diff", 1)?;
+            let right = expect_date(evaluate(right, record)?, "d/diff", 2)?;
+            Ok(RuntimeValue::Number(
+                left.signed_duration_since(right).num_days() as f64,
+            ))
         }
         Value::DateTimeFromUnix(value) => {
             let seconds = expect_number(evaluate(value, record)?, "dt/unix", 1)?;

@@ -784,6 +784,11 @@ mod tests {
         assert!(parse(r#"(filter (ip/multicast? $1))"#).is_ok());
         assert!(parse(r#"(filter (semver/>= $1 "2.4.0"))"#).is_ok());
         assert!(parse(r#"(filter (bs/> $1 "500MB"))"#).is_ok());
+        assert!(parse(r#"(filter (d/>= $1 "2026-08-01"))"#).is_ok());
+        assert!(
+            parse("(print (date $1) (d/year $1) (d/month $1) (d/day $1) (d/weekday $1))").is_ok()
+        );
+        assert!(parse("(print (d/add $1 7) (d/sub $1 7) (d/diff $1 $2))").is_ok());
         assert!(parse(r#"(print (bs $1) (bs/to-b (bs $2)))"#).is_ok());
         assert!(parse(r#"(filter (cidr/contains? "10.0.0.0/8" $1))"#).is_ok());
         assert!(
@@ -805,10 +810,28 @@ mod tests {
     }
 
     #[test]
+    fn rejects_invalid_date_expression_arities() {
+        for name in ["date", "d/year", "d/month", "d/day", "d/weekday"] {
+            assert_invalid(&format!("({name})"));
+            assert_invalid(&format!("({name} $1 $2)"));
+        }
+        for name in [
+            "d/add", "d/sub", "d/diff", "d/>", "d/>=", "d/<", "d/<=", "d/=", "d/!=",
+        ] {
+            assert_invalid(&format!("({name} $1)"));
+            assert_invalid(&format!("({name} $1 $2 $3)"));
+        }
+    }
+
+    #[test]
     fn threading_expands_to_existing_value_ast() {
         assert_eq!(
             parse(r#"(print (-> $1 (dt/add (du/s 10))))"#),
             parse(r#"(print (dt/add $1 (du/s 10)))"#)
+        );
+        assert_eq!(
+            parse("(print (-> $1 (d/add 7) d/weekday))"),
+            parse("(print (d/weekday (d/add $1 7)))")
         );
         assert_eq!(
             parse(r#"(print (-> $1 (n/fixed 2)))"#),

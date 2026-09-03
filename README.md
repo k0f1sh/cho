@@ -124,7 +124,7 @@ $ docker images --format '{{.Repository}}\t{{.Tag}}\t{{.Size}}' |
 ```
 
 Fields are plain strings, but cho knows about types. When a function
-expects a DateTime, ByteSize, IP address, CIDR, URL, SemVer, UUID, or ULID, the
+expects a Date, DateTime, ByteSize, IP address, CIDR, URL, SemVer, UUID, or ULID, the
 string is converted automatically — no annotations or casts needed. If the value
 doesn't match the expected format, cho stops with an error that pinpoints the
 record, function, and argument:
@@ -146,6 +146,14 @@ $ echo 'not-a-date' | cho '(f (dt/>= $1 "2026-08-01T00:00:00Z"))'
 cho: record 1: dt/>=: argument 1 expects DateTime, but "not-a-date" is not valid RFC 3339
 ```
 
+Calendar dates stay separate from timestamps. Compare them, calculate whole
+days, and extract ISO weekday numbers without a timezone:
+
+```console
+$ echo '2026-08-01' | cho '(p (d/add $1 7) (d/weekday $1))'
+2026-08-08 6
+```
+
 Chain transformations with the threading macro:
 
 ```console
@@ -153,7 +161,7 @@ $ echo '  hello-world  ' | cho '(p (-> $1 s/trim (s/replace "-" "_") s/upper))'
 HELLO_WORLD
 ```
 
-cho handles text, numbers, datetime, duration, IP/CIDR, URLs, semver, UUIDs,
+cho handles text, numbers, dates, datetime, duration, IP/CIDR, URLs, semver, UUIDs,
 and ULIDs.
 Run `cho --help` for the complete syntax, functions, and special forms.
 

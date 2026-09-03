@@ -15,6 +15,7 @@ pub(crate) enum ValueType {
     String,
     Number,
     Boolean,
+    Date,
     DateTime,
     Duration,
     ByteSize,
@@ -159,6 +160,7 @@ pub(crate) enum DocumentationCategory {
     Boolean,
     SpecialForm,
     RegularExpression,
+    Date,
     DateTime,
     ByteSize,
     Network,
@@ -323,6 +325,7 @@ mod boolean;
 mod byte_size;
 mod composition;
 mod csv;
+mod date;
 mod datetime;
 mod field;
 mod identifier;
@@ -425,6 +428,20 @@ registry!(
     regex::Replace,
     regex::ReplaceAll,
     regex::Part,
+    date::Normalize,
+    date::Year,
+    date::Month,
+    date::Day,
+    date::Weekday,
+    date::Add,
+    date::Subtract,
+    date::Difference,
+    date::GreaterThan,
+    date::GreaterThanOrEqual,
+    date::LessThan,
+    date::LessThanOrEqual,
+    date::Equal,
+    date::NotEqual,
     datetime::Unix,
     datetime::ToUnix,
     datetime::Format,
