@@ -66,7 +66,7 @@ service   started successfully
 Filter CSV or TSV data with typed comparisons (dates, sizes, IPs, and more):
 
 ```console
-$ cho --csv -s '(f (dt/>= $3 "2026-08-01T00:00:00Z")) (p $1 $2)'
+$ cat data.csv | cho --csv -s '(f (dt/>= $3 "2026-08-01T00:00:00Z")) (p $1 $2)'
 ```
 
 Filter by timestamp and CIDR block without manual type parsing:
