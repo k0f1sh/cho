@@ -158,6 +158,15 @@ Regular expressions:
   The -F pattern is passed directly: cho -F '\s+' '(p $1)'
   Example: cho --no-input '(p (re/replace "id=42" /(?P<n>\d+)/ "[${n}]"))'  # => id=[42]
 
+Dates:
+{{callables:date}}
+
+  Date input must be a valid proleptic Gregorian calendar date in fixed-width
+  YYYY-MM-DD form, from 0000-01-01 through 9999-12-31. Date renders in the same
+  form. DateTime values and DateTime strings are not converted implicitly. DAYS
+  must be a whole Number and may be negative. d/diff returns LEFT minus RIGHT.
+  d/weekday uses ISO numbering: Monday is 1 and Sunday is 7.
+
 DateTime and Duration:
 {{callables:date_time}}
 
@@ -203,10 +212,10 @@ UUIDs and ULIDs:
   7. Generators read the system clock when evaluated; extracted times render UTC.
 
 Types and errors:
-  String      fields and quoted literals    DateTime  RFC 3339 timestamps
-  Number      numeric literals, NR, NF       Duration  signed seconds
-  ByteSize    decimal or binary byte sizes
-  Boolean     true, false, predicates        IpAddr    IPv4 or IPv6
+  String      fields and quoted literals    Date      YYYY-MM-DD calendar dates
+  Number      numeric literals, NR, NF       DateTime  RFC 3339 timestamps
+  Boolean     true, false, predicates        Duration  signed seconds
+  ByteSize    decimal or binary byte sizes   IpAddr    IPv4 or IPv6
   Cidr        IPv4 or IPv6 networks          Url       absolute URLs
   SemVer      MAJOR.MINOR.PATCH versions     UUID      universally unique ID
   ULID        lexicographically sortable ID

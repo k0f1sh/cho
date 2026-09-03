@@ -4,6 +4,8 @@ mod byte_size;
 mod composition;
 #[path = "runtime/csv.rs"]
 mod csv;
+#[path = "runtime/date.rs"]
+mod date;
 #[path = "runtime/datetime.rs"]
 mod datetime;
 #[path = "runtime/execution.rs"]

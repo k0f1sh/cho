@@ -26,6 +26,7 @@ pub enum Category {
     Boolean,
     SpecialForm,
     RegularExpression,
+    Date,
     DateTime,
     ByteSize,
     Network,
@@ -36,7 +37,7 @@ pub enum Category {
 }
 
 impl Category {
-    const ALL: [Self; 16] = [
+    const ALL: [Self; 17] = [
         Self::Program,
         Self::Field,
         Self::Number,
@@ -46,6 +47,7 @@ impl Category {
         Self::Boolean,
         Self::SpecialForm,
         Self::RegularExpression,
+        Self::Date,
         Self::DateTime,
         Self::ByteSize,
         Self::Network,
@@ -66,6 +68,7 @@ impl Category {
             Self::Boolean => "boolean",
             Self::SpecialForm => "special_form",
             Self::RegularExpression => "regular_expression",
+            Self::Date => "date",
             Self::DateTime => "date_time",
             Self::ByteSize => "byte_size",
             Self::Network => "network",
@@ -92,6 +95,7 @@ pub enum ValueType {
     String,
     Number,
     Boolean,
+    Date,
     DateTime,
     Duration,
     ByteSize,
@@ -112,6 +116,7 @@ impl ValueType {
             Self::String => "STRING",
             Self::Number => "NUMBER",
             Self::Boolean => "BOOLEAN",
+            Self::Date => "DATE",
             Self::DateTime => "DATETIME",
             Self::Duration => "DURATION",
             Self::ByteSize => "BYTESIZE",
@@ -229,6 +234,7 @@ impl From<DocumentationCategory> for Category {
             DocumentationCategory::Boolean => Self::Boolean,
             DocumentationCategory::SpecialForm => Self::SpecialForm,
             DocumentationCategory::RegularExpression => Self::RegularExpression,
+            DocumentationCategory::Date => Self::Date,
             DocumentationCategory::DateTime => Self::DateTime,
             DocumentationCategory::ByteSize => Self::ByteSize,
             DocumentationCategory::Network => Self::Network,
@@ -395,6 +401,7 @@ impl From<LanguageValueType> for ValueType {
             LanguageValueType::String => Self::String,
             LanguageValueType::Number => Self::Number,
             LanguageValueType::Boolean => Self::Boolean,
+            LanguageValueType::Date => Self::Date,
             LanguageValueType::DateTime => Self::DateTime,
             LanguageValueType::Duration => Self::Duration,
             LanguageValueType::ByteSize => Self::ByteSize,

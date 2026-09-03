@@ -1,5 +1,6 @@
 use crate::ast::{ComparisonOperator, ComparisonType, Predicate, StringTest, Value};
 
+use super::date::expect_date;
 use super::datetime::expect_datetime;
 use super::eval::{EvalContext, evaluate};
 use super::identifier::{compare_ulid, compare_uuid};
@@ -71,6 +72,11 @@ pub(super) fn compare(
             let right = evaluate(right, record)?.render();
             Ok(apply_ordering(operator, Some(left.cmp(&right))))
         }
+        ComparisonType::Date => {
+            let left = expect_date(evaluate(left, record)?, function, 1)?;
+            let right = expect_date(evaluate(right, record)?, function, 2)?;
+            Ok(apply_ordering(operator, Some(left.cmp(&right))))
+        }
         ComparisonType::DateTime => {
             let left = expect_datetime(evaluate(left, record)?, function, 1)?;
             let right = expect_datetime(evaluate(right, record)?, function, 2)?;
@@ -128,6 +134,12 @@ pub(super) fn comparison_name(
         (ComparisonType::String, ComparisonOperator::LessThanOrEqual) => "s/<=",
         (ComparisonType::String, ComparisonOperator::Equal) => "s/=",
         (ComparisonType::String, ComparisonOperator::NotEqual) => "s/!=",
+        (ComparisonType::Date, ComparisonOperator::GreaterThan) => "d/>",
+        (ComparisonType::Date, ComparisonOperator::GreaterThanOrEqual) => "d/>=",
+        (ComparisonType::Date, ComparisonOperator::LessThan) => "d/<",
+        (ComparisonType::Date, ComparisonOperator::LessThanOrEqual) => "d/<=",
+        (ComparisonType::Date, ComparisonOperator::Equal) => "d/=",
+        (ComparisonType::Date, ComparisonOperator::NotEqual) => "d/!=",
         (ComparisonType::DateTime, ComparisonOperator::GreaterThan) => "dt/>",
         (ComparisonType::DateTime, ComparisonOperator::GreaterThanOrEqual) => "dt/>=",
         (ComparisonType::DateTime, ComparisonOperator::LessThan) => "dt/<",

@@ -195,6 +195,13 @@ fn example_input(
             DocumentationCategory::Boolean | DocumentationCategory::SpecialForm => {
                 if example.contains("$2") { "12 3" } else { "12" }
             }
+            DocumentationCategory::Date => {
+                if example.contains("$2") {
+                    "2024-01-02 2024-01-01"
+                } else {
+                    "2024-01-02"
+                }
+            }
             DocumentationCategory::DateTime => {
                 if example.contains("$2") {
                     "2024-01-02T03:04:05+00:00 2024-01-01T03:04:05+00:00"
@@ -275,6 +282,7 @@ fn category_search_terms(category: DocumentationCategory) -> &'static str {
         DocumentationCategory::Boolean => "boolean predicate",
         DocumentationCategory::SpecialForm => "special form",
         DocumentationCategory::RegularExpression => "regular expression regex",
+        DocumentationCategory::Date => "date calendar weekday",
         DocumentationCategory::DateTime => "date time datetime duration",
         DocumentationCategory::ByteSize => "byte size bytes storage",
         DocumentationCategory::Network => "network ip cidr",
@@ -343,6 +351,7 @@ fn help_name(value_type: ValueType) -> &'static str {
         ValueType::String => "STRING",
         ValueType::Number => "NUMBER",
         ValueType::Boolean => "BOOLEAN",
+        ValueType::Date => "DATE",
         ValueType::DateTime => "DATETIME",
         ValueType::Duration => "DURATION",
         ValueType::ByteSize => "BYTESIZE",
