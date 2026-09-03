@@ -7,21 +7,6 @@
 
 ## 優先して対応するもの
 
-### URLクエリの不正なpercent escape
-
-`url/query-get`と`url/query-has?`は、クエリに不正なpercent escapeやUTF-8が含まれる
-場合の挙動を`url/decode`と揃える。現在は`%ZZ`のような値を文字列として返すため、
-不正なescapeを拒否すると説明しているhelpと一致していない。
-
-```console
-$ echo 'https://example.com/?q=%ZZ' | cho '(url/query-get $1 "q")'
-%ZZ
-```
-
-URL全体を引数の型へ変換する段階で検証するか、クエリを取得する段階で検証するかを
-決める。`url/query-get`と`url/query-has?`で同じ規則を使い、関数名、引数位置、
-不正なbyte位置を含む実行時エラーにする。
-
 ### CSVを安全に出力する関数
 
 CSV入力から取り出した値を、カンマ、引用符、改行を保ったままCSVへ戻せる関数を
