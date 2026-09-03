@@ -56,48 +56,21 @@ parts as fields. Use `-F`, `--csv`, or `--tsv` to change how fields are parsed.
 
 ## Examples
 
-Extract a log message with field ranges — `$3..` keeps everything from the
-third field through the end of the record, preserving the original spacing:
+Keep everything from the third field through the end of the record:
 
 ```console
 $ echo '2026-08-24 INFO service   started successfully' | cho '(p $3..)'
 service   started successfully
 ```
 
-`$2..4` picks an inclusive bounded range — here, fields 2 through 4, preserving the
-separators between them:
-
-```console
-$ echo 'one  two   three four five' | cho '(p $2..4)'
-two   three four
-```
-
-Process CSV:
-
-```console
-$ printf 'name,city
-Alice,"Tokyo, Japan"
-Bob,Osaka
-' | cho --csv -s '(p (s/join " -> " $1 $2))'
-Alice -> Tokyo, Japan
-Bob -> Osaka
-```
-
-CSV input is validated strictly. Invalid quoting reports the logical record,
-physical line, and field instead of silently changing the input.
-
-Filter Docker images by their displayed size, even when units differ:
+Filter CSV or TSV data with typed comparisons (dates, sizes, IPs, and more):
 
 ```console
 $ docker images --format '{{.Repository}}\t{{.Tag}}\t{{.Size}}' |
     cho --tsv '(f (bs/> $3 "500MB")) (p $1 $2 $3)'
 ```
 
-Fields are plain strings, but cho knows about types. When a function
-expects a Date, DateTime, ByteSize, IP address, CIDR, URL, SemVer, UUID, or ULID, the
-string is converted automatically — no annotations or casts needed. If the value
-doesn't match the expected format, cho stops with an error that pinpoints the
-record, function, and argument:
+Filter by timestamp and CIDR block without manual type parsing:
 
 ```console
 $ printf '%s\n' \
@@ -108,22 +81,6 @@ $ printf '%s\n' \
 2026-08-02T09:00:00Z 10.1.2.3 deploy
 ```
 
-`dt/>=` parses `$1` as a DateTime, while `cidr/contains?` parses `$2` as an IP
-address. Invalid values fail with a precise error:
-
-```console
-$ echo 'not-a-date' | cho '(f (dt/>= $1 "2026-08-01T00:00:00Z"))'
-cho: record 1: dt/>=: argument 1 expects DateTime, but "not-a-date" is not valid RFC 3339
-```
-
-Calendar dates stay separate from timestamps. Compare them, calculate whole
-days, and extract ISO weekday numbers without a timezone:
-
-```console
-$ echo '2026-08-01' | cho '(p (d/add $1 7) (d/weekday $1))'
-2026-08-08 6
-```
-
 Chain transformations with the threading macro:
 
 ```console
@@ -131,8 +88,7 @@ $ echo '  hello-world  ' | cho '(p (-> $1 s/trim (s/replace "-" "_") s/upper))'
 HELLO_WORLD
 ```
 
-cho handles text, numbers, dates, datetime, duration, IP/CIDR, URLs, semver, UUIDs,
-and ULIDs.
+cho handles text, numbers, dates, datetime, duration, byte sizes, IP/CIDR, URLs, and semver.
 Run `cho --help` for the complete syntax, functions, and special forms.
 
 ## Documentation
