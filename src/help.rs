@@ -224,14 +224,57 @@ pub(crate) fn apropos(query: &str) -> Option<String> {
         DOCUMENTED_CALLABLES
             .iter()
             .copied()
-            .filter(|callable| {
-                let definition = callable.definition();
-                std::iter::once(definition.name)
-                    .chain(definition.aliases.iter().copied())
-                    .any(|name| name.to_ascii_lowercase().contains(&query))
-            })
+            .filter(|callable| matches_apropos(*callable, &query))
             .collect::<Vec<_>>(),
     )
+}
+
+fn matches_apropos(callable: &dyn crate::language::ToDoc, query: &str) -> bool {
+    let definition = callable.definition();
+    let documentation = callable.to_doc();
+    let text_matches = |text: &str| text.to_ascii_lowercase().contains(query);
+
+    std::iter::once(definition.name)
+        .chain(definition.aliases.iter().copied())
+        .chain(std::iter::once(documentation.summary))
+        .chain(documentation.notes.iter().copied())
+        .chain(
+            documentation
+                .signatures
+                .iter()
+                .filter_map(|signature| signature.summary),
+        )
+        .any(text_matches)
+        || text_matches(category_search_terms(documentation.category))
+        || definition.signatures.iter().any(|signature| {
+            signature.parameters.iter().any(|parameter| {
+                text_matches(parameter.name)
+                    || parameter.help_label.is_some_and(text_matches)
+                    || text_matches(help_name(parameter.value_type))
+            }) || signature
+                .returns
+                .is_some_and(|value| text_matches(help_name(value)))
+        })
+}
+
+fn category_search_terms(category: DocumentationCategory) -> &'static str {
+    match category {
+        DocumentationCategory::Program => "program",
+        DocumentationCategory::Field => "field",
+        DocumentationCategory::Number => "number numeric",
+        DocumentationCategory::String => "string text",
+        DocumentationCategory::Csv => "csv",
+        DocumentationCategory::Path => "path",
+        DocumentationCategory::Boolean => "boolean predicate",
+        DocumentationCategory::SpecialForm => "special form",
+        DocumentationCategory::RegularExpression => "regular expression regex",
+        DocumentationCategory::DateTime => "date time datetime duration",
+        DocumentationCategory::Network => "network ip cidr",
+        DocumentationCategory::Url => "url",
+        DocumentationCategory::SemanticVersion => "semantic version semver",
+        DocumentationCategory::Identifier => "identifier uuid ulid",
+        DocumentationCategory::Composition => "composition threading",
+    }
 }
 
 pub(crate) fn catalog() -> String {
@@ -399,19 +442,17 @@ mod tests {
     #[test]
     fn apropos_searches_names_and_aliases_case_insensitively_in_registry_order() {
         assert_eq!(
-            apropos("QUOTE").unwrap(),
-            concat!(
-                "s/dquote (dq)  stringify and wrap in escaped double quotes\n",
-                "s/squote (sq)  stringify and wrap in escaped single quotes\n",
-                "s/unquote      remove matching quotes and decode backslash escapes",
-            )
+            apropos("DQUOTE").unwrap(),
+            "s/dquote (dq)  stringify and wrap in escaped double quotes"
         );
         assert!(apropos("dq").unwrap().starts_with("s/dquote (dq)"));
     }
 
     #[test]
-    fn apropos_does_not_search_descriptions_and_rejects_empty_or_missing_matches() {
-        assert_eq!(apropos("fractional digits"), None);
+    fn apropos_searches_documentation_and_rejects_empty_or_missing_matches() {
+        assert!(apropos("fractional digits").unwrap().contains("n/fixed"));
+        assert!(apropos("timezone").unwrap().contains("dt/fmt"));
+        assert!(apropos("datetime").unwrap().contains("dt/unix"));
         assert_eq!(apropos(""), None);
         assert_eq!(apropos("not-a-callable"), None);
     }
