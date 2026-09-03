@@ -375,7 +375,7 @@ fn main() -> ExitCode {
         let output = match query {
             Some(query) => {
                 let Some(output) = cho::apropos(query) else {
-                    eprintln!("cho: no function or form names match: {query}");
+                    eprintln!("cho: no functions or forms match: {query}");
                     return ExitCode::FAILURE;
                 };
                 output

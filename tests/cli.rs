@@ -259,16 +259,12 @@ fn help_lists_types_and_signatures() {
 #[test]
 fn apropos_searches_callable_names_and_aliases() {
     for option in ["-k", "--apropos"] {
-        let output = run_with_args(&[option, "QUOTE"], "");
+        let output = run_with_args(&[option, "DQUOTE"], "");
         assert!(output.status.success());
         assert!(output.stderr.is_empty());
         assert_eq!(
             String::from_utf8(output.stdout).unwrap(),
-            concat!(
-                "s/dquote (dq)  stringify and wrap in escaped double quotes\n",
-                "s/squote (sq)  stringify and wrap in escaped single quotes\n",
-                "s/unquote      remove matching quotes and decode backslash escapes\n",
-            )
+            "s/dquote (dq)  stringify and wrap in escaped double quotes\n"
         );
     }
 
@@ -297,14 +293,25 @@ fn apropos_without_a_query_lists_every_callable() {
 }
 
 #[test]
-fn apropos_does_not_search_descriptions() {
-    let output = run_with_args(&["-k", "fractional digits"], "");
-    assert_eq!(output.status.code(), Some(1));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8(output.stderr).unwrap(),
-        "cho: no function or form names match: fractional digits\n"
-    );
+fn apropos_searches_summaries_notes_types_and_categories() {
+    for (query, expected) in [
+        ("fractional digits", "n/fixed"),
+        ("timezone", "dt/fmt"),
+        ("datetime", "dt/unix"),
+        ("regex", "reg"),
+        ("csv", "csv/join"),
+    ] {
+        let output = run_with_args(&["-k", query], "");
+        assert!(output.status.success(), "query: {query}");
+        assert!(output.stderr.is_empty(), "query: {query}");
+        assert!(
+            String::from_utf8(output.stdout)
+                .unwrap()
+                .lines()
+                .any(|line| line.starts_with(expected)),
+            "query: {query}"
+        );
+    }
 }
 
 #[test]
@@ -323,7 +330,7 @@ fn apropos_reports_empty_extra_and_unmatched_queries() {
         (
             vec!["-k", "not-a-callable"],
             1,
-            "cho: no function or form names match: not-a-callable\n".to_owned(),
+            "cho: no functions or forms match: not-a-callable\n".to_owned(),
         ),
     ] {
         let output = run_with_args(&arguments, "");
