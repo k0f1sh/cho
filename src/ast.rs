@@ -297,6 +297,7 @@ pub enum Value {
         separator: Box<Value>,
         values: Vec<Value>,
     },
+    CsvJoin(Vec<Value>),
     Repeat {
         value: Box<Value>,
         count: Box<Value>,

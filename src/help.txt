@@ -187,6 +187,9 @@ Strings:
   Empty prefixes, suffixes, and needles match every string, including empty.
   Example: cho --no-input '(p (dq (s/trim "  hello  ")))'  # => "hello"
 
+CSV output:
+  (csv/join VALUE ...) -> STRING            join values as one CSV record
+
 Paths:
   (path/name STRING) -> STRING              extract the final path component
   (path/stem STRING) -> STRING              extract the final component without its extension

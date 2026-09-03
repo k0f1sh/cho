@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.26.4",
+  "cho_version": "0.27.0",
   "callables": [
     {
       "name": "print",
@@ -1605,6 +1605,31 @@
           "returns": "Boolean",
           "summary": null,
           "example": "(s/!= \"b\" \"a\")"
+        }
+      ]
+    },
+    {
+      "name": "csv/join",
+      "aliases": [],
+      "kind": "function",
+      "category": "csv",
+      "summary": "join values as one CSV record",
+      "notes": [
+        "Fields containing commas, double quotes, CR, or LF are quoted; embedded double quotes are doubled.",
+        "A single empty field renders as \"\". The result has no record-ending newline."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "zero_or_more"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(csv/join $1 $2)"
         }
       ]
     },

@@ -450,6 +450,13 @@ pub(super) fn evaluate(
                 .collect::<EvalResult<Vec<_>>>()?;
             Ok(RuntimeValue::String(values.join(&separator)))
         }
+        Value::CsvJoin(values) => {
+            let values = values
+                .iter()
+                .map(|value| evaluate(value, record).map(|value| value.render()))
+                .collect::<EvalResult<Vec<_>>>()?;
+            Ok(RuntimeValue::String(super::csv::join(&values)))
+        }
         Value::Repeat { value, count } => evaluate_string_repeat(value, count, record),
         Value::Replace {
             mode,

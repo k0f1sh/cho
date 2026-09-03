@@ -114,7 +114,7 @@ fn example_input(
             "alice 30 active"
         }
         ("filter", _) => "alice 30",
-        ("str", _) | ("s/join", _) => "api gateway",
+        ("str", _) | ("s/join", _) | ("csv/join", _) => "api gateway",
         ("s/repeat", _) => "go",
         ("s/replace", _) | ("s/replace-all", _) => "api-server-prod",
         ("s/part", _) => "user:alice:admin",

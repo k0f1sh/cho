@@ -1,4 +1,5 @@
 mod compile;
+mod csv;
 mod datetime;
 mod eval;
 mod identifier;

@@ -545,6 +545,22 @@ mod tests {
     }
 
     #[test]
+    fn parses_csv_join_values_recursively() {
+        assert_eq!(
+            parse(r#"(print (csv/join $1 (s/upper $2)))"#),
+            Ok(Program {
+                forms: vec![Form::Print(vec![Value::CsvJoin(vec![
+                    Value::Field(1),
+                    Value::Upper(Box::new(Value::Field(2))),
+                ])])],
+                regex_patterns: vec![],
+                contains_field_range: false,
+            })
+        );
+        assert!(parse("(print (csv/join))").is_ok());
+    }
+
+    #[test]
     fn parses_literal_and_regex_replacements() {
         assert_eq!(
             parse(r#"(print (-> $1 (s/replace-all "a" "b")))"#),

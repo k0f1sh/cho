@@ -1,5 +1,7 @@
 #[path = "runtime/composition.rs"]
 mod composition;
+#[path = "runtime/csv.rs"]
+mod csv;
 #[path = "runtime/datetime.rs"]
 mod datetime;
 #[path = "runtime/execution.rs"]
