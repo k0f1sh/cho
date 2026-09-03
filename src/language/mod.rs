@@ -153,6 +153,7 @@ pub(crate) enum DocumentationCategory {
     Field,
     Number,
     String,
+    Csv,
     Path,
     Boolean,
     SpecialForm,
@@ -318,6 +319,7 @@ pub(crate) fn form(form: Form) -> Result<CompiledExpression, ParseError> {
 
 mod boolean;
 mod composition;
+mod csv;
 mod datetime;
 mod field;
 mod identifier;
@@ -398,6 +400,7 @@ registry!(
     string::LessThanOrEqual,
     string::Equal,
     string::NotEqual,
+    csv::Join,
     path::Name,
     path::Stem,
     path::Extension,

@@ -21,6 +21,7 @@ pub enum Category {
     Field,
     Number,
     String,
+    Csv,
     Path,
     Boolean,
     SpecialForm,
@@ -34,11 +35,12 @@ pub enum Category {
 }
 
 impl Category {
-    const ALL: [Self; 14] = [
+    const ALL: [Self; 15] = [
         Self::Program,
         Self::Field,
         Self::Number,
         Self::String,
+        Self::Csv,
         Self::Path,
         Self::Boolean,
         Self::SpecialForm,
@@ -57,6 +59,7 @@ impl Category {
             Self::Field => "field",
             Self::Number => "number",
             Self::String => "string",
+            Self::Csv => "csv",
             Self::Path => "path",
             Self::Boolean => "boolean",
             Self::SpecialForm => "special_form",
@@ -216,6 +219,7 @@ impl From<DocumentationCategory> for Category {
             DocumentationCategory::Field => Self::Field,
             DocumentationCategory::Number => Self::Number,
             DocumentationCategory::String => Self::String,
+            DocumentationCategory::Csv => Self::Csv,
             DocumentationCategory::Path => Self::Path,
             DocumentationCategory::Boolean => Self::Boolean,
             DocumentationCategory::SpecialForm => Self::SpecialForm,

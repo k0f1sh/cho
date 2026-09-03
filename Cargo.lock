@@ -42,7 +42,7 @@ dependencies = [
 
 [[package]]
 name = "cho"
-version = "0.26.4"
+version = "0.27.0"
 dependencies = [
  "chrono",
  "chrono-tz",
