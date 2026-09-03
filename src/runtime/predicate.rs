@@ -76,6 +76,11 @@ pub(super) fn compare(
             let right = expect_datetime(evaluate(right, record)?, function, 2)?;
             Ok(apply_ordering(operator, Some(left.cmp(&right))))
         }
+        ComparisonType::ByteSize => {
+            let left = super::byte_size::expect(evaluate(left, record)?, function, 1)?;
+            let right = super::byte_size::expect(evaluate(right, record)?, function, 2)?;
+            Ok(apply_ordering(operator, Some(left.cmp(&right))))
+        }
         ComparisonType::IpAddr => {
             let left = expect_ip(evaluate(left, record)?, function, 1)?;
             let right = expect_ip(evaluate(right, record)?, function, 2)?;
@@ -129,6 +134,12 @@ pub(super) fn comparison_name(
         (ComparisonType::DateTime, ComparisonOperator::LessThanOrEqual) => "dt/<=",
         (ComparisonType::DateTime, ComparisonOperator::Equal) => "dt/=",
         (ComparisonType::DateTime, ComparisonOperator::NotEqual) => "dt/!=",
+        (ComparisonType::ByteSize, ComparisonOperator::GreaterThan) => "bs/>",
+        (ComparisonType::ByteSize, ComparisonOperator::GreaterThanOrEqual) => "bs/>=",
+        (ComparisonType::ByteSize, ComparisonOperator::LessThan) => "bs/<",
+        (ComparisonType::ByteSize, ComparisonOperator::LessThanOrEqual) => "bs/<=",
+        (ComparisonType::ByteSize, ComparisonOperator::Equal) => "bs/=",
+        (ComparisonType::ByteSize, ComparisonOperator::NotEqual) => "bs/!=",
         (ComparisonType::IpAddr, ComparisonOperator::Equal) => "ip/=",
         (ComparisonType::IpAddr, ComparisonOperator::NotEqual) => "ip/!=",
         (ComparisonType::IpAddr, _) => unreachable!(),

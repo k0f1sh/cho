@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.27.2",
+  "cho_version": "0.28.0",
   "callables": [
     {
       "name": "print",
@@ -666,6 +666,214 @@
           "returns": "Boolean",
           "summary": null,
           "example": "(!= 12 3)"
+        }
+      ]
+    },
+    {
+      "name": "bs",
+      "aliases": [],
+      "kind": "function",
+      "category": "byte_size",
+      "summary": "validate and normalize a byte size",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "ByteSize",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "ByteSize",
+          "summary": null,
+          "example": "(bs $1)"
+        }
+      ]
+    },
+    {
+      "name": "bs/to-b",
+      "aliases": [],
+      "kind": "function",
+      "category": "byte_size",
+      "summary": "convert a byte size to bytes",
+      "notes": [
+        "Values greater than 2^53 - 1 B are outside Number's safe integer range and are errors."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "ByteSize",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(bs/to-b $1)"
+        }
+      ]
+    },
+    {
+      "name": "bs/>",
+      "aliases": [],
+      "kind": "function",
+      "category": "byte_size",
+      "summary": "greater than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "ByteSize",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "ByteSize",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(bs/> $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "bs/>=",
+      "aliases": [],
+      "kind": "function",
+      "category": "byte_size",
+      "summary": "greater than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "ByteSize",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "ByteSize",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(bs/>= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "bs/<",
+      "aliases": [],
+      "kind": "function",
+      "category": "byte_size",
+      "summary": "less than",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "ByteSize",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "ByteSize",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(bs/< $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "bs/<=",
+      "aliases": [],
+      "kind": "function",
+      "category": "byte_size",
+      "summary": "less than or equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "ByteSize",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "ByteSize",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(bs/<= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "bs/=",
+      "aliases": [],
+      "kind": "function",
+      "category": "byte_size",
+      "summary": "equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "ByteSize",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "ByteSize",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(bs/= $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "bs/!=",
+      "aliases": [],
+      "kind": "function",
+      "category": "byte_size",
+      "summary": "not equal",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "left",
+              "type": "ByteSize",
+              "cardinality": "required"
+            },
+            {
+              "name": "right",
+              "type": "ByteSize",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(bs/!= $1 $2)"
         }
       ]
     },

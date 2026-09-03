@@ -273,6 +273,24 @@ DateTime and Duration:
   At DST changes, floor chooses the latest matching boundary not after the input;
   if that local boundary does not exist, it uses the first local time after it.
 
+Byte sizes:
+  (bs BYTESIZE) -> BYTESIZE                 validate and normalize a byte size
+  (bs/to-b BYTESIZE) -> NUMBER              convert a byte size to bytes
+  (bs/> BYTESIZE BYTESIZE) -> BOOLEAN       greater than
+  (bs/>= BYTESIZE BYTESIZE) -> BOOLEAN      greater than or equal
+  (bs/< BYTESIZE BYTESIZE) -> BOOLEAN       less than
+  (bs/<= BYTESIZE BYTESIZE) -> BOOLEAN      less than or equal
+  (bs/= BYTESIZE BYTESIZE) -> BOOLEAN       equal
+  (bs/!= BYTESIZE BYTESIZE) -> BOOLEAN      not equal
+
+  ByteSize accepts B; decimal kB, MB, GB, TB, and PB; and binary KiB, MiB,
+  GiB, TiB, and PiB. Decimal units use powers of 1000; binary units use powers
+  of 1024. Units are case-sensitive. A number may be an integer or decimal and
+  may be separated from its unit by spaces or tabs. Signs, exponent notation,
+  digit separators, surrounding whitespace, and missing units are errors.
+  Values render as an exact decimal byte count followed by B. The supported
+  decimal range has up to 28 fractional digits and a 96-bit significand.
+
 IP and CIDR:
   (ip/version IPADDR) -> NUMBER             return 4 or 6
   (ip/v4? IPADDR) -> BOOLEAN                test an IPv4 address
@@ -351,6 +369,7 @@ UUIDs and ULIDs:
 Types and errors:
   String      fields and quoted literals    DateTime  RFC 3339 timestamps
   Number      numeric literals, NR, NF       Duration  signed seconds
+  ByteSize    decimal or binary byte sizes
   Boolean     true, false, predicates        IpAddr    IPv4 or IPv6
   Cidr        IPv4 or IPv6 networks          Url       absolute URLs
   SemVer      MAJOR.MINOR.PATCH versions     UUID      universally unique ID

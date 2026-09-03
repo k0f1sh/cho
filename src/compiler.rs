@@ -783,6 +783,8 @@ mod tests {
         assert!(parse(r#"(filter (ip/link-local? $1))"#).is_ok());
         assert!(parse(r#"(filter (ip/multicast? $1))"#).is_ok());
         assert!(parse(r#"(filter (semver/>= $1 "2.4.0"))"#).is_ok());
+        assert!(parse(r#"(filter (bs/> $1 "500MB"))"#).is_ok());
+        assert!(parse(r#"(print (bs $1) (bs/to-b (bs $2)))"#).is_ok());
         assert!(parse(r#"(filter (cidr/contains? "10.0.0.0/8" $1))"#).is_ok());
         assert!(
             parse(r#"(print (cidr/network $1) (cidr/prefix $1) (cidr/first $1) (cidr/last $1))"#)
@@ -989,6 +991,16 @@ mod tests {
             "(print (n/max))",
             "(print (n/clamp $1 $2))",
             "(print (n/clamp $1 $2 $3 $4))",
+            "(print (bs))",
+            "(print (bs $1 $2))",
+            "(print (bs/to-b))",
+            "(print (bs/to-b $1 $2))",
+            "(filter (bs/> $1))",
+            "(filter (bs/>= $1 $2 $3))",
+            "(filter (bs/< $1))",
+            "(filter (bs/<= $1 $2 $3))",
+            "(filter (bs/= $1))",
+            "(filter (bs/!= $1 $2 $3))",
             "(print (s/repeat $1))",
             "(print (s/repeat $1 2 3))",
             "(print (dt/fmt $1))",
