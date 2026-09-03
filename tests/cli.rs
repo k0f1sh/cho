@@ -188,6 +188,8 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("integer identifiers as strings with s/="));
     assert!(stdout.contains("String functions render VALUE arguments"));
     assert!(stdout.contains("s/ prefix therefore explicitly selects string"));
+    assert!(stdout.contains("Unicode code points, not grapheme clusters"));
+    assert!(stdout.contains("Combining marks and joined emoji"));
     assert!(stdout.contains("(p VALUE ...)"));
     assert!(stdout.contains("(f BOOLEAN)"));
     assert!(stdout.contains("(s/empty? VALUE)"));
@@ -254,6 +256,10 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("fc00::/7"));
     assert!(!stdout.contains("(dur/m NUMBER)"));
     assert!(stdout.contains("(cidr/contains? CIDR IPADDR)"));
+    assert!(stdout.contains("record 1: +: argument 1 expects Number"));
+    assert!(stdout.contains("short-circuiting skips > when the regex fails"));
+    assert!(stdout.contains("Recover from a conversion error with default"));
+    assert!(stdout.contains("set -o pipefail"));
 }
 
 #[test]
