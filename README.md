@@ -66,8 +66,7 @@ service   started successfully
 Filter CSV or TSV data with typed comparisons (dates, sizes, IPs, and more):
 
 ```console
-$ docker images --format '{{.Repository}}\t{{.Tag}}\t{{.Size}}' |
-    cho --tsv '(f (bs/> $3 "500MB")) (p $1 $2 $3)'
+$ cho --csv -s '(f (dt/>= $3 "2026-08-01T00:00:00Z")) (p $1 $2)'
 ```
 
 Filter by timestamp and CIDR block without manual type parsing:
@@ -88,8 +87,8 @@ $ echo '  hello-world  ' | cho '(p (-> $1 s/trim (s/replace "-" "_") s/upper))'
 HELLO_WORLD
 ```
 
-cho handles text, numbers, dates, datetime, duration, byte sizes, IP/CIDR, URLs, and semver.
-Run `cho --help` for the complete syntax, functions, and special forms.
+cho handles text, numbers, dates, durations, byte sizes, IPs, URLs, semver, and
+more. Run `cho --help` for the complete syntax, functions, and special forms.
 
 ## Documentation
 
@@ -106,8 +105,8 @@ forms. Its `schema_version` changes when the JSON structure makes an
 incompatible change.
 
 The [`examples`](examples) directory contains scripts and sample data for
-reviewing a CSV account export, investigating connection timeouts, checking
-release versions, and composing multiple cho processes as a typed pipeline.
+reviewing a CSV account export, auditing connection timeouts, checking
+release versions, and analyzing slow requests across a typed pipeline.
 
 ## Development
 
