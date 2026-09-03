@@ -7,9 +7,9 @@ use uuid::Uuid;
 
 use super::datetime::render_duration;
 
-// Only types produced by value expressions and passed to other value expressions have runtime
+// Only types that one expression can produce and pass as an argument to another have runtime
 // variants. Cidr, Url, and SemVer remain contextually parsed by their consumers until the
-// language has expressions that naturally produce values of those types.
+// language has functions that naturally produce values of those types.
 #[derive(Debug, Clone)]
 pub(super) enum RuntimeValue {
     String(String),

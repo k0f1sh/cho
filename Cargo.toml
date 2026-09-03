@@ -1,6 +1,6 @@
 [package]
 name = "cho"
-version = "0.26.2"
+version = "0.26.3"
 edition = "2024"
 description = "A small, type-aware text processor for the command line"
 license = "MIT"

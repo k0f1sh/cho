@@ -63,7 +63,7 @@ tested patterns. Do not copy all of them into the answer.
 - Expect output from earlier records to remain when a later record fails. A
   nonzero exit status means the overall transformation did not complete even if
   stdout is nonempty.
-- Use `default` only around the smallest value expression whose failure is
+- Use `default` only around the smallest subexpression whose failure is
   intentionally recoverable. Do not use it to hide errors across an entire
   record.
 - Use `--skip-header` before applying a typed predicate to CSV or TSV with a
