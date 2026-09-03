@@ -38,36 +38,6 @@ $ echo 'Alice 30 tokyo' | cho '(p $1 $3)'
 Alice tokyo
 ```
 
-Call one function without writing parentheses. `--call` passes the complete
-record as the first argument, followed by any command-line arguments:
-
-```console
-$ echo 'hello' | cho -c s/upper
-HELLO
-$ echo 'foo-bar' | cho -c s/replace - _
-foo_bar
-$ cho -nc s/upper production
-PRODUCTION
-```
-
-Combine `--no-input` with `--call` as `-nc` or `-cn` to call a function using
-only command-line arguments. In this mode, the empty `$0` is not added
-automatically.
-
-Generate UUIDs and ULIDs directly, or once for each input record:
-
-```console
-$ cho -nc uuid/v4
-67e55044-10b1-426f-9247-bb680e5fe0c8
-$ seq 1 3 | cho '(p $0 (ulid/new))'
-1 01K5J3Q8Z8W7VX1F3H8B2Y6M4C
-2 01K5J3Q8Z8W7VX1F3H8B2Y6M4D
-3 01K5J3Q8Z8W7VX1F3H8B2Y6M4E
-```
-
-UUIDv7 and ULID values are generated in increasing order within one `cho`
-invocation. Generated values differ on every run.
-
 Filter and format:
 
 ```console
