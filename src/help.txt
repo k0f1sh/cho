@@ -159,6 +159,9 @@ Strings:
   String functions render VALUE arguments with their default representation
   before processing. The s/ prefix therefore explicitly selects string
   semantics for transformations, tests, and comparisons of any value.
+  s/count and s/reverse operate on Unicode code points, not grapheme clusters
+  or terminal display columns. Combining marks and joined emoji therefore
+  count and reverse independently.
 
   s/part preserves empty parts. If no delimiter is found, position 1 returns
   the complete value; a missing position returns an empty string. DELIMITER
@@ -357,6 +360,21 @@ Types and errors:
   reports the record, function, and argument number. Boolean values never
   convert implicitly from strings or numbers. Numeric arithmetic is binary;
   division by zero and non-finite results are errors.
+
+  A conversion error identifies the record, function, argument, and expected type:
+    echo 'Alice unknown' | cho '(p (+ $2 1))'
+    # cho: record 1: +: argument 1 expects Number, but "unknown" cannot be parsed as a number
+
+  Guard a conversion with and; short-circuiting skips > when the regex fails:
+    printf 'Alice unknown\nBob 30\n' | cho '(f (and (~ $2 /^\d+$/) (> $2 20))) (p $1)'  # => Bob
+
+  Recover from a conversion error with default:
+    printf '20\nunknown\n' | cho '(p (default (+ $1 1) "invalid"))'  # => 21, then invalid
+
+  In a longer shell pipeline, use set -o pipefail so a nonzero cho exit status
+  is not hidden by a later successful command:
+    set -o pipefail
+    producer | cho '(f (> $2 20))' | consumer
 
 Composition:
   A VALUE can be a literal, field, function call, or special form. Values nest
