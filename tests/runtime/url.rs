@@ -55,6 +55,49 @@ fn url_component_extraction_rejects_invalid_urls_and_non_strings() {
 }
 
 #[test]
+fn url_conversion_rejects_invalid_percent_escapes_and_utf8() {
+    for (program, input, expected) in [
+        (
+            "(print (url/path $1))",
+            "https://example.com/%ZZ\n",
+            concat!(
+                "record 1: url/path: argument 1 expects Url (absolute URL), but ",
+                "\"https://example.com/%ZZ\" contains an invalid percent escape at byte 20",
+            ),
+        ),
+        (
+            "(print (url/host $1))",
+            "https://example.com/?ok=%20&q=%FF\n",
+            concat!(
+                "record 1: url/host: argument 1 expects Url (absolute URL), but ",
+                "\"https://example.com/?ok=%20&q=%FF\" decodes to bytes that are not valid ",
+                "UTF-8 at byte 30",
+            ),
+        ),
+        (
+            r#"(print (url/query-get $1 "q"))"#,
+            "https://example.com/?q=%ZZ\n",
+            concat!(
+                "record 1: url/query-get: argument 1 expects Url (absolute URL), but ",
+                "\"https://example.com/?q=%ZZ\" contains an invalid percent escape at byte 23",
+            ),
+        ),
+        (
+            r#"(print (url/query-has? $1 "q"))"#,
+            "https://example.com/?q=%FF\n",
+            concat!(
+                "record 1: url/query-has?: argument 1 expects Url (absolute URL), but ",
+                "\"https://example.com/?q=%FF\" decodes to bytes that are not valid UTF-8 ",
+                "at byte 23",
+            ),
+        ),
+    ] {
+        let error = cho::run(program, Cursor::new(input), Vec::new()).unwrap_err();
+        assert_eq!(error.to_string(), expected);
+    }
+}
+
+#[test]
 fn url_query_values_use_form_urlencoded_semantics() {
     assert_eq!(
         output(

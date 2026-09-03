@@ -7,7 +7,7 @@ pub(super) fn parse_absolute_url(
     function: &'static str,
     argument: usize,
 ) -> EvalResult<::url::Url> {
-    ::url::Url::parse(input).map_err(|_| {
+    let url = ::url::Url::parse(input).map_err(|_| {
         EvalError::conversion(
             function,
             argument,
@@ -15,7 +15,11 @@ pub(super) fn parse_absolute_url(
             input,
             "is not a valid absolute URL",
         )
-    })
+    })?;
+    decode_url_component(input).map_err(|reason| {
+        EvalError::conversion(function, argument, "Url (absolute URL)", input, reason)
+    })?;
+    Ok(url)
 }
 
 pub(super) fn url_part_name(part: &UrlPart) -> &'static str {
@@ -54,10 +58,12 @@ pub(super) fn encode_url_component(value: &str) -> String {
 pub(super) fn decode_url_component(value: &str) -> Result<String, String> {
     let input = value.as_bytes();
     let mut decoded = Vec::with_capacity(input.len());
+    let mut source_offsets = Vec::with_capacity(input.len());
     let mut index = 0;
     while index < input.len() {
         if input[index] != b'%' {
             decoded.push(input[index]);
+            source_offsets.push(index);
             index += 1;
             continue;
         }
@@ -70,9 +76,20 @@ pub(super) fn decode_url_component(value: &str) -> Result<String, String> {
             .and_then(|byte| hex_value(*byte))
             .ok_or_else(|| format!("contains an invalid percent escape at byte {index}"))?;
         decoded.push(high << 4 | low);
+        source_offsets.push(index);
         index += 3;
     }
-    String::from_utf8(decoded).map_err(|_| "decodes to bytes that are not valid UTF-8".to_owned())
+    String::from_utf8(decoded).map_err(|error| {
+        let decoded_offset = error.utf8_error().valid_up_to();
+        let source_offset = source_offsets
+            .get(decoded_offset)
+            .copied()
+            .unwrap_or(input.len());
+        format!(
+            "decodes to bytes that are not valid UTF-8 at byte {}",
+            source_offset
+        )
+    })
 }
 
 pub(super) fn hex_value(byte: u8) -> Option<u8> {

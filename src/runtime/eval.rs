@@ -186,15 +186,7 @@ pub(super) fn evaluate(
         Value::UrlPart { part, value } => {
             let function = url_part_name(part);
             let input = expect_string(evaluate(value, record)?, function, 1)?;
-            let url = ::url::Url::parse(&input).map_err(|_| {
-                EvalError::conversion(
-                    function,
-                    1,
-                    "Url (absolute URL)",
-                    input,
-                    "is not a valid absolute URL",
-                )
-            })?;
+            let url = parse_absolute_url(&input, function, 1)?;
             let part = match part {
                 UrlPart::Scheme => url.scheme().to_owned(),
                 UrlPart::Host => url.host_str().unwrap_or("").to_owned(),
