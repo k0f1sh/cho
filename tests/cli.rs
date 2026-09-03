@@ -237,6 +237,11 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("(du/m NUMBER)"));
     assert!(stdout.contains("(du/ms NUMBER)"));
     assert!(stdout.contains("(du/d NUMBER)"));
+    assert!(stdout.contains("(bs BYTESIZE) -> BYTESIZE"));
+    assert!(stdout.contains("(bs/to-b BYTESIZE) -> NUMBER"));
+    assert!(stdout.contains("(bs/> BYTESIZE BYTESIZE) -> BOOLEAN"));
+    assert!(stdout.contains("decimal kB, MB, GB, TB, and PB"));
+    assert!(stdout.contains("Values render as an exact decimal byte count"));
     assert!(stdout.contains("(ip/version IPADDR)"));
     assert!(stdout.contains("(ip/v4? IPADDR)"));
     assert!(stdout.contains("(ip/v6? IPADDR)"));
@@ -306,6 +311,7 @@ fn apropos_searches_summaries_notes_types_and_categories() {
         ("datetime", "dt/unix"),
         ("regex", "reg"),
         ("csv", "csv/join"),
+        ("storage", "bs"),
     ] {
         let output = run_with_args(&["-k", query], "");
         assert!(output.status.success(), "query: {query}");

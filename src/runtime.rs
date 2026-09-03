@@ -1,3 +1,4 @@
+mod byte_size;
 mod compile;
 mod csv;
 mod datetime;

@@ -2,6 +2,7 @@ use std::fmt;
 use std::net::IpAddr;
 
 use chrono::{DateTime, SecondsFormat, TimeDelta, Utc};
+use rust_decimal::Decimal;
 use ulid::Ulid;
 use uuid::Uuid;
 
@@ -17,6 +18,7 @@ pub(super) enum RuntimeValue {
     Boolean(bool),
     DateTime(DateTime<Utc>),
     Duration(TimeDelta),
+    ByteSize(Decimal),
     IpAddr(IpAddr),
     Uuid(Uuid),
     Ulid(Ulid),
@@ -30,6 +32,7 @@ impl RuntimeValue {
             Self::Boolean(value) => value.to_string(),
             Self::DateTime(value) => value.to_rfc3339_opts(SecondsFormat::AutoSi, true),
             Self::Duration(value) => render_duration(value),
+            Self::ByteSize(value) => format!("{}B", value.normalize()),
             Self::IpAddr(value) => value.to_string(),
             Self::Uuid(value) => value.to_string(),
             Self::Ulid(value) => value.to_string(),
@@ -43,6 +46,7 @@ impl RuntimeValue {
             Self::Boolean(_) => "Boolean",
             Self::DateTime(_) => "DateTime",
             Self::Duration(_) => "Duration",
+            Self::ByteSize(_) => "ByteSize",
             Self::IpAddr(_) => "IpAddr",
             Self::Uuid(_) => "UUID",
             Self::Ulid(_) => "ULID",

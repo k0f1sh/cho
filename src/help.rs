@@ -202,6 +202,13 @@ fn example_input(
                     "2024-01-02T03:04:05+00:00"
                 }
             }
+            DocumentationCategory::ByteSize => {
+                if example.contains("$2") {
+                    "2.11GB 2048MiB"
+                } else {
+                    "2.11GB"
+                }
+            }
             DocumentationCategory::Network => "10.20.30.40",
             DocumentationCategory::SemanticVersion => {
                 if example.contains("$2") {
@@ -269,6 +276,7 @@ fn category_search_terms(category: DocumentationCategory) -> &'static str {
         DocumentationCategory::SpecialForm => "special form",
         DocumentationCategory::RegularExpression => "regular expression regex",
         DocumentationCategory::DateTime => "date time datetime duration",
+        DocumentationCategory::ByteSize => "byte size bytes storage",
         DocumentationCategory::Network => "network ip cidr",
         DocumentationCategory::Url => "url",
         DocumentationCategory::SemanticVersion => "semantic version semver",
@@ -337,6 +345,7 @@ fn help_name(value_type: ValueType) -> &'static str {
         ValueType::Boolean => "BOOLEAN",
         ValueType::DateTime => "DATETIME",
         ValueType::Duration => "DURATION",
+        ValueType::ByteSize => "BYTESIZE",
         ValueType::IpAddr => "IPADDR",
         ValueType::Cidr => "CIDR",
         ValueType::Url => "URL",

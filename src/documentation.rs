@@ -27,6 +27,7 @@ pub enum Category {
     SpecialForm,
     RegularExpression,
     DateTime,
+    ByteSize,
     Network,
     Url,
     SemanticVersion,
@@ -35,7 +36,7 @@ pub enum Category {
 }
 
 impl Category {
-    const ALL: [Self; 15] = [
+    const ALL: [Self; 16] = [
         Self::Program,
         Self::Field,
         Self::Number,
@@ -46,6 +47,7 @@ impl Category {
         Self::SpecialForm,
         Self::RegularExpression,
         Self::DateTime,
+        Self::ByteSize,
         Self::Network,
         Self::Url,
         Self::SemanticVersion,
@@ -65,6 +67,7 @@ impl Category {
             Self::SpecialForm => "special_form",
             Self::RegularExpression => "regular_expression",
             Self::DateTime => "date_time",
+            Self::ByteSize => "byte_size",
             Self::Network => "network",
             Self::Url => "url",
             Self::SemanticVersion => "semantic_version",
@@ -91,6 +94,7 @@ pub enum ValueType {
     Boolean,
     DateTime,
     Duration,
+    ByteSize,
     IpAddr,
     Cidr,
     Url,
@@ -110,6 +114,7 @@ impl ValueType {
             Self::Boolean => "BOOLEAN",
             Self::DateTime => "DATETIME",
             Self::Duration => "DURATION",
+            Self::ByteSize => "BYTESIZE",
             Self::IpAddr => "IPADDR",
             Self::Cidr => "CIDR",
             Self::Url => "URL",
@@ -225,6 +230,7 @@ impl From<DocumentationCategory> for Category {
             DocumentationCategory::SpecialForm => Self::SpecialForm,
             DocumentationCategory::RegularExpression => Self::RegularExpression,
             DocumentationCategory::DateTime => Self::DateTime,
+            DocumentationCategory::ByteSize => Self::ByteSize,
             DocumentationCategory::Network => Self::Network,
             DocumentationCategory::Url => Self::Url,
             DocumentationCategory::SemanticVersion => Self::SemanticVersion,
@@ -391,6 +397,7 @@ impl From<LanguageValueType> for ValueType {
             LanguageValueType::Boolean => Self::Boolean,
             LanguageValueType::DateTime => Self::DateTime,
             LanguageValueType::Duration => Self::Duration,
+            LanguageValueType::ByteSize => Self::ByteSize,
             LanguageValueType::IpAddr => Self::IpAddr,
             LanguageValueType::Cidr => Self::Cidr,
             LanguageValueType::Url => Self::Url,

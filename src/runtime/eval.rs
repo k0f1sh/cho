@@ -183,6 +183,14 @@ pub(super) fn evaluate(
             minimum,
             maximum,
         } => number::clamp(value, minimum, maximum, record),
+        Value::NormalizeByteSize(value) => {
+            let value = super::byte_size::expect(evaluate(value, record)?, "bs", 1)?;
+            Ok(RuntimeValue::ByteSize(value))
+        }
+        Value::ByteSizeToBytes(value) => {
+            let value = super::byte_size::expect(evaluate(value, record)?, "bs/to-b", 1)?;
+            super::byte_size::to_number(value)
+        }
         Value::UrlPart { part, value } => {
             let function = url_part_name(part);
             let input = expect_string(evaluate(value, record)?, function, 1)?;

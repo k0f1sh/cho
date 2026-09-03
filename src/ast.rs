@@ -67,6 +67,7 @@ pub enum ComparisonType {
     Number,
     String,
     DateTime,
+    ByteSize,
     IpAddr,
     SemVer,
     Uuid,
@@ -220,6 +221,8 @@ pub enum Value {
         minimum: Box<Value>,
         maximum: Box<Value>,
     },
+    NormalizeByteSize(Box<Value>),
+    ByteSizeToBytes(Box<Value>),
     UrlPart {
         part: UrlPart,
         value: Box<Value>,

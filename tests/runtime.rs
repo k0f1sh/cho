@@ -1,3 +1,5 @@
+#[path = "runtime/byte_size.rs"]
+mod byte_size;
 #[path = "runtime/composition.rs"]
 mod composition;
 #[path = "runtime/csv.rs"]

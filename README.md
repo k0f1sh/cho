@@ -116,11 +116,18 @@ Bob -> Osaka
 CSV input is validated strictly. Invalid quoting reports the logical record,
 physical line, and field instead of silently changing the input.
 
+Filter Docker images by their displayed size, even when units differ:
+
+```console
+$ docker images --format '{{.Repository}}\t{{.Tag}}\t{{.Size}}' |
+    cho --tsv '(f (bs/> $3 "500MB")) (p $1 $2 $3)'
+```
+
 Fields are plain strings, but cho knows about types. When a function
-expects a DateTime, IP address, CIDR, URL, SemVer, UUID, or ULID, the string is
-converted automatically — no annotations or casts needed. If the value doesn't
-match the expected format, cho stops with an error that pinpoints the record,
-function, and argument:
+expects a DateTime, ByteSize, IP address, CIDR, URL, SemVer, UUID, or ULID, the
+string is converted automatically — no annotations or casts needed. If the value
+doesn't match the expected format, cho stops with an error that pinpoints the
+record, function, and argument:
 
 ```console
 $ printf '%s\n' \

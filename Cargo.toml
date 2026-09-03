@@ -1,6 +1,6 @@
 [package]
 name = "cho"
-version = "0.27.2"
+version = "0.28.0"
 edition = "2024"
 description = "A small, type-aware text processor for the command line"
 license = "MIT"
@@ -15,6 +15,7 @@ chrono-tz = "0.10.4"
 csv = "1.3"
 ipnet = "2.11"
 regex = "1.11"
+rust_decimal = { version = "1.37", default-features = false, features = ["std"] }
 semver = "1.0"
 url = "2.5"
 uuid = { version = "1.26", features = ["v4", "v7"] }

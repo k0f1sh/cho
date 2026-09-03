@@ -17,6 +17,7 @@ pub(crate) enum ValueType {
     Boolean,
     DateTime,
     Duration,
+    ByteSize,
     IpAddr,
     Cidr,
     Url,
@@ -159,6 +160,7 @@ pub(crate) enum DocumentationCategory {
     SpecialForm,
     RegularExpression,
     DateTime,
+    ByteSize,
     Network,
     Url,
     SemanticVersion,
@@ -318,6 +320,7 @@ pub(crate) fn form(form: Form) -> Result<CompiledExpression, ParseError> {
 }
 
 mod boolean;
+mod byte_size;
 mod composition;
 mod csv;
 mod datetime;
@@ -367,6 +370,14 @@ registry!(
     number::LessThanOrEqual,
     number::Equal,
     number::NotEqual,
+    byte_size::Normalize,
+    byte_size::ToBytes,
+    byte_size::GreaterThan,
+    byte_size::GreaterThanOrEqual,
+    byte_size::LessThan,
+    byte_size::LessThanOrEqual,
+    byte_size::Equal,
+    byte_size::NotEqual,
     string::Concat,
     string::Join,
     string::Repeat,
