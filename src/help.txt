@@ -9,6 +9,7 @@ Usage:
 
 Common recipes:
   Pick fields             cho '(p $1 $3)'
+  Exclude fields          cho '(p $..2 $4..)'
   Skip empty records      cho '(f (not (s/empty? $0)))'
   Filter numbers          cho '(f (> $2 20))'
   Match a field           cho '(f (~ $1 /^api-/))'
