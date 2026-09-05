@@ -94,6 +94,30 @@ fn parse_errors_explain_unbalanced_parentheses() {
 }
 
 #[test]
+fn deeply_nested_programs_report_an_error_instead_of_aborting() {
+    let program = format!("{}1{}", "(".repeat(20_000), ")".repeat(20_000));
+    let output = run_with_args(&["--no-input", &program], "");
+
+    assert!(!output.status.success());
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "cho: invalid program: expression nesting exceeds maximum depth of 256\n"
+    );
+}
+
+#[test]
+fn valid_functions_can_be_nested_up_to_the_expression_depth_limit() {
+    let program = format!("{}$1{}", "(s/upper ".repeat(256), ")".repeat(256));
+    let output = run(&program, "value\n");
+
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8(output.stdout).unwrap(), "VALUE\n");
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
 fn parse_errors_preserve_lexer_details() {
     let output = run(r#"(print "unfinished)"#, "");
     assert!(!output.status.success());
