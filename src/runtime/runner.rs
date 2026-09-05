@@ -278,6 +278,14 @@ fn validate_csv_record(record: &[u8]) -> CsvRecordStatus {
         if record_end {
             return CsvRecordStatus::Complete;
         }
+        if byte == b'\r' && state != CsvFieldState::Quoted && record.get(index + 1) != Some(&b'\n')
+        {
+            return CsvRecordStatus::Invalid {
+                offset: index,
+                field,
+                message: "bare carriage return is not allowed outside a quoted field",
+            };
+        }
         match state {
             CsvFieldState::Start => match byte {
                 b',' => field += 1,
@@ -339,12 +347,23 @@ fn parse_csv_fields(record: &[u8]) -> io::Result<Vec<String>> {
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(false)
         .from_reader(record);
-    let fields = reader
-        .records()
+    let mut records = reader.records();
+    let fields = records
         .next()
         .transpose()
         .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?
         .unwrap_or_default();
+    if records
+        .next()
+        .transpose()
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?
+        .is_some()
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "CSV decoder unexpectedly produced multiple records",
+        ));
+    }
     Ok(fields.iter().map(str::to_owned).collect())
 }
 
