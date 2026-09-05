@@ -13,6 +13,7 @@ pub enum ParseError {
     UnknownFunction(String),
     InvalidField,
     UnterminatedString,
+    UnsupportedStringEscape(char),
     UnterminatedRegex,
     MissingClosingParenthesis,
     UnexpectedClosingParenthesis,
@@ -43,6 +44,13 @@ impl fmt::Display for ParseError {
             }
             Self::InvalidField => "invalid field reference",
             Self::UnterminatedString => "unterminated string literal",
+            Self::UnsupportedStringEscape(character) => {
+                return write!(
+                    formatter,
+                    "unsupported escape in string literal: \\{}",
+                    character.escape_default()
+                );
+            }
             Self::UnterminatedRegex => "unterminated regex literal",
             Self::MissingClosingParenthesis => "missing closing parenthesis",
             Self::UnexpectedClosingParenthesis => "unexpected closing parenthesis",

@@ -128,6 +128,16 @@ fn parse_errors_preserve_lexer_details() {
 }
 
 #[test]
+fn parse_errors_identify_unsupported_string_escapes() {
+    let output = run(r#"(print "\q")"#, "");
+    assert!(!output.status.success());
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "cho: invalid program: unsupported escape in string literal: \\q\n"
+    );
+}
+
+#[test]
 fn parse_errors_explain_function_argument_counts() {
     for (program, message) in [
         (
