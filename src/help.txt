@@ -54,8 +54,8 @@ Input and options:
   Examples: echo production | cho -c s/upper  # => PRODUCTION
             echo api-server | cho -c s/replace - _  # => api_server
             cho -nc s/upper production  # => PRODUCTION
-  The -F separator must be a valid regular expression. It must not match an
-  empty string.
+  The -F separator must be a valid regular expression and must not produce a
+  zero-length match. An input-dependent zero-length match is a runtime error.
 
 Program forms:
   (print VALUE ...)                         print values separated by spaces

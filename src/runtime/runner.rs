@@ -83,7 +83,9 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
 
     for (index, line) in input.lines().enumerate() {
         let line = line?;
-        let field_spans = split_field_spans(&line, field_separator.as_ref());
+        let field_spans = split_field_spans(&line, field_separator.as_ref()).map_err(|error| {
+            io::Error::new(error.kind(), format!("record {}: {error}", index + 1))
+        })?;
         let record = Record {
             line: &line,
             number: index + 1,
@@ -101,19 +103,25 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
     Ok(())
 }
 
-fn split_field_spans(line: &str, separator: Option<&Regex>) -> Vec<(usize, usize)> {
+fn split_field_spans(line: &str, separator: Option<&Regex>) -> io::Result<Vec<(usize, usize)>> {
     if line.is_empty() {
-        return Vec::new();
+        return Ok(Vec::new());
     }
     if let Some(separator) = separator {
         let mut spans = Vec::new();
         let mut start = 0;
         for delimiter in separator.find_iter(line) {
+            if delimiter.is_empty() {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "field separator produced a zero-length match",
+                ));
+            }
             spans.push((start, delimiter.start()));
             start = delimiter.end();
         }
         spans.push((start, line.len()));
-        return spans;
+        return Ok(spans);
     }
 
     let mut spans = Vec::new();
@@ -130,7 +138,7 @@ fn split_field_spans(line: &str, separator: Option<&Regex>) -> Vec<(usize, usize
     if let Some(start) = start {
         spans.push((start, line.len()));
     }
-    spans
+    Ok(spans)
 }
 
 fn current_datetime() -> DateTime<Utc> {
@@ -394,7 +402,7 @@ fn compile_field_separator(pattern: Option<&str>) -> io::Result<Option<Regex>> {
     {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            "field separator must not match an empty string",
+            "field separator must not produce a zero-length match",
         ));
     }
     Ok(separator)

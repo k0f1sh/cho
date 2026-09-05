@@ -825,10 +825,41 @@ fn field_separators_can_be_regexes_and_preserve_empty_fields() {
 
 #[test]
 fn separators_that_match_empty_strings_are_rejected() {
-    let error =
-        cho::run_with_field_separator("(print $1)", Some(".*"), Cursor::new("Alice\n"), Vec::new())
-            .unwrap_err();
-    assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+    for separator in ["^", "a*"] {
+        let error = cho::run_with_field_separator(
+            "(print $1)",
+            Some(separator),
+            Cursor::new("Alice\n"),
+            Vec::new(),
+        )
+        .unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::InvalidInput);
+        assert_eq!(
+            error.to_string(),
+            "field separator must not produce a zero-length match"
+        );
+    }
+}
+
+#[test]
+fn input_dependent_zero_length_field_separator_matches_are_rejected() {
+    for separator in [r"\b", r"a|\b"] {
+        let mut output = Vec::new();
+        let error = cho::run_with_field_separator(
+            "(print $0)",
+            Some(separator),
+            Cursor::new("---\nabc\n"),
+            &mut output,
+        )
+        .unwrap_err();
+
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+        assert_eq!(
+            error.to_string(),
+            "record 2: field separator produced a zero-length match"
+        );
+        assert_eq!(String::from_utf8(output).unwrap(), "---\n");
+    }
 }
 
 #[test]
