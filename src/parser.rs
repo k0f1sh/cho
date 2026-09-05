@@ -1,6 +1,8 @@
 use crate::lexer::{Token, tokenize};
 use std::fmt;
 
+const MAX_EXPRESSION_DEPTH: usize = 256;
+
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
     InvalidSyntax,
@@ -14,6 +16,7 @@ pub enum ParseError {
     UnterminatedRegex,
     MissingClosingParenthesis,
     UnexpectedClosingParenthesis,
+    ExpressionNestingTooDeep,
     InvalidArity {
         expression: String,
         expected: String,
@@ -43,6 +46,7 @@ impl fmt::Display for ParseError {
             Self::UnterminatedRegex => "unterminated regex literal",
             Self::MissingClosingParenthesis => "missing closing parenthesis",
             Self::UnexpectedClosingParenthesis => "unexpected closing parenthesis",
+            Self::ExpressionNestingTooDeep => "expression nesting exceeds maximum depth of 256",
             Self::InvalidArity {
                 expression,
                 expected,
@@ -89,17 +93,20 @@ impl Parser {
     fn parse_program(&mut self) -> Result<Vec<SExpr>, ParseError> {
         let mut expressions = Vec::new();
         while self.position < self.tokens.len() {
-            expressions.push(self.parse_expression()?);
+            expressions.push(self.parse_expression(0)?);
         }
         Ok(expressions)
     }
 
-    fn parse_expression(&mut self) -> Result<SExpr, ParseError> {
+    fn parse_expression(&mut self, depth: usize) -> Result<SExpr, ParseError> {
         match self.next() {
             Some(Token::Atom(symbol)) => Ok(SExpr::Atom(Atom::Symbol(symbol))),
             Some(Token::String(value)) => Ok(SExpr::Atom(Atom::String(value))),
             Some(Token::Regex(pattern)) => Ok(SExpr::Atom(Atom::Regex(pattern))),
             Some(Token::LeftParen) => {
+                if depth == MAX_EXPRESSION_DEPTH {
+                    return Err(ParseError::ExpressionNestingTooDeep);
+                }
                 let mut expressions = Vec::new();
                 loop {
                     match self.tokens.get(self.position) {
@@ -107,7 +114,7 @@ impl Parser {
                             self.position += 1;
                             return Ok(SExpr::List(expressions));
                         }
-                        Some(_) => expressions.push(self.parse_expression()?),
+                        Some(_) => expressions.push(self.parse_expression(depth + 1)?),
                         None => return Err(ParseError::MissingClosingParenthesis),
                     }
                 }
@@ -174,6 +181,26 @@ mod tests {
     }
 
     #[test]
+    fn limits_expression_nesting_depth() {
+        let at_limit = format!(
+            "{}1{}",
+            "(".repeat(MAX_EXPRESSION_DEPTH),
+            ")".repeat(MAX_EXPRESSION_DEPTH)
+        );
+        assert!(parse(&at_limit).is_ok());
+
+        let over_limit = format!(
+            "{}1{}",
+            "(".repeat(MAX_EXPRESSION_DEPTH + 1),
+            ")".repeat(MAX_EXPRESSION_DEPTH + 1)
+        );
+        assert_eq!(
+            parse(&over_limit),
+            Err(ParseError::ExpressionNestingTooDeep)
+        );
+    }
+
+    #[test]
     fn describes_parse_errors() {
         assert_eq!(ParseError::InvalidSyntax.to_string(), "invalid syntax");
         assert_eq!(
@@ -183,6 +210,10 @@ mod tests {
         assert_eq!(
             ParseError::MissingClosingParenthesis.to_string(),
             "missing closing parenthesis"
+        );
+        assert_eq!(
+            ParseError::ExpressionNestingTooDeep.to_string(),
+            "expression nesting exceeds maximum depth of 256"
         );
     }
 }
