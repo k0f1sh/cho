@@ -3,7 +3,7 @@ use crate::language::{
     Arguments, AstContext, BoundArgument, CallableDefinition, CallableKind, Cardinality,
     CompiledExpression, Parameter, Signature, ThreadDirection, ValueType, expect_value, lookup,
 };
-use crate::parser::{Atom, ParseError, SExpr};
+use crate::parser::{Atom, MAX_EXPRESSION_DEPTH, ParseError, SExpr};
 
 #[derive(Debug)]
 enum InputArgument<'syntax> {
@@ -160,7 +160,20 @@ impl Compiler {
                 self.bind_argument(parameter, argument)
             })
             .collect::<Result<Vec<_>, _>>()?;
-        callable.to_ast(self, Arguments(arguments))
+        let compiled = callable.to_ast(self, Arguments(arguments))?;
+        let depth = match &compiled {
+            CompiledExpression::Value(value) => value.depth(),
+            CompiledExpression::Form(Form::Filter(value)) => 1 + value.depth(),
+            CompiledExpression::Form(Form::Print(values)) => {
+                1 + values.iter().map(Value::depth).max().unwrap_or(0)
+            }
+        };
+        // Check every invocation, including each threading step, so an oversized
+        // tree is rejected while it is still safe to evaluate and drop.
+        if depth > MAX_EXPRESSION_DEPTH {
+            return Err(ParseError::ExpressionNestingTooDeep);
+        }
+        Ok(compiled)
     }
 
     fn bind_argument<'syntax>(
