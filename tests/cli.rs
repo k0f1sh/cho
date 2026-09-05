@@ -232,7 +232,7 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("-k, --apropos [QUERY]"));
     assert!(stdout.contains("cannot pass NR or NF as record values"));
     assert!(stdout.contains("-F separator must be a valid regular expression"));
-    assert!(stdout.contains("It must not match an\n  empty string"));
+    assert!(stdout.contains("must not produce a\n  zero-length match"));
     assert!(stdout.contains("field accepts a non-negative whole number"));
     assert!(stdout.contains("fields also requires START to be less than or equal to END"));
     assert!(stdout.contains("dt/unix accepts only whole Unix seconds"));
