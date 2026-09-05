@@ -241,6 +241,37 @@ fn csv_mode_preserves_a_final_record_without_a_newline() {
 }
 
 #[test]
+fn csv_mode_rejects_bare_carriage_returns_without_losing_data_silently() {
+    let mut output = Vec::new();
+    let error = cho::run_csv(
+        "(print NR NF $1 $2)",
+        Cursor::new("first,valid\nsecond\rthird,value\n"),
+        &mut output,
+    )
+    .unwrap_err();
+
+    assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert_eq!(
+        error.to_string(),
+        "CSV record 2, line 2, field 1: bare carriage return is not allowed outside a quoted field"
+    );
+    assert_eq!(String::from_utf8(output).unwrap(), "1 2 first valid\n");
+}
+
+#[test]
+fn csv_mode_accepts_carriage_returns_inside_quotes() {
+    let mut output = Vec::new();
+    cho::run_csv(
+        "(print NR NF $1 (s/escape $2))",
+        Cursor::new("a,\"b\rc\"\r\nd,e"),
+        &mut output,
+    )
+    .unwrap();
+
+    assert_eq!(String::from_utf8(output).unwrap(), "1 2 a b\\rc\n2 2 d e\n");
+}
+
+#[test]
 fn csv_mode_rejects_invalid_quotes_with_record_line_and_field() {
     for (input, prior_output, message) in [
         (
