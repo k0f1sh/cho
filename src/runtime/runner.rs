@@ -186,13 +186,14 @@ fn read_csv_record<R: BufRead>(
 ) -> io::Result<bool> {
     record.clear();
     let start_line = *physical_line;
+    let mut validator = CsvRecordValidator::new();
     loop {
         let bytes_read = input.read_until(b'\n', record)?;
         if bytes_read == 0 {
             if record.is_empty() {
                 return Ok(false);
             }
-            return match validate_csv_record(record) {
+            return match validator.validate(record) {
                 CsvRecordStatus::Complete => Ok(true),
                 CsvRecordStatus::OpenQuote { field } => Err(csv_syntax_error(
                     record_number,
@@ -217,7 +218,7 @@ fn read_csv_record<R: BufRead>(
             };
         }
         *physical_line += 1;
-        match validate_csv_record(record) {
+        match validator.validate(record) {
             CsvRecordStatus::OpenQuote { .. } => continue,
             CsvRecordStatus::Invalid {
                 offset,
@@ -268,71 +269,86 @@ enum CsvRecordStatus {
     },
 }
 
-fn validate_csv_record(record: &[u8]) -> CsvRecordStatus {
-    let mut state = CsvFieldState::Start;
-    let mut field = 1;
-    let mut index = 0;
-    while index < record.len() {
-        let byte = record[index];
-        let record_end = byte == b'\n' && state != CsvFieldState::Quoted;
-        if record_end {
-            return CsvRecordStatus::Complete;
+struct CsvRecordValidator {
+    state: CsvFieldState,
+    field: usize,
+    scanned: usize,
+}
+
+impl CsvRecordValidator {
+    fn new() -> Self {
+        Self {
+            state: CsvFieldState::Start,
+            field: 1,
+            scanned: 0,
         }
-        if byte == b'\r' && state != CsvFieldState::Quoted && record.get(index + 1) != Some(&b'\n')
-        {
-            return CsvRecordStatus::Invalid {
-                offset: index,
-                field,
-                message: "bare carriage return is not allowed outside a quoted field",
-            };
-        }
-        match state {
-            CsvFieldState::Start => match byte {
-                b',' => field += 1,
-                b'"' => state = CsvFieldState::Quoted,
-                _ => state = CsvFieldState::Unquoted,
-            },
-            CsvFieldState::Unquoted => match byte {
-                b',' => {
-                    field += 1;
-                    state = CsvFieldState::Start;
-                }
-                b'"' => {
-                    return CsvRecordStatus::Invalid {
-                        offset: index,
-                        field,
-                        message: "quote is only allowed at the start of a field",
-                    };
-                }
-                _ => {}
-            },
-            CsvFieldState::Quoted => {
-                if byte == b'"' {
-                    state = CsvFieldState::AfterQuote;
-                }
-            }
-            CsvFieldState::AfterQuote => match byte {
-                b'"' => state = CsvFieldState::Quoted,
-                b',' => {
-                    field += 1;
-                    state = CsvFieldState::Start;
-                }
-                b'\r' if record.get(index + 1) == Some(&b'\n') => {}
-                _ => {
-                    return CsvRecordStatus::Invalid {
-                        offset: index,
-                        field,
-                        message: "expected a comma or end of record after closing quote",
-                    };
-                }
-            },
-        }
-        index += 1;
     }
-    if state == CsvFieldState::Quoted {
-        CsvRecordStatus::OpenQuote { field }
-    } else {
-        CsvRecordStatus::Complete
+
+    fn validate(&mut self, record: &[u8]) -> CsvRecordStatus {
+        while self.scanned < record.len() {
+            let byte = record[self.scanned];
+            let record_end = byte == b'\n' && self.state != CsvFieldState::Quoted;
+            if record_end {
+                return CsvRecordStatus::Complete;
+            }
+            if byte == b'\r'
+                && self.state != CsvFieldState::Quoted
+                && record.get(self.scanned + 1) != Some(&b'\n')
+            {
+                return CsvRecordStatus::Invalid {
+                    offset: self.scanned,
+                    field: self.field,
+                    message: "bare carriage return is not allowed outside a quoted field",
+                };
+            }
+            match self.state {
+                CsvFieldState::Start => match byte {
+                    b',' => self.field += 1,
+                    b'"' => self.state = CsvFieldState::Quoted,
+                    _ => self.state = CsvFieldState::Unquoted,
+                },
+                CsvFieldState::Unquoted => match byte {
+                    b',' => {
+                        self.field += 1;
+                        self.state = CsvFieldState::Start;
+                    }
+                    b'"' => {
+                        return CsvRecordStatus::Invalid {
+                            offset: self.scanned,
+                            field: self.field,
+                            message: "quote is only allowed at the start of a field",
+                        };
+                    }
+                    _ => {}
+                },
+                CsvFieldState::Quoted => {
+                    if byte == b'"' {
+                        self.state = CsvFieldState::AfterQuote;
+                    }
+                }
+                CsvFieldState::AfterQuote => match byte {
+                    b'"' => self.state = CsvFieldState::Quoted,
+                    b',' => {
+                        self.field += 1;
+                        self.state = CsvFieldState::Start;
+                    }
+                    b'\r' if record.get(self.scanned + 1) == Some(&b'\n') => {}
+                    _ => {
+                        return CsvRecordStatus::Invalid {
+                            offset: self.scanned,
+                            field: self.field,
+                            message: "expected a comma or end of record after closing quote",
+                        };
+                    }
+                },
+            }
+            self.scanned += 1;
+        }
+        if self.state == CsvFieldState::Quoted {
+            CsvRecordStatus::OpenQuote { field: self.field }
+        } else {
+            CsvRecordStatus::Complete
+        }
     }
 }
 
@@ -382,4 +398,38 @@ fn compile_field_separator(pattern: Option<&str>) -> io::Result<Option<Regex>> {
         ));
     }
     Ok(separator)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CsvRecordStatus, CsvRecordValidator};
+
+    #[test]
+    fn csv_validator_resumes_at_the_first_unscanned_byte() {
+        let mut validator = CsvRecordValidator::new();
+        let mut record = br#""first line
+"#
+        .to_vec();
+
+        assert!(matches!(
+            validator.validate(&record),
+            CsvRecordStatus::OpenQuote { field: 1 }
+        ));
+        assert_eq!(validator.scanned, record.len());
+
+        let previously_scanned = validator.scanned;
+        record.extend_from_slice(b"second line\n");
+        assert!(matches!(
+            validator.validate(&record),
+            CsvRecordStatus::OpenQuote { field: 1 }
+        ));
+        assert_eq!(validator.scanned, record.len());
+        assert!(validator.scanned > previously_scanned);
+
+        record.extend_from_slice(b"\",last\n");
+        assert!(matches!(
+            validator.validate(&record),
+            CsvRecordStatus::Complete
+        ));
+    }
 }
