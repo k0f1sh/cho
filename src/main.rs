@@ -1,11 +1,13 @@
 use std::env;
 use std::ffi::OsStr;
+use std::fs;
 use std::io::{self, IsTerminal};
 use std::process::ExitCode;
 
 const USAGE: &str = concat!(
     "Usage:\n",
     "  cho [INPUT OPTIONS] 'PROGRAM'\n",
+    "  cho [INPUT OPTIONS] --file FILE\n",
     "  cho [INPUT OPTIONS] --call FUNCTION [ARG ...]\n",
     "  cho --help [TOPIC]\n",
     "  cho --apropos [QUERY]\n",
@@ -25,7 +27,13 @@ struct Options {
     tsv: bool,
     skip_header: bool,
     no_input: bool,
-    program: String,
+    program: ProgramSource,
+}
+
+#[derive(Debug, PartialEq)]
+enum ProgramSource {
+    CommandLine(String),
+    File(String),
 }
 
 #[derive(Debug, PartialEq)]
@@ -40,6 +48,7 @@ enum Command {
 enum ArgumentError {
     MissingProgram,
     MissingSeparator,
+    MissingProgramFile,
     UnexpectedArgument(String),
     ConflictingInputFormats,
     SkipHeaderWithoutDelimitedInput,
@@ -48,6 +57,7 @@ enum ArgumentError {
     MissingCallFunction,
     InvalidCallFunction,
     CallExpression,
+    ConflictingProgramSources,
     EmptyAproposQuery,
     InformationCommandCannotBeCombined(String),
 }
@@ -57,6 +67,7 @@ impl std::fmt::Display for ArgumentError {
         match self {
             Self::MissingProgram => formatter.write_str("missing PROGRAM"),
             Self::MissingSeparator => formatter.write_str("-F expects SEPARATOR"),
+            Self::MissingProgramFile => formatter.write_str("--file expects FILE"),
             Self::UnexpectedArgument(argument) => {
                 write!(formatter, "unexpected argument: {argument}")
             }
@@ -77,6 +88,9 @@ impl std::fmt::Display for ArgumentError {
             Self::CallExpression => formatter.write_str(
                 "--call expects FUNCTION without parentheses; use -n 'PROGRAM' to evaluate an expression without input",
             ),
+            Self::ConflictingProgramSources => {
+                formatter.write_str("--file cannot be combined with PROGRAM or --call")
+            }
             Self::EmptyAproposQuery => formatter.write_str("--apropos expects a non-empty QUERY"),
             Self::InformationCommandCannotBeCombined(option) => write!(
                 formatter,
@@ -181,15 +195,27 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, Ar
             skip_header = true;
         } else if matches!(argument.as_str(), "-n" | "--no-input") {
             no_input = true;
+        } else if matches!(argument.as_str(), "-f" | "--file") {
+            if program.is_some() {
+                return Err(ArgumentError::ConflictingProgramSources);
+            }
+            let path = arguments.next().ok_or(ArgumentError::MissingProgramFile)?;
+            program = Some(ProgramSource::File(path));
         } else if is_call_option(&argument) {
             if program.is_some() {
-                return Err(ArgumentError::CallAfterProgram);
+                return if matches!(program, Some(ProgramSource::File(_))) {
+                    Err(ArgumentError::ConflictingProgramSources)
+                } else {
+                    Err(ArgumentError::CallAfterProgram)
+                };
             }
             if matches!(argument.as_str(), "-nc" | "-cn") {
                 no_input = true;
             }
             let function = arguments.next().ok_or(ArgumentError::MissingCallFunction)?;
-            program = Some(call_program(&function, arguments, !no_input)?);
+            program = Some(ProgramSource::CommandLine(call_program(
+                &function, arguments, !no_input,
+            )?));
             break;
         } else if argument == "-F" {
             field_separator = Some(arguments.next().ok_or(ArgumentError::MissingSeparator)?);
@@ -201,9 +227,13 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, Ar
         } else if is_information_option(&argument) {
             return Err(ArgumentError::InformationCommandCannotBeCombined(argument));
         } else if program.is_some() {
-            return Err(ArgumentError::UnexpectedArgument(argument));
+            return if matches!(program, Some(ProgramSource::File(_))) {
+                Err(ArgumentError::ConflictingProgramSources)
+            } else {
+                Err(ArgumentError::UnexpectedArgument(argument))
+            };
         } else {
-            program = Some(argument);
+            program = Some(ProgramSource::CommandLine(argument));
         }
     }
 
@@ -274,7 +304,15 @@ fn is_cli_option(argument: &str) -> bool {
         || is_call_option(argument)
         || matches!(
             argument,
-            "--csv" | "--tsv" | "-s" | "--skip-header" | "-n" | "--no-input" | "-F"
+            "--csv"
+                | "--tsv"
+                | "-s"
+                | "--skip-header"
+                | "-n"
+                | "--no-input"
+                | "-F"
+                | "-f"
+                | "--file"
         )
         || argument.starts_with("-F")
 }
@@ -399,10 +437,20 @@ fn main() -> ExitCode {
         unreachable!("information commands returned above");
     };
 
+    let program = match options.program {
+        ProgramSource::CommandLine(program) => program,
+        ProgramSource::File(path) => match fs::read_to_string(&path) {
+            Ok(program) => program,
+            Err(error) => {
+                eprintln!("cho: cannot read program file {path:?}: {error}");
+                return ExitCode::FAILURE;
+            }
+        },
+    };
     let program = if options.skip_header {
-        format!("(f (!= NR 1)) {}", options.program)
+        format!("(f (!= NR 1)) {program}")
     } else {
-        options.program
+        program
     };
     let stdout = io::stdout();
     let result = if options.no_input {
@@ -508,7 +556,7 @@ mod tests {
                 tsv: false,
                 skip_header: false,
                 no_input: false,
-                program: "(print $1)".into(),
+                program: ProgramSource::CommandLine("(print $1)".into()),
             })
         );
     }
@@ -542,6 +590,16 @@ mod tests {
                 .field_separator,
             Some("[,;]".into())
         );
+    }
+
+    #[test]
+    fn parses_a_program_file() {
+        for option in ["-f", "--file"] {
+            assert_eq!(
+                parse_args(args(&[option, "program.cho"])).unwrap().program,
+                ProgramSource::File("program.cho".into())
+            );
+        }
     }
 
     #[test]
@@ -614,12 +672,15 @@ mod tests {
             parse_args(args(&["-n", "--call", "s/upper", "hoge"]))
                 .unwrap()
                 .program,
-            r#"(s/upper "hoge")"#
+            ProgramSource::CommandLine(r#"(s/upper "hoge")"#.into())
         );
         for option in ["-nc", "-cn"] {
             let options = parse_args(args(&[option, "s/upper", "hoge"])).unwrap();
             assert!(options.no_input);
-            assert_eq!(options.program, r#"(s/upper "hoge")"#);
+            assert_eq!(
+                options.program,
+                ProgramSource::CommandLine(r#"(s/upper "hoge")"#.into())
+            );
         }
     }
 

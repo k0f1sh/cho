@@ -2,6 +2,7 @@ cho — a small, type-aware text processor for the command line
 
 Usage:
   cho [INPUT OPTIONS] 'PROGRAM'
+  cho [INPUT OPTIONS] --file FILE
   cho [INPUT OPTIONS] --call FUNCTION [ARG ...]
   cho --help [TOPIC]
   cho --apropos [QUERY]
@@ -31,6 +32,7 @@ Input and options:
   --tsv              split fields on tabs
   -s, --skip-header  skip the first CSV or TSV record
   -n, --no-input     do not read input; run once with an empty record
+  -f, --file FILE    read PROGRAM from FILE
   -c, --call         call FUNCTION with $0 followed by ARG values
   -nc, -cn           call FUNCTION without input, using only ARG values
   -k, --apropos [QUERY] list all functions and forms, or search their documentation
@@ -40,6 +42,11 @@ Input and options:
   Help, apropos, and version are standalone commands and cannot be combined
   with PROGRAM or input options.
   PROGRAM runs once per input record. Whitespace splits fields by default.
+  --file reads the same program syntax from a UTF-8 file while standard input
+  remains the record input. It cannot be combined with PROGRAM or --call. An
+  empty program file has the same behavior as an empty PROGRAM and prints $0.
+  Example: printf '(f (> $2 20)) (p $1)\n' > adults.cho
+           printf 'Alice 30\nBob 18\n' | cho -f adults.cho  # => Alice
   $0 is the complete record; $1, $2, ... are fields. NR is the record number;
   NF is the field count. Missing fields are empty strings. With --skip-header,
   the first data record keeps its input position and therefore has NR 2.
