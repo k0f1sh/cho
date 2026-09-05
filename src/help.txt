@@ -81,6 +81,8 @@ Literals and fields:
   (fields-from START) -> STRING             get fields from a computed position through the record end
   (fields-to END) -> STRING                 get fields from the record start through a computed position
 
+  String literals accept \n, \r, \t, \\, and \". Other backslash escapes are
+  errors; use \\ to include a literal backslash.
   An omitted range bound extends to that edge of the complete record, including
   leading or trailing separators. An end beyond NF stops at NF. A start beyond
   NF is empty.

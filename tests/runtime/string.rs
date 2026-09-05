@@ -482,6 +482,17 @@ fn quote_stringifies_values_and_escapes_the_enclosing_quote() {
 }
 
 #[test]
+fn double_quoted_output_can_be_reused_as_a_string_literal() {
+    assert_eq!(
+        output(
+            r#"(print (s/dquote "line 1\nline 2\r\t\\\"quoted\""))"#,
+            "ignored\n",
+        ),
+        "\"line 1\\nline 2\\r\\t\\\\\\\"quoted\\\"\"\n"
+    );
+}
+
+#[test]
 fn unquote_decodes_quotes_and_composes_as_a_value() {
     assert_eq!(
         output(

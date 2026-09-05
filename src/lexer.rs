@@ -73,11 +73,14 @@ where
             '"' => return Ok(value),
             '\\' => {
                 let escaped = characters.next().ok_or(ParseError::UnterminatedString)?;
-                value.push(match escaped {
-                    'n' => '\n',
-                    't' => '\t',
-                    other => other,
-                });
+                match escaped {
+                    'n' => value.push('\n'),
+                    'r' => value.push('\r'),
+                    't' => value.push('\t'),
+                    '\\' => value.push('\\'),
+                    '"' => value.push('"'),
+                    other => return Err(ParseError::UnsupportedStringEscape(other)),
+                }
             }
             other => value.push(other),
         }
@@ -106,8 +109,20 @@ mod tests {
     #[test]
     fn handles_string_escapes() {
         assert_eq!(
-            tokenize(r#""a\tb\n\"c""#),
-            Ok(vec![Token::String("a\tb\n\"c".into())])
+            tokenize(r#""a\tb\n\rc\\d\"e""#),
+            Ok(vec![Token::String("a\tb\n\rc\\d\"e".into())])
+        );
+    }
+
+    #[test]
+    fn rejects_unsupported_string_escapes() {
+        assert_eq!(
+            tokenize(r#""\q""#),
+            Err(ParseError::UnsupportedStringEscape('q'))
+        );
+        assert_eq!(
+            tokenize(r#""\/""#),
+            Err(ParseError::UnsupportedStringEscape('/'))
         );
     }
 
