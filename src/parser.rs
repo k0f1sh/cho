@@ -1,8 +1,6 @@
 use crate::lexer::{Token, tokenize};
 use std::fmt;
 
-pub(crate) const MAX_EXPRESSION_DEPTH: usize = 256;
-
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
     InvalidSyntax,
@@ -17,7 +15,6 @@ pub enum ParseError {
     UnterminatedRegex,
     MissingClosingParenthesis,
     UnexpectedClosingParenthesis,
-    ExpressionNestingTooDeep,
     InvalidArity {
         expression: String,
         expected: String,
@@ -54,7 +51,6 @@ impl fmt::Display for ParseError {
             Self::UnterminatedRegex => "unterminated regex literal",
             Self::MissingClosingParenthesis => "missing closing parenthesis",
             Self::UnexpectedClosingParenthesis => "unexpected closing parenthesis",
-            Self::ExpressionNestingTooDeep => "expression nesting exceeds maximum depth of 256",
             Self::InvalidArity {
                 expression,
                 expected,
@@ -100,35 +96,38 @@ impl Parser {
 
     fn parse_program(&mut self) -> Result<Vec<SExpr>, ParseError> {
         let mut expressions = Vec::new();
+        let mut lists: Vec<Vec<SExpr>> = Vec::new();
         while self.position < self.tokens.len() {
-            expressions.push(self.parse_expression(0)?);
-        }
-        Ok(expressions)
-    }
-
-    fn parse_expression(&mut self, depth: usize) -> Result<SExpr, ParseError> {
-        match self.next() {
-            Some(Token::Atom(symbol)) => Ok(SExpr::Atom(Atom::Symbol(symbol))),
-            Some(Token::String(value)) => Ok(SExpr::Atom(Atom::String(value))),
-            Some(Token::Regex(pattern)) => Ok(SExpr::Atom(Atom::Regex(pattern))),
-            Some(Token::LeftParen) => {
-                if depth == MAX_EXPRESSION_DEPTH {
-                    return Err(ParseError::ExpressionNestingTooDeep);
+            match self.next() {
+                Some(Token::Atom(symbol)) => push_expression(
+                    &mut expressions,
+                    &mut lists,
+                    SExpr::Atom(Atom::Symbol(symbol)),
+                ),
+                Some(Token::String(value)) => push_expression(
+                    &mut expressions,
+                    &mut lists,
+                    SExpr::Atom(Atom::String(value)),
+                ),
+                Some(Token::Regex(pattern)) => push_expression(
+                    &mut expressions,
+                    &mut lists,
+                    SExpr::Atom(Atom::Regex(pattern)),
+                ),
+                Some(Token::LeftParen) => lists.push(Vec::new()),
+                Some(Token::RightParen) => {
+                    let items = lists
+                        .pop()
+                        .ok_or(ParseError::UnexpectedClosingParenthesis)?;
+                    push_expression(&mut expressions, &mut lists, SExpr::List(items));
                 }
-                let mut expressions = Vec::new();
-                loop {
-                    match self.tokens.get(self.position) {
-                        Some(Token::RightParen) => {
-                            self.position += 1;
-                            return Ok(SExpr::List(expressions));
-                        }
-                        Some(_) => expressions.push(self.parse_expression(depth + 1)?),
-                        None => return Err(ParseError::MissingClosingParenthesis),
-                    }
-                }
+                None => unreachable!("the loop checks that a token remains"),
             }
-            Some(Token::RightParen) => Err(ParseError::UnexpectedClosingParenthesis),
-            None => Err(ParseError::InvalidSyntax),
+        }
+        if lists.is_empty() {
+            Ok(expressions)
+        } else {
+            Err(ParseError::MissingClosingParenthesis)
         }
     }
 
@@ -139,8 +138,16 @@ impl Parser {
     }
 }
 
+fn push_expression(expressions: &mut Vec<SExpr>, lists: &mut [Vec<SExpr>], expression: SExpr) {
+    match lists.last_mut() {
+        Some(list) => list.push(expression),
+        None => expressions.push(expression),
+    }
+}
+
 pub(crate) fn parse(program: &str) -> Result<Vec<SExpr>, ParseError> {
-    Parser::new(tokenize(program)?).parse_program()
+    let tokens = tokenize(program)?;
+    stacker::grow(32 * 1024 * 1024, || Parser::new(tokens).parse_program())
 }
 
 #[cfg(test)]
@@ -189,23 +196,10 @@ mod tests {
     }
 
     #[test]
-    fn limits_expression_nesting_depth() {
-        let at_limit = format!(
-            "{}1{}",
-            "(".repeat(MAX_EXPRESSION_DEPTH),
-            ")".repeat(MAX_EXPRESSION_DEPTH)
-        );
-        assert!(parse(&at_limit).is_ok());
-
-        let over_limit = format!(
-            "{}1{}",
-            "(".repeat(MAX_EXPRESSION_DEPTH + 1),
-            ")".repeat(MAX_EXPRESSION_DEPTH + 1)
-        );
-        assert_eq!(
-            parse(&over_limit),
-            Err(ParseError::ExpressionNestingTooDeep)
-        );
+    fn parses_deeply_nested_expressions() {
+        let program = format!("{}1{}", "(".repeat(20_000), ")".repeat(20_000));
+        let expressions = parse(&program).unwrap();
+        stacker::grow(32 * 1024 * 1024, || drop(expressions));
     }
 
     #[test]
@@ -218,10 +212,6 @@ mod tests {
         assert_eq!(
             ParseError::MissingClosingParenthesis.to_string(),
             "missing closing parenthesis"
-        );
-        assert_eq!(
-            ParseError::ExpressionNestingTooDeep.to_string(),
-            "expression nesting exceeds maximum depth of 256"
         );
     }
 }
