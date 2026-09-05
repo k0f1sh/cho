@@ -68,7 +68,8 @@ Program forms:
   automatic top-level value with print or place multiple values at the top level.
   A program containing only filters implicitly prints $0 after they pass.
   An empty program also prints $0. Any explicit print disables implicit output.
-  Expressions may contain at most 256 nested lists.
+  Expressions may contain at most 256 nested lists, including the nesting
+  produced by expanding -> and ->> steps.
 
 Literals and fields:
   $0, $1, ...                    complete record or field

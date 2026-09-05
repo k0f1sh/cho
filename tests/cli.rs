@@ -128,6 +128,50 @@ fn parse_errors_preserve_lexer_details() {
 }
 
 #[test]
+fn threading_respects_expanded_expression_depth() {
+    for direction in ["->", "->>"] {
+        for (steps, succeeds) in [(256, true), (257, false), (2_000, false)] {
+            let program = format!("({direction} \"value\" {})", "s/upper ".repeat(steps));
+            let output = run_with_args(&["--no-input", &program], "");
+            assert_eq!(output.status.code(), Some(if succeeds { 0 } else { 1 }));
+            if succeeds {
+                assert_eq!(output.stdout, b"VALUE\n");
+                assert!(output.stderr.is_empty());
+            } else {
+                assert!(output.stdout.is_empty());
+                assert_eq!(
+                    output.stderr,
+                    b"cho: invalid program: expression nesting exceeds maximum depth of 256\n"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn threading_depth_includes_nested_values_steps_and_enclosing_calls() {
+    let chain = format!("(-> \"value\" {})", "s/upper ".repeat(128));
+    let programs = [
+        format!("(-> {chain} {})", "s/upper ".repeat(129)),
+        format!("(->> {chain} {})", "s/upper ".repeat(129)),
+        format!("{}{}{}", "(s/upper ".repeat(129), chain, ")".repeat(129)),
+        format!("(-> \"value\" (s/join {chain}) {})", "s/upper ".repeat(128)),
+        format!("(p (-> \"value\" {}))", "s/upper ".repeat(256)),
+        // Rejection must also safely drop the partial AST on an invalid step.
+        format!("(-> \"value\" {} unknown)", "s/upper ".repeat(2_000)),
+    ];
+    for program in programs {
+        let output = run_with_args(&["--no-input", &program], "");
+        assert_eq!(output.status.code(), Some(1), "{program}");
+        assert!(output.stdout.is_empty());
+        assert_eq!(
+            output.stderr,
+            b"cho: invalid program: expression nesting exceeds maximum depth of 256\n"
+        );
+    }
+}
+
+#[test]
 fn parse_errors_identify_unsupported_string_escapes() {
     let output = run(r#"(print "\q")"#, "");
     assert!(!output.status.success());

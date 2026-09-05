@@ -1,7 +1,7 @@
 use crate::lexer::{Token, tokenize};
 use std::fmt;
 
-const MAX_EXPRESSION_DEPTH: usize = 256;
+pub(crate) const MAX_EXPRESSION_DEPTH: usize = 256;
 
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
