@@ -4,6 +4,7 @@ use std::process::{Command, Output, Stdio};
 const USAGE: &str = concat!(
     "Usage:\n",
     "  cho [INPUT OPTIONS] 'PROGRAM'\n",
+    "  cho [INPUT OPTIONS] --file FILE\n",
     "  cho [INPUT OPTIONS] --call FUNCTION [ARG ...]\n",
     "  cho --help [TOPIC]\n",
     "  cho --apropos [QUERY]\n",
@@ -35,6 +36,51 @@ fn run_with_args(arguments: &[&str], input: &str) -> Output {
         );
     }
     child.wait_with_output().unwrap()
+}
+
+fn program_file(name: &str, contents: &[u8]) -> std::path::PathBuf {
+    let path = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("{}-{name}", std::process::id()));
+    std::fs::write(&path, contents).unwrap();
+    path
+}
+
+#[test]
+fn program_file_uses_stdin_for_records() {
+    let path = program_file("filter-adults.cho", b"(f (> $2 20))\n(p $1)\n");
+    let path = path.to_str().unwrap();
+
+    for option in ["-f", "--file"] {
+        let output = run_with_args(&[option, path], "Alice 30\nBob 18\n");
+        assert!(output.status.success());
+        assert_eq!(output.stdout, b"Alice\n");
+        assert!(output.stderr.is_empty());
+    }
+}
+
+#[test]
+fn empty_program_file_has_the_same_implicit_output_as_an_empty_program() {
+    let path = program_file("empty.cho", b"");
+    let output = run_with_args(&["--file", path.to_str().unwrap()], "one\ntwo\n");
+
+    assert!(output.status.success());
+    assert_eq!(output.stdout, b"one\ntwo\n");
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn unreadable_program_file_reports_its_path() {
+    let path = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("{}-does-not-exist.cho", std::process::id()));
+    let output = run_with_args(&["--file", path.to_str().unwrap()], "ignored\n");
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.starts_with(&format!(
+        "cho: cannot read program file {:?}: ",
+        path.to_str().unwrap()
+    )));
 }
 
 #[test]
@@ -661,6 +707,19 @@ fn argument_errors_explain_the_invalid_arguments() {
     for (arguments, message) in [
         (vec![], "missing PROGRAM"),
         (vec!["-F"], "-F expects SEPARATOR"),
+        (vec!["--file"], "--file expects FILE"),
+        (
+            vec!["--file", "program.cho", "(p $1)"],
+            "--file cannot be combined with PROGRAM or --call",
+        ),
+        (
+            vec!["(p $1)", "--file", "program.cho"],
+            "--file cannot be combined with PROGRAM or --call",
+        ),
+        (
+            vec!["--file", "program.cho", "--call", "s/upper"],
+            "--file cannot be combined with PROGRAM or --call",
+        ),
         (vec!["(print $1)", "extra"], "unexpected argument: extra"),
         (
             vec!["--csv", "--tsv", "(print $1)"],

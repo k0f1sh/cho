@@ -99,6 +99,8 @@ Use `cho -k` to list function and form names, or `cho -k trim` to search them
 and show matching summaries.
 Help, apropos, and version are standalone commands; execution options and
 programs are not combined with them.
+Use `cho -f program.cho` to reuse a longer program from a UTF-8 file while
+keeping standard input available for the records being processed.
 
 [`metadata.json`](metadata.json) is the machine-readable index of functions and
 forms. Its `schema_version` changes when the JSON structure makes an
