@@ -94,22 +94,22 @@ fn parse_errors_explain_unbalanced_parentheses() {
 }
 
 #[test]
-fn deeply_nested_programs_report_an_error_instead_of_aborting() {
-    let program = format!("{}1{}", "(".repeat(20_000), ")".repeat(20_000));
+fn deeply_nested_programs_execute_without_aborting() {
+    let program = format!(
+        "{}\"value\"{}",
+        "(s/upper ".repeat(10_000),
+        ")".repeat(10_000)
+    );
     let output = run_with_args(&["--no-input", &program], "");
 
-    assert!(!output.status.success());
-    assert_eq!(output.status.code(), Some(1));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8(output.stderr).unwrap(),
-        "cho: invalid program: expression nesting exceeds maximum depth of 256\n"
-    );
+    assert!(output.status.success());
+    assert_eq!(output.stdout, b"VALUE\n");
+    assert!(output.stderr.is_empty());
 }
 
 #[test]
-fn valid_functions_can_be_nested_up_to_the_expression_depth_limit() {
-    let program = format!("{}$1{}", "(s/upper ".repeat(256), ")".repeat(256));
+fn valid_functions_can_be_nested_beyond_the_previous_limit() {
+    let program = format!("{}$1{}", "(s/upper ".repeat(2_000), ")".repeat(2_000));
     let output = run(&program, "value\n");
 
     assert!(output.status.success());
@@ -128,28 +128,20 @@ fn parse_errors_preserve_lexer_details() {
 }
 
 #[test]
-fn threading_respects_expanded_expression_depth() {
+fn threading_can_expand_beyond_the_previous_depth_limit() {
     for direction in ["->", "->>"] {
-        for (steps, succeeds) in [(256, true), (257, false), (2_000, false)] {
+        for steps in [256, 257, 2_000] {
             let program = format!("({direction} \"value\" {})", "s/upper ".repeat(steps));
             let output = run_with_args(&["--no-input", &program], "");
-            assert_eq!(output.status.code(), Some(if succeeds { 0 } else { 1 }));
-            if succeeds {
-                assert_eq!(output.stdout, b"VALUE\n");
-                assert!(output.stderr.is_empty());
-            } else {
-                assert!(output.stdout.is_empty());
-                assert_eq!(
-                    output.stderr,
-                    b"cho: invalid program: expression nesting exceeds maximum depth of 256\n"
-                );
-            }
+            assert!(output.status.success());
+            assert_eq!(output.stdout, b"VALUE\n");
+            assert!(output.stderr.is_empty());
         }
     }
 }
 
 #[test]
-fn threading_depth_includes_nested_values_steps_and_enclosing_calls() {
+fn deeply_nested_threading_and_calls_execute_safely() {
     let chain = format!("(-> \"value\" {})", "s/upper ".repeat(128));
     let programs = [
         format!("(-> {chain} {})", "s/upper ".repeat(129)),
@@ -157,18 +149,21 @@ fn threading_depth_includes_nested_values_steps_and_enclosing_calls() {
         format!("{}{}{}", "(s/upper ".repeat(129), chain, ")".repeat(129)),
         format!("(-> \"value\" (s/join {chain}) {})", "s/upper ".repeat(128)),
         format!("(p (-> \"value\" {}))", "s/upper ".repeat(256)),
-        // Rejection must also safely drop the partial AST on an invalid step.
-        format!("(-> \"value\" {} unknown)", "s/upper ".repeat(2_000)),
     ];
     for program in programs {
         let output = run_with_args(&["--no-input", &program], "");
-        assert_eq!(output.status.code(), Some(1), "{program}");
-        assert!(output.stdout.is_empty());
-        assert_eq!(
-            output.stderr,
-            b"cho: invalid program: expression nesting exceeds maximum depth of 256\n"
-        );
+        assert!(output.status.success(), "{program}");
+        assert_eq!(output.stdout, b"VALUE\n");
+        assert!(output.stderr.is_empty());
     }
+
+    let invalid = format!("(-> \"value\" {} unknown)", "s/upper ".repeat(2_000));
+    let output = run_with_args(&["--no-input", &invalid], "");
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(
+        output.stderr,
+        b"cho: invalid program: no such function: unknown\n"
+    );
 }
 
 #[test]

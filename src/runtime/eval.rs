@@ -101,6 +101,10 @@ pub(super) fn evaluate(
     value: &Value,
     record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
+    stacker::maybe_grow(64 * 1024, 1024 * 1024, || evaluate_inner(value, record))
+}
+
+fn evaluate_inner(value: &Value, record: &EvalContext<'_, '_, '_>) -> EvalResult<RuntimeValue> {
     match value {
         Value::Field(0) => Ok(RuntimeValue::String(record.line.to_owned())),
         Value::Field(number) => Ok(RuntimeValue::String(

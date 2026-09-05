@@ -3,7 +3,7 @@ use crate::language::{
     Arguments, AstContext, BoundArgument, CallableDefinition, CallableKind, Cardinality,
     CompiledExpression, Parameter, Signature, ThreadDirection, ValueType, expect_value, lookup,
 };
-use crate::parser::{Atom, MAX_EXPRESSION_DEPTH, ParseError, SExpr};
+use crate::parser::{Atom, ParseError, SExpr};
 
 #[derive(Debug)]
 enum InputArgument<'syntax> {
@@ -18,7 +18,9 @@ enum CompileContext {
 }
 
 pub(crate) fn compile(expressions: Vec<SExpr>) -> Result<Program, ParseError> {
-    Compiler::new().compile_program(expressions)
+    stacker::grow(32 * 1024 * 1024, || {
+        Compiler::new().compile_program(expressions)
+    })
 }
 
 struct Compiler {
@@ -91,6 +93,12 @@ impl Compiler {
     }
 
     fn compile_value(&mut self, expression: &SExpr) -> Result<Value, ParseError> {
+        stacker::maybe_grow(64 * 1024, 1024 * 1024, || {
+            self.compile_value_inner(expression)
+        })
+    }
+
+    fn compile_value_inner(&mut self, expression: &SExpr) -> Result<Value, ParseError> {
         match expression {
             SExpr::Atom(Atom::Symbol(symbol)) => self.compile_symbol(symbol),
             SExpr::Atom(Atom::String(value)) => Ok(Value::String(value.clone())),
@@ -161,18 +169,6 @@ impl Compiler {
             })
             .collect::<Result<Vec<_>, _>>()?;
         let compiled = callable.to_ast(self, Arguments(arguments))?;
-        let depth = match &compiled {
-            CompiledExpression::Value(value) => value.depth(),
-            CompiledExpression::Form(Form::Filter(value)) => 1 + value.depth(),
-            CompiledExpression::Form(Form::Print(values)) => {
-                1 + values.iter().map(Value::depth).max().unwrap_or(0)
-            }
-        };
-        // Check every invocation, including each threading step, so an oversized
-        // tree is rejected while it is still safe to evaluate and drop.
-        if depth > MAX_EXPRESSION_DEPTH {
-            return Err(ParseError::ExpressionNestingTooDeep);
-        }
         Ok(compiled)
     }
 
