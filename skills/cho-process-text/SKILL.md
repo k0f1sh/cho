@@ -1,81 +1,83 @@
 ---
 name: cho-process-text
-description: Use cho when a shell one-liner or script needs to handle typed data — calendar dates, RFC 3339 datetimes, IP addresses, CIDR ranges, URLs, SemVer, UUIDs, and ULIDs — embedded in line-oriented text, or generate UUIDv4, UUIDv7, and ULID values. Basic shell commands (grep, cut, awk, sed) treat these as opaque strings; cho parses them in context and rejects malformed input instead of silently passing it through. Reach for this skill when the task involves comparing or calculating dates, comparing timestamps, testing CIDR membership, extracting URL components, filtering by version range, or validating, comparing, inspecting, or generating identifiers inside a Unix pipeline.
+description: Build and verify cho one-liners for line-oriented text, CSV, TSV, and typed data in Unix pipelines. Use when the user requests cho or when numeric, date/time, byte-size, network, URL, version, or identifier operations benefit from contextual type conversion.
 ---
 
-# Process typed data in shell pipelines with cho
+# Process text with cho
 
-cho is a small line-oriented tool that slots into Unix pipelines. Use it when
-the data in a field carries meaning that plain string comparison gets wrong:
-calendar-date comparison and arithmetic, timestamp ordering, IP classification, CIDR membership, URL parsing, SemVer
-precedence, or identifier validation and ordering. cho converts fields to the
-right type in context and treats invalid input as an error, not a silent
-mismatch. It can also generate UUIDv4, UUIDv7, and ULID values without input.
+cho evaluates small, composable Lisp-like expressions once per input record.
+Fields are strings; functions convert them to the types their signatures need.
+Malformed typed input produces an error rather than silently failing a match.
+Use cho for the user's requested text processing, especially when typed
+comparisons and conversions would otherwise require a separate script.
+Keep sorting and cross-record aggregation in other pipeline tools.
 
-If the task only needs pattern matching, field extraction, or string
-manipulation that grep / cut / awk / sed already handle well, prefer those
-tools. cho adds value when you need type-aware predicates or conversions that
-would otherwise require a heavier language.
+## Discover the available syntax
 
-## When to use cho
+Check the executable you will actually use. Start with `cho --help` for input
+options and language rules; use `cho -k QUERY` to find functions and
+`cho --help FUNCTION` for signatures, examples, and notes. `cho -k` lists names.
+These discovery commands run separately from execution options and programs.
+Do not assume a function exists from its name or from another installed version.
 
-- Filtering log lines by an RFC 3339 timestamp range (`dt/>=`, `dt/<`).
-- Comparing `YYYY-MM-DD` dates, adding whole days, or extracting ISO weekdays
-  (`d/>=`, `d/add`, `d/weekday`).
-- Testing whether an IP address is private, loopback, or inside a CIDR block
-  (`ip/private?`, `ip/loopback?`, `cidr/contains?`).
-- Extracting or encoding URL components (`url/host`, `url/path`, `url/encode`).
-- Comparing version strings by SemVer precedence (`semver/>=`, `semver/<`).
-- Validating, normalizing, comparing, or extracting time from UUIDs and ULIDs
-  (`uuid`, `uuid/>=`, `uuid/time`, `ulid`, `ulid/time`).
-- Generating an identifier once (`cho -nc uuid/v4`) or once per input record
-  (`cho '(ulid/new)'`).
-- Arithmetic or fixed-point formatting on numeric fields (`+`, `-`, `n/fixed`).
-- Combining the above with field selection, string join, regex match, and
-  defaults — all in a single composable expression.
+If cho is unavailable, say so and distinguish a proposed command from one you
+have verified. In a cho checkout, use `cargo run --quiet --` or build and use
+`target/debug/cho` to check the local implementation. Installing or upgrading
+cho is not a prerequisite for merely explaining a command.
 
-## Workflow
+## Build the command
 
-1. Run `cho --help` and confirm the installed version exposes the required
-   expressions. If `cho` is unavailable, report that before proposing a command.
-2. Inspect the input: delimiter, header, first few records, empty fields,
-   quoting, and the meaning of each column you will reference.
-3. Select `--csv`, `--tsv`, `-F`, or the default whitespace splitting based on
-   the actual file. Add `--skip-header` for CSV or TSV input with a header.
-4. Compose a small program from values and predicates shown in help. Typed
-   expressions (`dt/>=`, `cidr/contains?`, etc.) convert string arguments in
-   context. UUID and ULID deliberately provide `uuid` and `ulid` normalization
-   expressions; do not infer equivalent constructors for other types.
-5. Run the command against a small representative sample before the full stream.
-   Verify stdout, stderr, and the exit status separately.
-6. Run the full command only after the sample proves the column numbers, types,
-   and quoting are correct.
+- Inspect representative input for delimiters, headers, quoting, empty fields,
+  and column meanings. Choose default whitespace splitting, regex `-F`,
+  `--csv`, or `--tsv` accordingly. Use `--skip-header` for CSV or TSV headers.
+- Quote the program with single shell quotes so the shell preserves `$1` and
+  other field references. Regex literals preserve backslashes; quoted cho
+  strings require doubled backslashes. Consult help when patterns contain `/`.
+- Compose values and predicates with the required type: numeric comparisons
+  use `>`, `=`, etc.; strings use `s/`, calendar dates `d/`, timestamps `dt/`.
+  Check signatures for other domains rather than inventing type constructors.
+- `$0` is the whole record; missing fields are empty strings. Ranges such as
+  `$3..` preserve separators and are unavailable with `--csv`.
+- A single top-level value prints automatically. `(p VALUE ...)` prints values
+  separated by spaces; use `s/join` for another delimiter and `csv/join` for CSV
+  encoding. Filters alone print the original record when they pass. A false
+  filter skips the remaining expressions for that record.
+- `--call` supplies `$0` as the first argument; `--no-input --call` (or `-nc`)
+  supplies only explicit arguments and runs once. For nested expressions or a
+  different primary field, use regular program syntax. `--file` reads that
+  same syntax from a UTF-8 file while stdin remains available for input records.
 
-When working in the cho repository, consult the scripts under `examples/` for
-tested patterns. Do not copy all of them into the answer.
+Small starting points:
 
-## Safety rules
+```sh
+printf 'Alice 18\nBob 30\n' | cho '(f (> $2 20)) (p $1)'
+# Bob
+printf '2026-08-24T01:30:00Z\n' | cho '(dt/fmt $1 "%Y-%m-%d %H:%M" "Asia/Tokyo")'
+# 2026-08-24 10:30
+printf '10.1.2.3\n8.8.8.8\n' | cho '(f (cidr/contains? "10.0.0.0/8" $1))'
+# 10.1.2.3
+cho -nc uuid/v4
+# One generated UUID
+```
 
-- Quote the whole cho program with single shell quotes. Follow the regex
-  escaping guidance in `cho --help`; regex literals and quoted strings have
-  different escaping rules.
-- Treat a typed conversion error as evidence of malformed data or a wrong
-  column selection. Do not silently discard the record or change the comparison
-  type just to make the command pass.
-- Expect output from earlier records to remain when a later record fails. A
-  nonzero exit status means the overall transformation did not complete even if
-  stdout is nonempty.
-- Use `default` only around the smallest subexpression whose failure is
-  intentionally recoverable. Do not use it to hide errors across an entire
-  record.
-- Use `--skip-header` before applying a typed predicate to CSV or TSV with a
-  header.
-- Keep sorting external. Render a sortable key with cho, then pipe to `sort`
-  when ordering is required.
+In a cho checkout, `examples/` contains complete pipelines and sample data.
+Use relevant examples without treating them as an exhaustive function catalog.
 
-## Verification
+## Handle errors and verify
 
-Return or record the final command together with the observed exit status. For
-error-handling tasks, demonstrate both the strict failure and the narrowly
-recovered form. For commands using typed values, include at least one valid
-boundary case and one malformed value in the sample.
+Test a representative sample before processing a full dataset when executing
+an unfamiliar transformation. Check stdout, stderr, and exit status separately.
+Include boundaries or malformed values when they matter to the requested
+filtering, validation, or recovery behavior; do not invent a full test suite
+for a simple command explanation.
+
+A typed conversion failure can indicate malformed data or a wrong column.
+Do not silently discard records or switch to string comparisons to suppress it.
+`default` recovers from both an empty value and an evaluation error; scope it to
+the expression for which a fallback is intended. Boolean false and numeric zero
+are not empty values.
+
+Output from earlier records remains if a later record fails. Nonempty stdout
+does not prove completion. In Bash pipelines, use `set -o pipefail` when later
+commands could hide cho's failure. When executing commands, report the observed
+result and any failure; when only drafting them, do not imply they were run.
