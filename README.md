@@ -106,9 +106,10 @@ keeping standard input available for the records being processed.
 forms. Its `schema_version` changes when the JSON structure makes an
 incompatible change.
 
-The [`examples`](examples) directory contains scripts and sample data for
-reviewing a CSV account export, auditing connection timeouts, checking
-release versions, and analyzing slow requests across a typed pipeline.
+The [`examples`](examples/README.md) directory contains runnable recipes for
+overdue invoices, slow API requests, connection timeouts, deployment updates,
+long-running jobs, error counts, and daily export paths. Each script includes
+sample input and its expected output.
 
 ## Development
 
