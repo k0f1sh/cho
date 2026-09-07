@@ -3,7 +3,7 @@ use rust_decimal::Decimal;
 use super::value::{EvalError, EvalResult, RuntimeValue};
 
 const MAX_SAFE_INTEGER: u64 = (1_u64 << 53) - 1;
-const UNITS: [(&str, u128); 11] = [
+const UNITS: [(&str, u128); 12] = [
     ("PiB", 1_u128 << 50),
     ("TiB", 1_u128 << 40),
     ("GiB", 1_u128 << 30),
@@ -13,6 +13,7 @@ const UNITS: [(&str, u128); 11] = [
     ("TB", 1_000_000_000_000),
     ("GB", 1_000_000_000),
     ("MB", 1_000_000),
+    ("KB", 1_000),
     ("kB", 1_000),
     ("B", 1),
 ];

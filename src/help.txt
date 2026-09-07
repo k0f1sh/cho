@@ -318,10 +318,11 @@ Byte sizes:
   (bs/!= BYTESIZE BYTESIZE) -> BOOLEAN      not equal
 
   ByteSize accepts B; decimal kB, MB, GB, TB, and PB; and binary KiB, MiB,
-  GiB, TiB, and PiB. Decimal units use powers of 1000; binary units use powers
-  of 1024. Units are case-sensitive. A number may be an integer or decimal and
-  may be separated from its unit by spaces or tabs. Signs, exponent notation,
-  digit separators, surrounding whitespace, and missing units are errors.
+  GiB, TiB, and PiB. KB is accepted as an alias for decimal kB. Decimal units
+  use powers of 1000; binary units use powers of 1024. Other unit spellings are
+  case-sensitive. A number may be an integer or decimal and may be separated
+  from its unit by spaces or tabs. Signs, exponent notation, digit separators,
+  surrounding whitespace, and missing units are errors.
   Values render as an exact decimal byte count followed by B. The supported
   decimal range has up to 28 fractional digits and a 96-bit significand.
 

@@ -16,7 +16,7 @@ define_callable!(
     },
     ByteSize,
     "validate and normalize a byte size",
-    [],
+    ["KB is accepted as an alias for decimal kB (1000 B)."],
     [(None, "(bs $1)")]
 );
 

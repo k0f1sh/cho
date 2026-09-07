@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.31.1",
+  "cho_version": "0.31.2",
   "callables": [
     {
       "name": "print",
@@ -675,7 +675,9 @@
       "kind": "function",
       "category": "byte_size",
       "summary": "validate and normalize a byte size",
-      "notes": [],
+      "notes": [
+        "KB is accepted as an alias for decimal kB (1000 B)."
+      ],
       "signatures": [
         {
           "parameters": [
