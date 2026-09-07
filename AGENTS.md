@@ -104,7 +104,7 @@ IPアドレス、CIDR、URL、SemVerなどを、各関数のシグネチャが�
 言語定義、helpテンプレート、バージョンを変更した場合は、先に生成物を更新する。
 
 ```console
-$ cargo run --quiet --features documentation --example generate-documentation
+$ cargo run --quiet --features documentation --bin generate-documentation
 ```
 
 変更を完了する前に、以下を実行する。
