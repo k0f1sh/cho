@@ -367,6 +367,7 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("(bs/to-b BYTESIZE) -> NUMBER"));
     assert!(stdout.contains("(bs/> BYTESIZE BYTESIZE) -> BOOLEAN"));
     assert!(stdout.contains("decimal kB, MB, GB, TB, and PB"));
+    assert!(stdout.contains("KB is accepted as an alias for decimal kB"));
     assert!(stdout.contains("Values render as an exact decimal byte count"));
     assert!(stdout.contains("(ip/version IPADDR)"));
     assert!(stdout.contains("(ip/v4? IPADDR)"));

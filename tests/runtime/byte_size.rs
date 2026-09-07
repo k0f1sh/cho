@@ -5,10 +5,10 @@ use std::io::Cursor;
 fn byte_sizes_normalize_decimal_and_binary_units_exactly() {
     assert_eq!(
         output(
-            "(print (bs $1) (bs $2) (bs $3) (bs $4) (bs $5) (bs $6))",
-            "1kB 1KiB 2.11GB 2.352MiB 0.1KiB 0B\n",
+            "(print (bs $1) (bs $2) (bs $3) (bs $4) (bs $5) (bs $6) (bs $7))",
+            "1kB 1KB 1KiB 2.11GB 2.352MiB 0.1KiB 0B\n",
         ),
-        "1000B 1024B 2110000000B 2466250.752B 102.4B 0B\n"
+        "1000B 1000B 1024B 2110000000B 2466250.752B 102.4B 0B\n"
     );
     assert_eq!(
         output(
@@ -41,7 +41,7 @@ fn byte_size_comparisons_are_exact_across_units_and_compose() {
     assert_eq!(
         output(
             concat!(
-                "(print (bs/= \"1kB\" \"1000B\") (bs/!= \"1kB\" \"1KiB\") ",
+                "(print (bs/= \"1KB\" \"1kB\") (bs/!= \"1KB\" \"1KiB\") ",
                 "(bs/< \"999MB\" \"1GB\") (bs/<= \"1024MiB\" \"1GiB\") ",
                 "(bs/> \"2.11GB\" \"2048MiB\") (bs/>= \"1PiB\" \"1PB\"))",
             ),
@@ -87,6 +87,7 @@ fn byte_sizes_reject_invalid_syntax_ranges_and_runtime_types() {
         "",
         "500",
         "500mb",
+        "500Kb",
         "500M",
         "-1GB",
         "+1GB",
