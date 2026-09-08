@@ -8,6 +8,7 @@ and the exact expected output together. All data is fictional.
 | --- | --- | --- |
 | Which unpaid invoices are overdue? | [overdue-invoices.sh](overdue-invoices.sh) | CSV quoting, date comparisons, missing owners |
 | Which API requests took at least 500 ms? | [analyze-slow-requests.sh](analyze-slow-requests.sh) | URL parsing, numeric thresholds, readable units |
+| Which free-form log events took at least 500 ms? | [extract-slow-log-events.sh](extract-slow-log-events.sh) | Regex captures, whole-match extraction, numeric comparison, missing IDs |
 | Which internal connections timed out? | [audit-connection-timeouts.sh](audit-connection-timeouts.sh) | TSV, CIDR membership, private IPs, explicit timezone |
 | Which deployments need an update? | [check-release-versions.sh](check-release-versions.sh) | Semantic version ordering, release candidates |
 | Which completed jobs exceeded 30 minutes? | [find-long-jobs.sh](find-long-jobs.sh) | Timestamp subtraction across offsets and midnight |
