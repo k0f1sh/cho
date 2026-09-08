@@ -642,6 +642,19 @@ mod tests {
     }
 
     #[test]
+    fn parses_regex_extract_with_optional_nested_group() {
+        let program = parse(r#"(p (re/extract $0 /(x)/))"#).unwrap();
+        assert_eq!(program.regex_patterns, vec!["(x)"]);
+        assert!(matches!(&program.forms[0], Form::Print(values)
+            if matches!(&values[0], Value::RegexExtract { group, .. }
+                if **group == Value::Number(0.0))));
+        assert_eq!(
+            parse(r#"(p (-> $0 (re/extract /(x)/ (s/count "x"))))"#).unwrap(),
+            parse(r#"(p (re/extract $0 /(x)/ (s/count "x")))"#).unwrap()
+        );
+    }
+
+    #[test]
     fn parses_slice_with_an_optional_length() {
         assert_eq!(
             parse(r#"(print (s/slice $1 2) (s/slice $1 2 3))"#),
@@ -1108,6 +1121,11 @@ mod tests {
             r#"(print (re/replace $1 /a/))"#,
             r#"(print (re/replace $1 /a/ "b" $2))"#,
             r#"(print (re/replace $1 $2 "b"))"#,
+            r#"(print (re/extract))"#,
+            r#"(print (re/extract $1))"#,
+            r#"(print (re/extract $1 /:/ 1 $2))"#,
+            r#"(print (re/extract $1 $2 1))"#,
+            r#"(print (re/extract $1 /:/ /x/))"#,
             r#"(print (re/part))"#,
             r#"(print (re/part $1 /:/))"#,
             r#"(print (re/part $1 /:/ 1 $2))"#,

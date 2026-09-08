@@ -119,3 +119,37 @@ define_callable!(
     ["POSITION must be a positive whole number. Missing parts are empty strings."],
     [(None, "(re/part $1 /[,:]+/ 2)")]
 );
+
+define_callable!(
+    Extract,
+    CallableDefinition {
+        name: "re/extract",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[
+            sig!([p!("value", Value, Required), p!("pattern", Regex, Required, "/PATTERN/"), p!("group", Number, Optional, "GROUP")] => Some(ValueType::String))
+        ]
+    },
+    |_context, arguments| {
+        let mut args = arguments.0.into_iter();
+        let value_arg = expect_value(args.next().expect("signature requires value"))?;
+        let regex = expect_regex(args.next().expect("signature requires pattern"))?;
+        let group = args
+            .next()
+            .map(expect_value)
+            .transpose()?
+            .unwrap_or(Value::Number(0.0));
+        value(Value::RegexExtract {
+            value: Box::new(value_arg),
+            regex,
+            group: Box::new(group),
+        })
+    },
+    RegularExpression,
+    "extract the first match or a numbered capture",
+    [
+        "GROUP defaults to 0 (whole match); 1 and above select captures. Unmatched captures return empty strings.",
+        "GROUP must be a non-negative whole number naming an existing group; checked at runtime even without a match."
+    ],
+    [(None, r"(re/extract $0 /elapsed=(\d+)ms/ 1)")]
+);

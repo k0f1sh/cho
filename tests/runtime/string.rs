@@ -913,3 +913,69 @@ fn typed_values_render_inside_string_operations() {
         "at=1970-01-01T00:00:00Z 1970-01-01T00:00:00Z,1.5 20\n"
     );
 }
+
+#[test]
+fn regex_extract_composes_and_selects_the_first_match() {
+    assert_eq!(
+        output(
+            r#"(print (re/extract $0 /elapsed=(\d+)ms/) (re/extract $0 /elapsed=(\d+)ms/ 0)
+          (>= (re/extract $0 /elapsed=(\d+)ms/ "1") 500)
+          (s/upper (-> $0 (re/extract /elapsed=(\d+)ms/ (s/count "x"))))
+          (default (re/extract $0 /region=([a-z-]+)/ 1) "unknown"))"#,
+            "elapsed=750ms elapsed=900ms\n"
+        ),
+        "elapsed=750ms elapsed=750ms true 750 unknown\n"
+    );
+    assert_eq!(
+        output(r#"(p (re/extract $0 "(日本語)" 1))"#, "日本語\n"),
+        "日本語\n"
+    );
+}
+
+#[test]
+fn regex_extract_returns_empty_for_missing_and_empty_matches() {
+    for expression in [
+        r#"(re/extract "none" /(x)/ 1)"#,
+        r#"(re/extract "b" /(a)?b/ 1)"#,
+        r#"(re/extract "b" /(a*)b/ 1)"#,
+        r#"(re/extract "" //)"#,
+        r#"(re/extract $9 /(x)/ 1)"#,
+        r#"(re/extract "abc" /^/)"#,
+    ] {
+        assert_eq!(output(&format!("(p (dq {expression}))"), "x\n"), "\"\"\n");
+    }
+}
+
+#[test]
+fn regex_extract_rejects_invalid_groups_even_without_a_match() {
+    for group in ["-1", "1.5", "2", "1e40", r#""name""#, r#""""#, "$9"] {
+        for input in ["a\n", "z\n"] {
+            let error = cho::run(
+                &format!("(p (re/extract $0 /(a)/ {group}))"),
+                Cursor::new(input),
+                Vec::new(),
+            )
+            .unwrap_err();
+            assert!(
+                error
+                    .to_string()
+                    .starts_with("record 1: re/extract: argument 3 expects Number"),
+                "{error}"
+            );
+        }
+    }
+    let error = cho::run(
+        r#"(p (>= (re/extract $0 /(\d+)/ 1) 500))"#,
+        Cursor::new("none\n"),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("expects Number"), "{error}");
+    assert_eq!(
+        output(
+            r#"(filter (reg $0 /elapsed=(\d+)ms/)) (p (>= (re/extract $0 /elapsed=(\d+)ms/ 1) 500))"#,
+            "none\nelapsed=750ms\n"
+        ),
+        "true\n"
+    );
+}

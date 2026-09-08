@@ -232,12 +232,22 @@ Regular expressions:
   (re/replace VALUE /PATTERN/ REPLACEMENT) -> STRING      replace the first regular-expression match
   (re/replace-all VALUE /PATTERN/ REPLACEMENT) -> STRING  replace all regular-expression matches
   (re/part VALUE /PATTERN/ POSITION) -> STRING            take a 1-based regular-expression-delimited part
+  (re/extract VALUE /PATTERN/ [GROUP]) -> STRING          extract the first match or a numbered capture
 
   Regex literals preserve backslashes; escape only a literal / as \/:
     (~ $1 /^\d+$/)     (~ $1 /^foo\/bar$/)
   Quoted patterns are also accepted and require doubled backslashes:
     (reg $1 "^\\d+$")     (re/replace $1 "\\d+" "X")
   Replacement expands $0, $1, and ${name}; write $$ for a literal dollar sign.
+  re/extract returns the first whole match (GROUP omitted or 0), or capture
+  GROUP (1-based). No match, a nonparticipating capture, and an empty capture
+  return an empty string. GROUP accepts numeric strings and expressions, not
+  capture names; invalid or nonexistent groups are runtime errors even without
+  a match. Extraction returns String; consumers request any numeric conversion.
+  Example: cho -nc re/extract 'created id=abc-123 successfully' 'id=([a-z0-9-]+)' 1
+  Example: cho --no-input '(p (>= (re/extract "elapsed=750ms" /elapsed=(\d+)ms/ 1) 500))'
+  Guard unmatched records with filter and reg before numeric comparison.
+  Unlike re/extract's group 0, re/part positions start at 1 and select split parts.
   re/part preserves empty parts. If the pattern does not match, position 1
   returns the complete value; a missing position returns an empty string.
   In replacements, empty and zero-width matches insert text, following awk behavior.
