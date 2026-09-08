@@ -87,12 +87,18 @@ $ echo '  hello-world  ' | cho '(p (-> $1 s/trim (s/replace "-" "_") s/upper))'
 HELLO_WORLD
 ```
 
-Treat a value as a local record and reuse field expressions inside it:
+Treat one value as a temporary local record with `s/with`. Inside its body,
+`$0`, `$1`, `$2`, ranges, and `NF` refer to the split value; outside it, they
+still refer to the original input record. Pass a delimiter for literal
+splitting, or omit it to split on whitespace:
 
 ```console
 $ echo 'job42 ready api:worker:8080' | cho '(p $1 (s/with $3 ":" (s/join ":" $2 $3)))'
 job42 worker:8080
 ```
+
+When the delimiter needs to be a regular expression, use
+`(re/with VALUE PATTERN BODY)` instead.
 
 cho handles text, numbers, dates, durations, byte sizes, IPs, URLs, semver, and
 more. Run `cho --help` for the complete syntax, functions, and special forms.
