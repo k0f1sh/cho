@@ -413,6 +413,7 @@ impl From<LanguageValueType> for ValueType {
             LanguageValueType::Ulid => Self::Ulid,
             LanguageValueType::Regex => Self::Regex,
             LanguageValueType::Step => Self::Step,
+            LanguageValueType::LocalValue => Self::Value,
         }
     }
 }

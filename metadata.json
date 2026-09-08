@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.31.4",
+  "cho_version": "0.32.0",
   "callables": [
     {
       "name": "print",
@@ -925,6 +925,58 @@
           "returns": "String",
           "summary": null,
           "example": "(s/join \",\" $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "s/with",
+      "aliases": [],
+      "kind": "special_form",
+      "category": "string",
+      "summary": "evaluate a value using fields split from another value",
+      "notes": [
+        "Without DELIMITER, Unicode whitespace splits fields and runs of whitespace are ignored.",
+        "With DELIMITER, empty fields are preserved and DELIMITER must not be empty. BODY sees the local value as $0; NR is unchanged."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "body",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Value",
+          "summary": "split on whitespace",
+          "example": "(s/with \"beta alpha\" (s/join \"-\" $2 $1))"
+        },
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "delimiter",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "body",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Value",
+          "summary": "split on a literal delimiter",
+          "example": "(s/with \"api:worker:8080\" \":\" (s/join \":\" $2 $3))"
         }
       ]
     },
@@ -2101,7 +2153,9 @@
     },
     {
       "name": "re/replace",
-      "aliases": [],
+      "aliases": [
+        "re/r"
+      ],
       "kind": "function",
       "category": "regular_expression",
       "summary": "replace the first regular-expression match",
@@ -2133,7 +2187,9 @@
     },
     {
       "name": "re/replace-all",
-      "aliases": [],
+      "aliases": [
+        "re/ra"
+      ],
       "kind": "function",
       "category": "regular_expression",
       "summary": "replace all regular-expression matches",
@@ -2165,7 +2221,9 @@
     },
     {
       "name": "re/part",
-      "aliases": [],
+      "aliases": [
+        "re/p"
+      ],
       "kind": "function",
       "category": "regular_expression",
       "summary": "take a 1-based regular-expression-delimited part",
@@ -2198,8 +2256,44 @@
       ]
     },
     {
-      "name": "re/extract",
+      "name": "re/with",
       "aliases": [],
+      "kind": "special_form",
+      "category": "regular_expression",
+      "summary": "evaluate a value using fields split by a regular expression",
+      "notes": [
+        "Empty fields are preserved. Empty and zero-width patterns split at UTF-8 boundaries. BODY sees the local value as $0; NR is unchanged."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "pattern",
+              "type": "Regex",
+              "cardinality": "required"
+            },
+            {
+              "name": "body",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Value",
+          "summary": null,
+          "example": "(re/with \"api,worker:8080\" /[,:]+/ (s/join \":\" $2 $3))"
+        }
+      ]
+    },
+    {
+      "name": "re/extract",
+      "aliases": [
+        "re/ex"
+      ],
       "kind": "function",
       "category": "regular_expression",
       "summary": "extract the first match or a numbered capture",
