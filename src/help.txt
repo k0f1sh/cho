@@ -131,6 +131,8 @@ Numbers:
 Strings:
   (str VALUE ...) -> STRING                    concatenate values
   (s/join SEPARATOR VALUE ...) -> STRING       join values
+  (s/with VALUE BODY) -> VALUE                 split on whitespace
+  (s/with VALUE DELIMITER BODY) -> VALUE       split on a literal delimiter
   (s/repeat VALUE COUNT) -> STRING             repeat a value
   (s/replace VALUE FROM TO) -> STRING          replace the first literal match
   (s/replace-all VALUE FROM TO) -> STRING      replace all literal matches
@@ -230,9 +232,14 @@ Regular expressions:
   (~ /PATTERN/) -> BOOLEAN                                short form of reg
   (~ VALUE /PATTERN/) -> BOOLEAN                          short form of reg
   (re/replace VALUE /PATTERN/ REPLACEMENT) -> STRING      replace the first regular-expression match
+  (re/r VALUE /PATTERN/ REPLACEMENT) -> STRING            short form of re/replace
   (re/replace-all VALUE /PATTERN/ REPLACEMENT) -> STRING  replace all regular-expression matches
+  (re/ra VALUE /PATTERN/ REPLACEMENT) -> STRING           short form of re/replace-all
   (re/part VALUE /PATTERN/ POSITION) -> STRING            take a 1-based regular-expression-delimited part
+  (re/p VALUE /PATTERN/ POSITION) -> STRING               short form of re/part
+  (re/with VALUE /PATTERN/ BODY) -> VALUE                 evaluate a value using fields split by a regular expression
   (re/extract VALUE /PATTERN/ [GROUP]) -> STRING          extract the first match or a numbered capture
+  (re/ex VALUE /PATTERN/ [GROUP]) -> STRING               short form of re/extract
 
   Regex literals preserve backslashes; escape only a literal / as \/:
     (~ $1 /^\d+$/)     (~ $1 /^foo\/bar$/)
