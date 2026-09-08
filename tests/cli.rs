@@ -570,6 +570,11 @@ fn call_mode_calls_one_function_with_record_then_string_arguments() {
         (vec!["-c", "s/replace", "-", "_"], "foo-bar\n", "foo_bar\n"),
         (vec!["-c", "s/contains?", "ell"], "hello\n", "true\n"),
         (
+            vec!["-c", "s/with", ":", "$2"],
+            "api:worker:8080\n",
+            "worker\n",
+        ),
+        (
             vec!["-n", "--call", "str", "a b", "\\", "\""],
             "",
             "a b\\\"\n",

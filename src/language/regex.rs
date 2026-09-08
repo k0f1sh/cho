@@ -41,7 +41,7 @@ define_callable!(
     Replace,
     CallableDefinition {
         name: "re/replace",
-        aliases: &[],
+        aliases: &["re/r"],
         kind: CallableKind::Function,
         signatures: &[
             sig!([p!("value", Value, Required), p!("pattern", Regex, Required, "/PATTERN/"), p!("replacement", Value, Required, "REPLACEMENT")] => Some(ValueType::String))
@@ -69,7 +69,7 @@ define_callable!(
     ReplaceAll,
     CallableDefinition {
         name: "re/replace-all",
-        aliases: &[],
+        aliases: &["re/ra"],
         kind: CallableKind::Function,
         signatures: &[
             sig!([p!("value", Value, Required), p!("pattern", Regex, Required, "/PATTERN/"), p!("replacement", Value, Required, "REPLACEMENT")] => Some(ValueType::String))
@@ -97,7 +97,7 @@ define_callable!(
     Part,
     CallableDefinition {
         name: "re/part",
-        aliases: &[],
+        aliases: &["re/p"],
         kind: CallableKind::Function,
         signatures: &[
             sig!([p!("value", Value, Required), p!("pattern", Regex, Required, "/PATTERN/"), p!("position", Number, Required, "POSITION")] => Some(ValueType::String))
@@ -121,10 +121,44 @@ define_callable!(
 );
 
 define_callable!(
+    With,
+    CallableDefinition {
+        name: "re/with",
+        aliases: &[],
+        kind: CallableKind::SpecialForm,
+        signatures: &[
+            sig!([p!("value", Value, Required), p!("pattern", Regex, Required, "/PATTERN/"), p!("body", LocalValue, Required, "BODY")] => Some(ValueType::Value))
+        ]
+    },
+    |_context, arguments| {
+        let [value_arg, regex, body] = arguments
+            .0
+            .try_into()
+            .map_err(|_| ParseError::InvalidSyntax)?;
+        value(Value::WithRegexInput {
+            value: Box::new(expect_value(value_arg)?),
+            regex: expect_regex(regex)?,
+            body: Box::new(expect_value(body)?),
+        })
+    },
+    RegularExpression,
+    "evaluate a value using fields split by a regular expression",
+    [
+        "Empty fields are preserved. Empty and zero-width patterns split at UTF-8 boundaries. BODY sees the local value as $0; NR is unchanged."
+    ],
+    [(
+        None,
+        "(re/with \"api,worker:8080\" /[,:]+/ (s/join \":\" $2 $3))",
+        "record",
+        "worker:8080"
+    )]
+);
+
+define_callable!(
     Extract,
     CallableDefinition {
         name: "re/extract",
-        aliases: &[],
+        aliases: &["re/ex"],
         kind: CallableKind::Function,
         signatures: &[
             sig!([p!("value", Value, Required), p!("pattern", Regex, Required, "/PATTERN/"), p!("group", Number, Optional, "GROUP")] => Some(ValueType::String))

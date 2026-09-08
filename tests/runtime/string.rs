@@ -26,6 +26,134 @@ fn joins_values_with_a_separator() {
 }
 
 #[test]
+fn with_uses_a_value_as_a_local_whitespace_split_record() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (s/with "  beta\talpha  " (s/join "-" $2 $1)) "#,
+                r#"(s/with "10 20" (+ $1 $2)) "#,
+                r#"(s/with "yes no" (s/= $1 "yes")) "#,
+                r#"(s/with "" NF) "#,
+                r#"(-> "api:worker:8080" (s/with (str ":") $2)) $1 NR)"#,
+            ),
+            "outer 7\n",
+        ),
+        "alpha-beta 30 true 0 worker outer 1\n"
+    );
+}
+
+#[test]
+fn with_literal_delimiter_preserves_empty_fields_ranges_and_outer_context() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (s/with ":a::" ":" (s/join "|" $1 $2 $3 $4 NF)) "#,
+                r#"(s/with "api:worker:8080" ":" $2..) $1) "#,
+                r#"(print (s/with "left|inner:right" "|" "#,
+                r#"(s/with $2 ":" (s/join "/" $2 $1))))"#,
+            ),
+            "outer\n",
+        ),
+        "|a|||4 worker:8080 outer\nright/inner\n"
+    );
+}
+
+#[test]
+fn regex_with_preserves_parts_and_accepts_zero_width_patterns() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (re/with "alpha,:beta,,,gamma" /[,:]+/ "#,
+                r#"(s/join "|" $1 $2 $3 NF)) "#,
+                r#"(re/with "abc" // (s/join "|" $1 $2 $5 NF)) "#,
+                r#"(re/with "" // NF))"#,
+            ),
+            "outer\n",
+        ),
+        "alpha|beta|gamma|3 |a||5 2\n"
+    );
+}
+
+#[test]
+fn with_stringifies_input_and_supports_multiline_values() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (s/with (+ 120 3) $1) "#,
+                r#"(s/with "left\nright" (s/join ":" $1 $2)) "#,
+                r#"(s/with "left\nright" "|" $0))"#,
+            ),
+            "outer\n",
+        ),
+        "123 left:right left\nright\n"
+    );
+}
+
+#[test]
+fn with_rejects_empty_literal_delimiters_and_program_forms() {
+    let error = cho::run(r#"(s/with $0 "" $1)"#, Cursor::new("value\n"), Vec::new()).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .starts_with("record 1: s/with: argument 2 expects a non-empty delimiter"),
+        "{error}"
+    );
+
+    for program in [
+        r#"(s/with $0)"#,
+        r#"(s/with $0 ":" $1 $2)"#,
+        r#"(re/with $0 /:/)"#,
+        r#"(s/with $0 (print $1))"#,
+        r#"(re/with $0 /:/ (filter true))"#,
+    ] {
+        assert!(cho::parse(program).is_err(), "accepted {program}");
+    }
+
+    let error = cho::run(
+        r#"(s/with "a:nope" ":" (+ $2 1))"#,
+        Cursor::new("outer\n"),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .starts_with("record 1: s/with: body: +: argument 1 expects Number"),
+        "{error}"
+    );
+    assert_eq!(
+        output(
+            r#"(print (default (s/with "a:nope" ":" (+ $2 1)) 0) $1)"#,
+            "outer\n"
+        ),
+        "0 outer\n"
+    );
+}
+
+#[test]
+fn csv_input_allows_ranges_only_inside_local_records() {
+    let mut output = Vec::new();
+    cho::run_csv(
+        r#"(print $1 (s/with $2 ":" $2..))"#,
+        Cursor::new("name,api:worker:8080\n"),
+        &mut output,
+    )
+    .unwrap();
+    assert_eq!(String::from_utf8(output).unwrap(), "name worker:8080\n");
+
+    let error = cho::run_csv(
+        r#"(print (s/with $2 ":" $2..) $1..)"#,
+        Cursor::new("name,api:worker:8080\n"),
+        Vec::new(),
+    )
+    .unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "field ranges are not supported with --csv"
+    );
+}
+
+#[test]
 fn repeat_handles_values_zero_empty_and_composition() {
     assert_eq!(
         output(
@@ -102,6 +230,20 @@ fn regex_replace_handles_captures_zero_width_and_threading() {
     assert_eq!(
         output(r#"(print (re/replace-all $1 "\\d+" "X"))"#, "a12b34\n"),
         "aXbX\n"
+    );
+}
+
+#[test]
+fn regex_short_aliases_match_their_canonical_functions() {
+    assert_eq!(
+        output(
+            concat!(
+                r#"(print (re/r $1 /\d+/ "N") (re/ra $1 /\d+/ "N")) "#,
+                r#"(print (re/p $2 /[:,]+/ 2) (re/ex $3 /id=(\w+)/ 1))"#,
+            ),
+            "a1b2 left:right id=abc\n",
+        ),
+        "aNb2 aNbN\nright abc\n"
     );
 }
 

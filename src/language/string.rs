@@ -42,6 +42,58 @@ define_callable!(
 );
 
 define_callable!(
+    With,
+    CallableDefinition {
+        name: "s/with",
+        aliases: &[],
+        kind: CallableKind::SpecialForm,
+        signatures: &[
+            sig!([p!("value", Value, Required), p!("body", LocalValue, Required, "BODY")] => Some(ValueType::Value)),
+            sig!([p!("value", Value, Required), p!("delimiter", Value, Required, "DELIMITER"), p!("body", LocalValue, Required, "BODY")] => Some(ValueType::Value))
+        ]
+    },
+    |_context, arguments| {
+        let args = values(arguments)?;
+        let (value_arg, delimiter, body) = match args.len() {
+            2 => {
+                let [value_arg, body] = args.try_into().expect("length was checked");
+                (value_arg, None, body)
+            }
+            3 => {
+                let [value_arg, delimiter, body] = args.try_into().expect("length was checked");
+                (value_arg, Some(delimiter), body)
+            }
+            _ => return Err(ParseError::InvalidSyntax),
+        };
+        value(Value::WithLiteralInput {
+            value: Box::new(value_arg),
+            delimiter: delimiter.map(Box::new),
+            body: Box::new(body),
+        })
+    },
+    String,
+    "evaluate a value using fields split from another value",
+    [
+        "Without DELIMITER, Unicode whitespace splits fields and runs of whitespace are ignored.",
+        "With DELIMITER, empty fields are preserved and DELIMITER must not be empty. BODY sees the local value as $0; NR is unchanged."
+    ],
+    [
+        (
+            Some("split on whitespace"),
+            "(s/with \"beta alpha\" (s/join \"-\" $2 $1))",
+            "record",
+            "alpha-beta"
+        ),
+        (
+            Some("split on a literal delimiter"),
+            "(s/with \"api:worker:8080\" \":\" (s/join \":\" $2 $3))",
+            "record",
+            "worker:8080"
+        )
+    ]
+);
+
+define_callable!(
     Repeat,
     CallableDefinition {
         name: "s/repeat",

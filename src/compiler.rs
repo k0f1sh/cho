@@ -187,6 +187,12 @@ impl Compiler {
                 InputArgument::Syntax(expression) => Ok(BoundArgument::Step(expression)),
                 InputArgument::Compiled(_) => Err(ParseError::InvalidSyntax),
             },
+            ValueType::LocalValue => {
+                let outer_contains_field_range = self.contains_field_range;
+                let value = self.compile_argument(argument);
+                self.contains_field_range = outer_contains_field_range;
+                value.map(BoundArgument::Value)
+            }
             _ => self.compile_argument(argument).map(BoundArgument::Value),
         }
     }

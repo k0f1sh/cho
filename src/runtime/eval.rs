@@ -97,6 +97,60 @@ impl Record<'_> {
     }
 }
 
+fn whitespace_field_spans(value: &str) -> Vec<(usize, usize)> {
+    let mut spans = Vec::new();
+    let mut start = None;
+    for (index, character) in value.char_indices() {
+        if character.is_whitespace() {
+            if let Some(start) = start.take() {
+                spans.push((start, index));
+            }
+        } else if start.is_none() {
+            start = Some(index);
+        }
+    }
+    if let Some(start) = start {
+        spans.push((start, value.len()));
+    }
+    spans
+}
+
+fn delimited_field_spans<'a>(
+    value: &'a str,
+    delimiters: impl Iterator<Item = (usize, &'a str)>,
+) -> Vec<(usize, usize)> {
+    let mut spans = Vec::new();
+    let mut start = 0;
+    for (delimiter_start, delimiter) in delimiters {
+        spans.push((start, delimiter_start));
+        start = delimiter_start + delimiter.len();
+    }
+    spans.push((start, value.len()));
+    spans
+}
+
+fn evaluate_with_input(
+    value: String,
+    field_spans: Vec<(usize, usize)>,
+    body: &Value,
+    context: &EvalContext<'_, '_, '_>,
+    function: &'static str,
+) -> EvalResult<RuntimeValue> {
+    let local_record = Record {
+        line: &value,
+        number: context.number,
+        field_spans,
+        csv_fields: None,
+        now: context.now,
+    };
+    let local_context = EvalContext {
+        record: &local_record,
+        regexes: context.regexes,
+        ulid_generator: context.ulid_generator,
+    };
+    evaluate(body, &local_context).map_err(|error| error.within(function))
+}
+
 pub(super) fn evaluate(
     value: &Value,
     record: &EvalContext<'_, '_, '_>,
@@ -162,6 +216,40 @@ pub(super) fn evaluate(
         }
         Value::RecordNumber => Ok(RuntimeValue::Number(record.number as f64)),
         Value::FieldCount => Ok(RuntimeValue::Number(record.field_count() as f64)),
+        Value::WithLiteralInput {
+            value,
+            delimiter,
+            body,
+        } => {
+            let value = evaluate(value, record)?.render();
+            let field_spans = if let Some(delimiter) = delimiter {
+                let delimiter = evaluate(delimiter, record)?.render();
+                if delimiter.is_empty() {
+                    return Err(EvalError::conversion(
+                        "s/with",
+                        2,
+                        "a non-empty delimiter",
+                        delimiter,
+                        "is empty",
+                    ));
+                }
+                delimited_field_spans(&value, value.match_indices(&delimiter))
+            } else {
+                whitespace_field_spans(&value)
+            };
+            evaluate_with_input(value, field_spans, body, record, "s/with")
+        }
+        Value::WithRegexInput { value, regex, body } => {
+            let value = evaluate(value, record)?.render();
+            let regex = &record.regexes[regex.0];
+            let field_spans = delimited_field_spans(
+                &value,
+                regex
+                    .find_iter(&value)
+                    .map(|found| (found.start(), found.as_str())),
+            );
+            evaluate_with_input(value, field_spans, body, record, "re/with")
+        }
         Value::String(value) => Ok(RuntimeValue::String(value.clone())),
         Value::Number(number) => Ok(RuntimeValue::Number(*number)),
         Value::Boolean(value) => Ok(RuntimeValue::Boolean(*value)),

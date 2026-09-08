@@ -364,6 +364,7 @@ fn help_name(value_type: ValueType) -> &'static str {
         ValueType::Ulid => "ULID",
         ValueType::Regex => "/PATTERN/",
         ValueType::Step => "STEP",
+        ValueType::LocalValue => "BODY",
     }
 }
 

@@ -27,6 +27,7 @@ pub(crate) enum ValueType {
     Ulid,
     Regex,
     Step,
+    LocalValue,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -383,6 +384,7 @@ registry!(
     byte_size::NotEqual,
     string::Concat,
     string::Join,
+    string::With,
     string::Repeat,
     string::Replace,
     string::ReplaceAll,
@@ -428,6 +430,7 @@ registry!(
     regex::Replace,
     regex::ReplaceAll,
     regex::Part,
+    regex::With,
     regex::Extract,
     date::Normalize,
     date::Year,
