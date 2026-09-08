@@ -353,6 +353,16 @@ pub enum Value {
         regex: RegexId,
         position: Box<Value>,
     },
+    WithLiteralInput {
+        value: Box<Value>,
+        delimiter: Option<Box<Value>>,
+        body: Box<Value>,
+    },
+    WithRegexInput {
+        value: Box<Value>,
+        regex: RegexId,
+        body: Box<Value>,
+    },
     Part {
         value: Box<Value>,
         delimiter: Box<Value>,
@@ -522,6 +532,15 @@ impl Value {
             Self::RegexPart {
                 value, position, ..
             } => value.depth().max(position.depth()),
+            Self::WithLiteralInput {
+                value,
+                delimiter,
+                body,
+            } => value
+                .depth()
+                .max(delimiter.as_ref().map_or(0, |value| value.depth()))
+                .max(body.depth()),
+            Self::WithRegexInput { value, body, .. } => value.depth().max(body.depth()),
             Self::Part {
                 value,
                 delimiter,
