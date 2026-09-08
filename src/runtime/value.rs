@@ -63,7 +63,6 @@ impl RuntimeValue {
 
 #[derive(Debug)]
 pub(super) struct EvalError {
-    contexts: Vec<&'static str>,
     function: &'static str,
     argument: usize,
     expected: &'static str,
@@ -80,7 +79,6 @@ impl EvalError {
         reason: impl Into<String>,
     ) -> Self {
         Self {
-            contexts: Vec::new(),
             function,
             argument,
             expected,
@@ -88,18 +86,10 @@ impl EvalError {
             reason: reason.into(),
         }
     }
-
-    pub(super) fn within(mut self, function: &'static str) -> Self {
-        self.contexts.push(function);
-        self
-    }
 }
 
 impl fmt::Display for EvalError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for context in self.contexts.iter().rev() {
-            write!(formatter, "{context}: body: ")?;
-        }
         write!(
             formatter,
             "{}: argument {} expects {}, but {:?} {}",

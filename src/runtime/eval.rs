@@ -6,7 +6,9 @@ use chrono::format::{Item, StrftimeItems};
 use chrono::{DateTime, Utc};
 use regex::Regex;
 
-use crate::ast::{CidrPart, ReplaceMode, StringBoundary, StringTrim, UrlEncoding, UrlPart, Value};
+use crate::ast::{
+    CidrPart, RegexId, ReplaceMode, StringBoundary, StringTrim, UrlEncoding, UrlPart, Value,
+};
 
 use super::date::{checked_result, expect_date, expect_days, part as date_part, part_name};
 use super::datetime::{
@@ -134,7 +136,6 @@ fn evaluate_with_input(
     field_spans: Vec<(usize, usize)>,
     body: &Value,
     context: &EvalContext<'_, '_, '_>,
-    function: &'static str,
 ) -> EvalResult<RuntimeValue> {
     let local_record = Record {
         line: &value,
@@ -148,7 +149,49 @@ fn evaluate_with_input(
         regexes: context.regexes,
         ulid_generator: context.ulid_generator,
     };
-    evaluate(body, &local_context).map_err(|error| error.within(function))
+    evaluate(body, &local_context)
+}
+
+fn evaluate_with_literal_input(
+    value: &Value,
+    delimiter: Option<&Value>,
+    body: &Value,
+    context: &EvalContext<'_, '_, '_>,
+) -> EvalResult<RuntimeValue> {
+    let value = evaluate(value, context)?.render();
+    let field_spans = if let Some(delimiter) = delimiter {
+        let delimiter = evaluate(delimiter, context)?.render();
+        if delimiter.is_empty() {
+            return Err(EvalError::conversion(
+                "s/with",
+                2,
+                "a non-empty delimiter",
+                delimiter,
+                "is empty",
+            ));
+        }
+        delimited_field_spans(&value, value.match_indices(&delimiter))
+    } else {
+        whitespace_field_spans(&value)
+    };
+    evaluate_with_input(value, field_spans, body, context)
+}
+
+fn evaluate_with_regex_input(
+    value: &Value,
+    regex: RegexId,
+    body: &Value,
+    context: &EvalContext<'_, '_, '_>,
+) -> EvalResult<RuntimeValue> {
+    let value = evaluate(value, context)?.render();
+    let regex = &context.regexes[regex.0];
+    let field_spans = delimited_field_spans(
+        &value,
+        regex
+            .find_iter(&value)
+            .map(|found| (found.start(), found.as_str())),
+    );
+    evaluate_with_input(value, field_spans, body, context)
 }
 
 pub(super) fn evaluate(
@@ -220,35 +263,9 @@ pub(super) fn evaluate(
             value,
             delimiter,
             body,
-        } => {
-            let value = evaluate(value, record)?.render();
-            let field_spans = if let Some(delimiter) = delimiter {
-                let delimiter = evaluate(delimiter, record)?.render();
-                if delimiter.is_empty() {
-                    return Err(EvalError::conversion(
-                        "s/with",
-                        2,
-                        "a non-empty delimiter",
-                        delimiter,
-                        "is empty",
-                    ));
-                }
-                delimited_field_spans(&value, value.match_indices(&delimiter))
-            } else {
-                whitespace_field_spans(&value)
-            };
-            evaluate_with_input(value, field_spans, body, record, "s/with")
-        }
+        } => evaluate_with_literal_input(value, delimiter.as_deref(), body, record),
         Value::WithRegexInput { value, regex, body } => {
-            let value = evaluate(value, record)?.render();
-            let regex = &record.regexes[regex.0];
-            let field_spans = delimited_field_spans(
-                &value,
-                regex
-                    .find_iter(&value)
-                    .map(|found| (found.start(), found.as_str())),
-            );
-            evaluate_with_input(value, field_spans, body, record, "re/with")
+            evaluate_with_regex_input(value, *regex, body, record)
         }
         Value::String(value) => Ok(RuntimeValue::String(value.clone())),
         Value::Number(number) => Ok(RuntimeValue::Number(*number)),
