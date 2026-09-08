@@ -2,12 +2,11 @@
 set -euo pipefail
 
 # Find log events taking at least 500 ms, even when fields move around.
-# Guard with reg before comparing: re/extract returns an empty string on no match.
+# Treat a missing elapsed value as 0 so it falls below the 500 ms threshold.
 # Capture group 1 returns just the digits; >= requests their numeric conversion.
 # Missing request IDs use a fallback. These logs use unquoted key=value tokens.
 cho '
-  (filter (reg $0 /\belapsed=(\d+)ms\b/))
-  (filter (>= (re/extract $0 /\belapsed=(\d+)ms\b/ 1) 500))
+  (filter (>= (default (re/extract $0 /\belapsed=(\d+)ms\b/ 1) 0) 500))
   (print
     (str "request=" (default (re/extract $0 /\brequest_id=([a-z0-9-]+)\b/ 1) "unknown"))
     (re/extract $0 /\belapsed=(\d+)ms\b/))
