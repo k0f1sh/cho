@@ -6,10 +6,6 @@ Inspired by awk, `cho` processes input one record at a time. It fills the gap
 between shell one-liners and small standalone scripts with typed values and
 composable Lisp-like functions and forms.
 
-`cho` intentionally has no arrays, loops, user-defined functions, variable
-bindings, or assignment. It is designed for small, record-oriented
-transformations that fit in a readable pipeline.
-
 > [!WARNING]
 > `cho` is experimental. Its syntax and behavior may change.
 
@@ -51,8 +47,18 @@ Carol
 
 By default, cho treats each input line as a record and its whitespace-separated
 parts as fields. Use `-F`, `--csv`, or `--tsv` to change how fields are parsed.
-`$1`, `$2`, ... refer to those fields. `p` is short for `print`, `f` for
+`$0` is the whole record; `$1`, `$2`, ... refer to its fields. `p` is short for `print`, `f` for
 `filter`. Filters without an explicit `print` output the whole record.
+
+Fields are strings; functions convert them to the types they require, so `>`
+above compares `$2` as a number and reports an error if it cannot be converted.
+
+To call just one function on each input line, use `-c`:
+
+```console
+$ echo hello | cho -c s/upper
+HELLO
+```
 
 ## Examples
 
@@ -63,10 +69,15 @@ $ echo '2026-08-24 INFO service   started successfully' | cho '(p $3..)'
 service   started successfully
 ```
 
-Filter CSV or TSV data with typed comparisons (dates, sizes, IPs, and more):
+Filter CSV records by timestamp, using `-s` to skip the header:
 
 ```console
-$ cat data.csv | cho --csv -s '(f (dt/>= $3 "2026-08-01T00:00:00Z")) (p $1 $2)'
+$ printf '%s\n' \
+    'name,role,created_at' \
+    'Alice,admin,2026-08-02T09:00:00Z' \
+    'Bob,viewer,2026-07-31T12:00:00Z' |
+    cho --csv -s '(f (dt/>= $3 "2026-08-01T00:00:00Z")) (p $1 $2)'
+Alice admin
 ```
 
 Filter by timestamp and CIDR block without manual type parsing:
@@ -83,7 +94,7 @@ $ printf '%s\n' \
 Chain transformations with the threading macro:
 
 ```console
-$ echo '  hello-world  ' | cho '(p (-> $1 s/trim (s/replace "-" "_") s/upper))'
+$ echo '  hello-world  ' | cho '(p (-> $0 s/trim (s/replace "-" "_") s/upper))'
 HELLO_WORLD
 ```
 
@@ -102,6 +113,10 @@ When the delimiter needs to be a regular expression, use
 
 cho handles text, numbers, dates, durations, byte sizes, IPs, URLs, semver, and
 more. Run `cho --help` for the complete syntax, functions, and special forms.
+
+`cho` intentionally has no arrays, loops, user-defined functions, variable
+bindings, or assignment. It is designed for small, record-oriented
+transformations that fit in a readable pipeline.
 
 ## Documentation
 
