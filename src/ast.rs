@@ -343,6 +343,11 @@ pub enum Value {
         regex: RegexId,
         replacement: Box<Value>,
     },
+    RegexExtract {
+        value: Box<Value>,
+        regex: RegexId,
+        group: Box<Value>,
+    },
     RegexPart {
         value: Box<Value>,
         regex: RegexId,
@@ -513,6 +518,7 @@ impl Value {
             Self::RegexReplace {
                 value, replacement, ..
             } => value.depth().max(replacement.depth()),
+            Self::RegexExtract { value, group, .. } => value.depth().max(group.depth()),
             Self::RegexPart {
                 value, position, ..
             } => value.depth().max(position.depth()),

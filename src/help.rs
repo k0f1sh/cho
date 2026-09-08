@@ -148,6 +148,7 @@ fn example_input(
         ("reg", 0) => "WARN request timed out",
         ("reg", 1) => "api-gateway",
         ("re/replace", _) | ("re/replace-all", _) => "order-123-item-45",
+        ("re/extract", _) => "elapsed=750ms",
         ("re/part", _) => "alpha,beta:gamma",
         ("cidr/contains?", _) => "10.20.30.40",
         ("cidr/network", _)

@@ -766,3 +766,35 @@ fn call_mode_explains_that_parenthesized_programs_need_no_input_mode() {
         )
     );
 }
+
+#[test]
+fn regex_extract_cli_and_runtime_error_preserve_output() {
+    for (args, input) in [
+        (
+            vec![
+                "-nc",
+                "re/extract",
+                "created id=abc-123 successfully",
+                "id=([a-z0-9-]+)",
+                "1",
+            ],
+            "",
+        ),
+        (
+            vec!["-c", "re/extract", "id=([a-z0-9-]+)", "1"],
+            "created id=abc-123 successfully\n",
+        ),
+    ] {
+        let result = run_with_args(&args, input);
+        assert!(result.status.success());
+        assert_eq!(result.stdout, b"abc-123\n");
+        assert!(result.stderr.is_empty());
+    }
+    let result = run_with_args(&[r#"(p (re/extract $1 /(a)/ $2))"#], "a 1\nz 2\n");
+    assert!(!result.status.success());
+    assert_eq!(result.stdout, b"a\n");
+    assert!(
+        String::from_utf8_lossy(&result.stderr)
+            .contains("record 2: re/extract: argument 3 expects Number")
+    );
+}

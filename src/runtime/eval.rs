@@ -522,6 +522,31 @@ pub(super) fn evaluate(
             };
             Ok(RuntimeValue::String(replaced.into_owned()))
         }
+        Value::RegexExtract {
+            value,
+            regex,
+            group,
+        } => {
+            let value = evaluate(value, record)?.render();
+            let group = expect_number(evaluate(group, record)?, "re/extract", 3)?;
+            let regex = &record.regexes[regex.0];
+            if group.fract() != 0.0 || group < 0.0 || group >= regex.captures_len() as f64 {
+                return Err(EvalError::conversion(
+                    "re/extract",
+                    3,
+                    "Number (existing non-negative whole capture group)",
+                    group.to_string(),
+                    "does not identify an existing capture group",
+                ));
+            }
+            Ok(RuntimeValue::String(
+                regex
+                    .captures(&value)
+                    .and_then(|captures| captures.get(group as usize))
+                    .map_or("", |capture| capture.as_str())
+                    .to_owned(),
+            ))
+        }
         Value::RegexPart {
             regex,
             position,

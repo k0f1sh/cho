@@ -428,6 +428,7 @@ registry!(
     regex::Replace,
     regex::ReplaceAll,
     regex::Part,
+    regex::Extract,
     date::Normalize,
     date::Year,
     date::Month,
