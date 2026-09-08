@@ -118,7 +118,7 @@ fn with_rejects_empty_literal_delimiters_and_program_forms() {
     assert!(
         error
             .to_string()
-            .starts_with("record 1: s/with: body: +: argument 1 expects Number"),
+            .starts_with("record 1: +: argument 1 expects Number"),
         "{error}"
     );
     assert_eq!(
