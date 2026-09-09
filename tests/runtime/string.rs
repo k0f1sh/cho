@@ -34,11 +34,12 @@ fn with_uses_a_value_as_a_local_whitespace_split_record() {
                 r#"(s/with "10 20" (+ $1 $2)) "#,
                 r#"(s/with "yes no" (s/= $1 "yes")) "#,
                 r#"(s/with "" NF) "#,
-                r#"(-> "api:worker:8080" (s/with (str ":") $2)) $1 NR)"#,
+                r#"(-> "api:worker:8080" (s/with (str ":") $2)) "#,
+                r#"(s/with "left:right" ":" (field (s/count "xx"))) $1 NR)"#,
             ),
             "outer 7\n",
         ),
-        "alpha-beta 30 true 0 worker outer 1\n"
+        "alpha-beta 30 true 0 worker right outer 1\n"
     );
 }
 
@@ -66,11 +67,12 @@ fn regex_with_preserves_parts_and_accepts_zero_width_patterns() {
                 r#"(print (re/with "alpha,:beta,,,gamma" /[,:]+/ "#,
                 r#"(s/join "|" $1 $2 $3 NF)) "#,
                 r#"(re/with "abc" // (s/join "|" $1 $2 $5 NF)) "#,
-                r#"(re/with "" // NF))"#,
+                r#"(re/with "" // NF) "#,
+                r#"(re/with "left,:right" /[,:]+/ (field (s/count "xx"))))"#,
             ),
             "outer\n",
         ),
-        "alpha|beta|gamma|3 |a||5 2\n"
+        "alpha|beta|gamma|3 |a||5 2 right\n"
     );
 }
 
@@ -239,96 +241,11 @@ fn regex_short_aliases_match_their_canonical_functions() {
         output(
             concat!(
                 r#"(print (re/r $1 /\d+/ "N") (re/ra $1 /\d+/ "N")) "#,
-                r#"(print (re/p $2 /[:,]+/ 2) (re/ex $3 /id=(\w+)/ 1))"#,
+                r#"(print (re/ex $3 /id=(\w+)/ 1))"#,
             ),
             "a1b2 left:right id=abc\n",
         ),
-        "aNb2 aNbN\nright abc\n"
-    );
-}
-
-#[test]
-fn regex_part_extracts_parts_and_composes_with_values() {
-    assert_eq!(
-        output(
-            concat!(
-                r#"(print (re/part $1 /[,:]+/ 1) (re/part $1 /[,:]+/ 2) "#,
-                r#"(s/upper (-> $1 (re/part /[,:]+/ (s/count "x")))))"#,
-            ),
-            "alpha,:beta,,,gamma\n",
-        ),
-        "alpha beta ALPHA\n"
-    );
-    assert_eq!(
-        output(
-            r#"(print (re/part $0 "\\s*[:;,]\\s*" 2))"#,
-            "left ; right\n"
-        ),
-        "right\n"
-    );
-}
-
-#[test]
-fn regex_part_preserves_empty_parts_and_handles_missing_parts() {
-    assert_eq!(
-        output(
-            concat!(
-                r#"(print (s/join "|" "#,
-                r#"(re/part ":a::" /:+/ 1) "#,
-                r#"(re/part ":a::" /:+/ 2) "#,
-                r#"(re/part ":a::" /:+/ 3))) "#,
-                r#"(print (re/part "whole" /:+/ 1) (dq (re/part "whole" /:+/ 2)))"#,
-            ),
-            "x\n",
-        ),
-        "|a|\nwhole \"\"\n"
-    );
-}
-
-#[test]
-fn regex_part_accepts_empty_and_zero_width_patterns() {
-    assert_eq!(
-        output(
-            r#"(print (s/join "|" (re/part "abc" // 1) (re/part "abc" // 2) (re/part "abc" // 5)))"#,
-            "x\n",
-        ),
-        "|a|\n"
-    );
-}
-
-#[test]
-fn regex_part_rejects_invalid_positions() {
-    for (program, expected) in [
-        (
-            r#"(print (re/part $1 /:/ 0))"#,
-            "record 1: re/part: argument 3 expects Number (positive whole part position)",
-        ),
-        (
-            r#"(print (re/part $1 /:/ 1.5))"#,
-            "record 1: re/part: argument 3 expects Number (positive whole part position)",
-        ),
-        (
-            r#"(print (re/part $1 /:/ 1e40))"#,
-            "record 1: re/part: argument 3 expects Number (representable part position)",
-        ),
-    ] {
-        let error = cho::run(program, Cursor::new("a:b\n"), Vec::new()).unwrap_err();
-        assert!(error.to_string().starts_with(expected), "{error}");
-    }
-}
-
-#[test]
-fn part_extracts_one_literal_delimited_part() {
-    assert_eq!(
-        output(
-            concat!(
-                r#"(print (s/part $1 ":" 1) "#,
-                r#"(s/part $2 "=" 2) "#,
-                r#"(s/part (s/part $3 "[" 2) "]:" 1))"#,
-            ),
-            "192.168.10.20:39652 SRC=10.0.0.25 [fd00::1]:443\n",
-        ),
-        "192.168.10.20 10.0.0.25 fd00::1\n"
+        "aNb2 aNbN\nabc\n"
     );
 }
 
@@ -373,97 +290,6 @@ fn before_and_after_reject_empty_delimiters() {
             "{error}"
         );
     }
-}
-
-#[test]
-fn part_preserves_empty_parts_and_returns_the_whole_unsplit_value() {
-    assert_eq!(
-        output(
-            concat!(
-                r#"(print (s/join "|" "#,
-                r#"(s/part ":a::" ":" 1) "#,
-                r#"(s/part ":a::" ":" 2) "#,
-                r#"(s/part ":a::" ":" 3) "#,
-                r#"(s/part ":a::" ":" 4))) "#,
-                r#"(print (s/part "whole" ":" 1)) "#,
-                r#"(print (s/part "左区切右" "区切" 2) "#,
-                r#"(default (s/part "" ":" 1) "empty"))"#,
-            ),
-            "x\n",
-        ),
-        "|a||\nwhole\n右 empty\n"
-    );
-}
-
-#[test]
-fn part_composes_with_values_threading_and_typed_predicates() {
-    assert_eq!(
-        output(
-            concat!(
-                r#"(filter (ip/private? (-> $1 (s/part ":" 1)))) "#,
-                r#"(print (str "ip=" (s/upper (s/part $1 (str ":") (s/count "x")))))"#,
-            ),
-            "10.1.2.3:443\n8.8.8.8:53\n",
-        ),
-        "ip=10.1.2.3\n"
-    );
-}
-
-#[test]
-fn part_returns_empty_for_a_missing_part_and_composes_with_other_values() {
-    assert_eq!(
-        output(
-            concat!(
-                r#"(print (s/join "|" (s/part $1 ":" 3) (s/upper (s/part $1 ":" 3)))) "#,
-                r#"(print (default (s/part $1 ":" 3) "missing") "#,
-                r#"(default (s/part $2 ":" 2) "empty"))"#,
-            ),
-            "a:b x:\n",
-        ),
-        "|\nmissing empty\n"
-    );
-}
-
-#[test]
-fn part_keeps_invalid_delimiters_and_positions_strict() {
-    for (program, expected) in [
-        (
-            r#"(print (s/part $1 "" 1))"#,
-            "record 1: s/part: argument 2 expects a non-empty delimiter",
-        ),
-        (
-            r#"(print (s/part $1 ":" 0))"#,
-            "record 1: s/part: argument 3 expects Number (positive whole part position)",
-        ),
-        (
-            r#"(print (s/part $1 ":" -1))"#,
-            "record 1: s/part: argument 3 expects Number (positive whole part position)",
-        ),
-        (
-            r#"(print (s/part $1 ":" 1.5))"#,
-            "record 1: s/part: argument 3 expects Number (positive whole part position)",
-        ),
-        (
-            r#"(print (s/part $1 ":" 1e40))"#,
-            "record 1: s/part: argument 3 expects Number (representable part position)",
-        ),
-    ] {
-        let error = cho::run(program, Cursor::new("a:b\n"), Vec::new()).unwrap_err();
-        assert!(error.to_string().starts_with(expected), "{error}");
-    }
-
-    let error = cho::run(
-        r#"(filter (> (s/part $1 ":" 3) 0))"#,
-        Cursor::new("a:b\n"),
-        Vec::new(),
-    )
-    .unwrap_err();
-    assert!(
-        error
-            .to_string()
-            .starts_with("record 1: >: argument 1 expects Number"),
-        "{error}"
-    );
 }
 
 #[test]

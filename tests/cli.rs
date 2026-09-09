@@ -336,7 +336,6 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("field accepts a non-negative whole number"));
     assert!(stdout.contains("fields also requires START to be less than or equal to END"));
     assert!(stdout.contains("dt/unix accepts only whole Unix seconds"));
-    assert!(stdout.contains("(s/part VALUE DELIMITER POSITION)"));
     assert!(stdout.contains("(s/before VALUE DELIMITER)"));
     assert!(stdout.contains("(s/after VALUE DELIMITER)"));
     assert!(stdout.contains("(s/slice VALUE START [LENGTH])"));

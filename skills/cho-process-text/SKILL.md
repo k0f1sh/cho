@@ -47,8 +47,8 @@ cho is not a prerequisite for merely explaining a command.
   different primary field, use regular program syntax. `--file` reads that
   same syntax from a UTF-8 file while stdin remains available for input records.
 - Regular-expression functions have short aliases for one-liners: `re/r` for
-  `re/replace`, `re/ra` for `re/replace-all`, `re/p` for `re/part`, and `re/ex`
-  for `re/extract`. With `--call`, pass the pattern without regex-literal `/`
+  `re/replace`, `re/ra` for `re/replace-all`, and `re/ex` for `re/extract`.
+  With `--call`, pass the pattern without regex-literal `/`
   delimiters, for example `cho -c re/ex 'id=(\w+)' 1`.
 
 - Use `s/with VALUE BODY` to evaluate BODY with VALUE as a whitespace-split

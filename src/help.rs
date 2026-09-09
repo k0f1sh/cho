@@ -117,7 +117,6 @@ fn example_input(
         ("str", _) | ("s/join", _) | ("csv/join", _) => "api gateway",
         ("s/repeat", _) => "go",
         ("s/replace", _) | ("s/replace-all", _) => "api-server-prod",
-        ("s/part", _) => "user:alice:admin",
         ("s/before", _) | ("s/after", _) => "status=active",
         ("s/slice", _) => "production",
         ("s/lpad", _) => "42",
@@ -149,7 +148,6 @@ fn example_input(
         ("reg", 1) => "api-gateway",
         ("re/replace", _) | ("re/replace-all", _) => "order-123-item-45",
         ("re/extract", _) => "elapsed=750ms",
-        ("re/part", _) => "alpha,beta:gamma",
         ("cidr/contains?", _) => "10.20.30.40",
         ("cidr/network", _)
         | ("cidr/prefix", _)
