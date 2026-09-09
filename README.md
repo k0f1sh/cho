@@ -1,10 +1,12 @@
 # cho
 
-A small, type-aware text processor for the command line.
+Filter, extract, and transform text with one-liners that understand numbers,
+dates, and IP addresses.
 
-Inspired by awk, `cho` processes input one record at a time. It fills the gap
-between shell one-liners and small standalone scripts with typed values and
-composable Lisp-like functions and forms.
+`cho` is an awk-inspired command-line tool with composable Lisp-like expressions.
+Compare timestamps, check whether an IP belongs to a network, and format output
+without writing parsing code. It bridges the gap between shell one-liners and
+small standalone scripts.
 
 > [!WARNING]
 > `cho` is experimental. Its syntax and behavior may change.
