@@ -98,14 +98,12 @@ $ echo '  hello-world  ' | cho '(p (-> $0 s/trim (s/replace "-" "_") s/upper))'
 HELLO_WORLD
 ```
 
-Treat one value as a temporary local record with `s/with`. Inside its body,
-`$0`, `$1`, `$2`, ranges, and `NF` refer to the split value; outside it, they
-still refer to the original input record. Pass a delimiter for literal
-splitting, or omit it to split on whitespace:
+Use `s/with` to split one field again and select a field from it. Pass a
+delimiter for literal splitting, or omit it to split on whitespace:
 
 ```console
-$ echo 'job42 ready api:worker:8080' | cho '(p $1 (s/with $3 ":" (s/join ":" $2 $3)))'
-job42 worker:8080
+$ echo 'job42 ready api:worker:8080' | cho '(p (s/with $3 ":" $2))'
+worker
 ```
 
 When the delimiter needs to be a regular expression, use
