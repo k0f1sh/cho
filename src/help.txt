@@ -135,7 +135,9 @@ Strings:
   (s/with VALUE DELIMITER BODY) -> VALUE    split on a literal delimiter
   (s/repeat VALUE COUNT) -> STRING          repeat a value
   (s/replace VALUE FROM TO) -> STRING       replace the first literal match
+  (s/r VALUE FROM TO) -> STRING             short form of s/replace
   (s/replace-all VALUE FROM TO) -> STRING   replace all literal matches
+  (s/ra VALUE FROM TO) -> STRING            short form of s/replace-all
   (s/before VALUE DELIMITER) -> STRING      take text before the first literal delimiter
   (s/after VALUE DELIMITER) -> STRING       take text after the first literal delimiter
   (s/slice VALUE START [LENGTH]) -> STRING  take Unicode characters from a 1-based start

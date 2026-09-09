@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.33.0",
+  "cho_version": "0.33.1",
   "callables": [
     {
       "name": "print",
@@ -1011,7 +1011,9 @@
     },
     {
       "name": "s/replace",
-      "aliases": [],
+      "aliases": [
+        "s/r"
+      ],
       "kind": "function",
       "category": "string",
       "summary": "replace the first literal match",
@@ -1045,7 +1047,9 @@
     },
     {
       "name": "s/replace-all",
-      "aliases": [],
+      "aliases": [
+        "s/ra"
+      ],
       "kind": "function",
       "category": "string",
       "summary": "replace all literal matches",

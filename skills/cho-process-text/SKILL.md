@@ -46,8 +46,9 @@ cho is not a prerequisite for merely explaining a command.
   supplies only explicit arguments and runs once. For nested expressions or a
   different primary field, use regular program syntax. `--file` reads that
   same syntax from a UTF-8 file while stdin remains available for input records.
-- Regular-expression functions have short aliases for one-liners: `re/r` for
-  `re/replace`, `re/ra` for `re/replace-all`, and `re/ex` for `re/extract`.
+- Replacement functions have short aliases for one-liners: `s/r` for
+  `s/replace`, `s/ra` for `s/replace-all`, `re/r` for `re/replace`, `re/ra` for
+  `re/replace-all`, and `re/ex` for `re/extract`.
   With `--call`, pass the pattern without regex-literal `/`
   delimiters, for example `cho -c re/ex 'id=(\w+)' 1`.
 

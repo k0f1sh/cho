@@ -250,6 +250,14 @@ fn regex_short_aliases_match_their_canonical_functions() {
 }
 
 #[test]
+fn string_replace_short_aliases_match_their_canonical_functions() {
+    assert_eq!(
+        output(r#"(print (s/r $1 "a" "x") (s/ra $1 "a" "x"))"#, "banana\n",),
+        "bxnana bxnxnx\n"
+    );
+}
+
+#[test]
 fn before_and_after_use_the_first_literal_delimiter() {
     assert_eq!(
         output(

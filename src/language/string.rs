@@ -120,7 +120,7 @@ define_callable!(
     Replace,
     CallableDefinition {
         name: "s/replace",
-        aliases: &[],
+        aliases: &["s/r"],
         kind: CallableKind::Function,
         signatures: &[
             sig!([p!("value", Value, Required), p!("from", Value, Required, "FROM"), p!("to", Value, Required, "TO")] => Some(ValueType::String))
@@ -145,7 +145,7 @@ define_callable!(
     ReplaceAll,
     CallableDefinition {
         name: "s/replace-all",
-        aliases: &[],
+        aliases: &["s/ra"],
         kind: CallableKind::Function,
         signatures: &[
             sig!([p!("value", Value, Required), p!("from", Value, Required, "FROM"), p!("to", Value, Required, "TO")] => Some(ValueType::String))
