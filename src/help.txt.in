@@ -113,9 +113,6 @@ Strings:
   or terminal display columns. Combining marks and joined emoji therefore
   count and reverse independently.
 
-  s/part preserves empty parts. If no delimiter is found, position 1 returns
-  the complete value; a missing position returns an empty string. DELIMITER
-  must not be empty.
   s/before and s/after use the first delimiter and preserve the complete value
   on the other side. Without a delimiter, s/before returns the complete value
   and s/after returns empty. DELIMITER must not be empty.
@@ -172,9 +169,6 @@ Regular expressions:
   Example: cho -nc re/extract 'created id=abc-123 successfully' 'id=([a-z0-9-]+)' 1
   Example: cho --no-input '(p (>= (re/extract "elapsed=750ms" /elapsed=(\d+)ms/ 1) 500))'
   Guard unmatched records with filter and reg before numeric comparison.
-  Unlike re/extract's group 0, re/part positions start at 1 and select split parts.
-  re/part preserves empty parts. If the pattern does not match, position 1
-  returns the complete value; a missing position returns an empty string.
   In replacements, empty and zero-width matches insert text, following awk behavior.
   The -F pattern is passed directly: cho -F '\s+' '(p $1)'
   Example: cho --no-input '(p (re/replace "id=42" /(?P<n>\d+)/ "[${n}]"))'  # => id=[42]

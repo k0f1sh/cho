@@ -21,8 +21,8 @@ use super::number;
 use super::predicate::matches;
 use super::semver;
 use super::string::{
-    escape, evaluate_string_padding, evaluate_string_repeat, evaluate_string_slice,
-    expect_part_position, quote, shell_quote, unquote,
+    escape, evaluate_string_padding, evaluate_string_repeat, evaluate_string_slice, quote,
+    shell_quote, unquote,
 };
 use super::url::{
     decode_url_component, encode_url_component, parse_absolute_url, url_encoding_name,
@@ -649,46 +649,6 @@ pub(super) fn evaluate(
                     .captures(&value)
                     .and_then(|captures| captures.get(group as usize))
                     .map_or("", |capture| capture.as_str())
-                    .to_owned(),
-            ))
-        }
-        Value::RegexPart {
-            regex,
-            position,
-            value,
-        } => {
-            let value = evaluate(value, record)?.render();
-            let position = expect_part_position(position, "re/part", record)?;
-            Ok(RuntimeValue::String(
-                record.regexes[regex.0]
-                    .split(&value)
-                    .nth(position - 1)
-                    .unwrap_or("")
-                    .to_owned(),
-            ))
-        }
-        Value::Part {
-            delimiter,
-            position,
-            value,
-        } => {
-            let value = evaluate(value, record)?.render();
-            let delimiter = evaluate(delimiter, record)?.render();
-            if delimiter.is_empty() {
-                return Err(EvalError::conversion(
-                    "s/part",
-                    2,
-                    "a non-empty delimiter",
-                    delimiter,
-                    "is empty",
-                ));
-            }
-            let position = expect_part_position(position, "s/part", record)?;
-            Ok(RuntimeValue::String(
-                value
-                    .split(&delimiter)
-                    .nth(position - 1)
-                    .unwrap_or("")
                     .to_owned(),
             ))
         }
