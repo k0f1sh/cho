@@ -129,46 +129,45 @@ Numbers:
   integer identifiers as strings with s/=. Decimal arithmetic may round.
 
 Strings:
-  (str VALUE ...) -> STRING                    concatenate values
-  (s/join SEPARATOR VALUE ...) -> STRING       join values
-  (s/with VALUE BODY) -> VALUE                 split on whitespace
-  (s/with VALUE DELIMITER BODY) -> VALUE       split on a literal delimiter
-  (s/repeat VALUE COUNT) -> STRING             repeat a value
-  (s/replace VALUE FROM TO) -> STRING          replace the first literal match
-  (s/replace-all VALUE FROM TO) -> STRING      replace all literal matches
-  (s/part VALUE DELIMITER POSITION) -> STRING  take a 1-based literal-delimited part
-  (s/before VALUE DELIMITER) -> STRING         take text before the first literal delimiter
-  (s/after VALUE DELIMITER) -> STRING          take text after the first literal delimiter
-  (s/slice VALUE START [LENGTH]) -> STRING     take Unicode characters from a 1-based start
-  (s/lpad VALUE WIDTH [FILL]) -> STRING        pad the left side to a Unicode character width
-  (s/rpad VALUE WIDTH [FILL]) -> STRING        pad the right side to a Unicode character width
-  (s/count VALUE) -> NUMBER                    count Unicode characters
-  (s/empty? VALUE) -> BOOLEAN                  test whether a string is empty
-  (s/escape VALUE) -> STRING                   escape tabs, newlines, and backslashes
-  (s/dquote VALUE) -> STRING                   stringify and wrap in escaped double quotes
-  (dq VALUE) -> STRING                         short form of s/dquote
-  (s/squote VALUE) -> STRING                   stringify and wrap in escaped single quotes
-  (sq VALUE) -> STRING                         short form of s/squote
-  (s/unquote VALUE) -> STRING                  remove matching quotes and decode backslash escapes
-  (shq VALUE) -> STRING                        stringify and quote as one shell-safe argument
-  (s/lower VALUE) -> STRING                    lowercase
-  (s/upper VALUE) -> STRING                    uppercase
-  (s/reverse VALUE) -> STRING                  reverse Unicode characters
-  (s/trim VALUE) -> STRING                     remove Unicode whitespace from both ends
-  (s/trim VALUE PREFIX SUFFIX) -> STRING       remove one exact prefix and suffix
-  (s/ltrim VALUE) -> STRING                    remove Unicode whitespace from the left
-  (s/ltrim VALUE PREFIX) -> STRING             remove one exact prefix
-  (s/rtrim VALUE) -> STRING                    remove Unicode whitespace from the right
-  (s/rtrim VALUE SUFFIX) -> STRING             remove one exact suffix
-  (s/starts-with? VALUE PREFIX) -> BOOLEAN     test a prefix
-  (s/ends-with? VALUE SUFFIX) -> BOOLEAN       test a suffix
-  (s/contains? VALUE NEEDLE) -> BOOLEAN        test a substring
-  (s/> VALUE VALUE) -> BOOLEAN                 greater than
-  (s/>= VALUE VALUE) -> BOOLEAN                greater than or equal
-  (s/< VALUE VALUE) -> BOOLEAN                 less than
-  (s/<= VALUE VALUE) -> BOOLEAN                less than or equal
-  (s/= VALUE VALUE) -> BOOLEAN                 equal
-  (s/!= VALUE VALUE) -> BOOLEAN                not equal
+  (str VALUE ...) -> STRING                 concatenate values
+  (s/join SEPARATOR VALUE ...) -> STRING    join values
+  (s/with VALUE BODY) -> VALUE              split on whitespace
+  (s/with VALUE DELIMITER BODY) -> VALUE    split on a literal delimiter
+  (s/repeat VALUE COUNT) -> STRING          repeat a value
+  (s/replace VALUE FROM TO) -> STRING       replace the first literal match
+  (s/replace-all VALUE FROM TO) -> STRING   replace all literal matches
+  (s/before VALUE DELIMITER) -> STRING      take text before the first literal delimiter
+  (s/after VALUE DELIMITER) -> STRING       take text after the first literal delimiter
+  (s/slice VALUE START [LENGTH]) -> STRING  take Unicode characters from a 1-based start
+  (s/lpad VALUE WIDTH [FILL]) -> STRING     pad the left side to a Unicode character width
+  (s/rpad VALUE WIDTH [FILL]) -> STRING     pad the right side to a Unicode character width
+  (s/count VALUE) -> NUMBER                 count Unicode characters
+  (s/empty? VALUE) -> BOOLEAN               test whether a string is empty
+  (s/escape VALUE) -> STRING                escape tabs, newlines, and backslashes
+  (s/dquote VALUE) -> STRING                stringify and wrap in escaped double quotes
+  (dq VALUE) -> STRING                      short form of s/dquote
+  (s/squote VALUE) -> STRING                stringify and wrap in escaped single quotes
+  (sq VALUE) -> STRING                      short form of s/squote
+  (s/unquote VALUE) -> STRING               remove matching quotes and decode backslash escapes
+  (shq VALUE) -> STRING                     stringify and quote as one shell-safe argument
+  (s/lower VALUE) -> STRING                 lowercase
+  (s/upper VALUE) -> STRING                 uppercase
+  (s/reverse VALUE) -> STRING               reverse Unicode characters
+  (s/trim VALUE) -> STRING                  remove Unicode whitespace from both ends
+  (s/trim VALUE PREFIX SUFFIX) -> STRING    remove one exact prefix and suffix
+  (s/ltrim VALUE) -> STRING                 remove Unicode whitespace from the left
+  (s/ltrim VALUE PREFIX) -> STRING          remove one exact prefix
+  (s/rtrim VALUE) -> STRING                 remove Unicode whitespace from the right
+  (s/rtrim VALUE SUFFIX) -> STRING          remove one exact suffix
+  (s/starts-with? VALUE PREFIX) -> BOOLEAN  test a prefix
+  (s/ends-with? VALUE SUFFIX) -> BOOLEAN    test a suffix
+  (s/contains? VALUE NEEDLE) -> BOOLEAN     test a substring
+  (s/> VALUE VALUE) -> BOOLEAN              greater than
+  (s/>= VALUE VALUE) -> BOOLEAN             greater than or equal
+  (s/< VALUE VALUE) -> BOOLEAN              less than
+  (s/<= VALUE VALUE) -> BOOLEAN             less than or equal
+  (s/= VALUE VALUE) -> BOOLEAN              equal
+  (s/!= VALUE VALUE) -> BOOLEAN             not equal
 
   String functions render VALUE arguments with their default representation
   before processing. The s/ prefix therefore explicitly selects string
@@ -177,9 +176,6 @@ Strings:
   or terminal display columns. Combining marks and joined emoji therefore
   count and reverse independently.
 
-  s/part preserves empty parts. If no delimiter is found, position 1 returns
-  the complete value; a missing position returns an empty string. DELIMITER
-  must not be empty.
   s/before and s/after use the first delimiter and preserve the complete value
   on the other side. Without a delimiter, s/before returns the complete value
   and s/after returns empty. DELIMITER must not be empty.
@@ -235,8 +231,6 @@ Regular expressions:
   (re/r VALUE /PATTERN/ REPLACEMENT) -> STRING            short form of re/replace
   (re/replace-all VALUE /PATTERN/ REPLACEMENT) -> STRING  replace all regular-expression matches
   (re/ra VALUE /PATTERN/ REPLACEMENT) -> STRING           short form of re/replace-all
-  (re/part VALUE /PATTERN/ POSITION) -> STRING            take a 1-based regular-expression-delimited part
-  (re/p VALUE /PATTERN/ POSITION) -> STRING               short form of re/part
   (re/with VALUE /PATTERN/ BODY) -> VALUE                 evaluate a value using fields split by a regular expression
   (re/extract VALUE /PATTERN/ [GROUP]) -> STRING          extract the first match or a numbered capture
   (re/ex VALUE /PATTERN/ [GROUP]) -> STRING               short form of re/extract
@@ -254,9 +248,6 @@ Regular expressions:
   Example: cho -nc re/extract 'created id=abc-123 successfully' 'id=([a-z0-9-]+)' 1
   Example: cho --no-input '(p (>= (re/extract "elapsed=750ms" /elapsed=(\d+)ms/ 1) 500))'
   Guard unmatched records with filter and reg before numeric comparison.
-  Unlike re/extract's group 0, re/part positions start at 1 and select split parts.
-  re/part preserves empty parts. If the pattern does not match, position 1
-  returns the complete value; a missing position returns an empty string.
   In replacements, empty and zero-width matches insert text, following awk behavior.
   The -F pattern is passed directly: cho -F '\s+' '(p $1)'
   Example: cho --no-input '(p (re/replace "id=42" /(?P<n>\d+)/ "[${n}]"))'  # => id=[42]

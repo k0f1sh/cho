@@ -166,32 +166,6 @@ define_callable!(
     [(None, "(s/replace-all $1 \"-\" \"_\")")]
 );
 
-define_callable!(
-    Part,
-    CallableDefinition {
-        name: "s/part",
-        aliases: &[],
-        kind: CallableKind::Function,
-        signatures: &[
-            sig!([p!("value", Value, Required), p!("delimiter", Value, Required, "DELIMITER"), p!("position", Number, Required, "POSITION")] => Some(ValueType::String))
-        ]
-    },
-    |_context, arguments| {
-        let [value_arg, delimiter, position] = value_array(arguments)?;
-        value(Value::Part {
-            value: Box::new(value_arg),
-            delimiter: Box::new(delimiter),
-            position: Box::new(position),
-        })
-    },
-    String,
-    "take a 1-based literal-delimited part",
-    [
-        "DELIMITER must not be empty; POSITION must be a positive whole number. Missing parts are empty strings."
-    ],
-    [(None, "(s/part $1 \":\" 2)")]
-);
-
 macro_rules! define_boundary {
     ($type:ident, $name:literal, $kind:ident, $summary:literal, $example:literal) => {
         define_callable!(

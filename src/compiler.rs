@@ -607,40 +607,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_part_values() {
-        assert_eq!(
-            parse(r#"(print (s/part $1 (str "]" ":") (s/count "x")))"#),
-            Ok(Program {
-                forms: vec![Form::Print(vec![Value::Part {
-                    delimiter: Box::new(Value::Concat(vec![
-                        Value::String("]".into()),
-                        Value::String(":".into()),
-                    ])),
-                    position: Box::new(Value::Count(Box::new(Value::String("x".into())))),
-                    value: Box::new(Value::Field(1)),
-                }])],
-                regex_patterns: vec![],
-                contains_field_range: false,
-            })
-        );
-        assert_eq!(
-            parse(r#"(print (-> $1 (s/part "=" 2)))"#),
-            parse(r#"(print (s/part $1 "=" 2))"#)
-        );
-        let program = parse(r#"(print (re/part $1 /[,:]+/ (s/count "x")))"#).unwrap();
-        assert_eq!(program.regex_patterns, vec!["[,:]+"]);
-        assert!(matches!(
-            &program.forms[0],
-            Form::Print(values)
-                if matches!(values[0], Value::RegexPart {
-                    regex: RegexId(0),
-                    ..
-                })
-        ));
-        assert_eq!(
-            parse(r#"(print (-> $1 (re/part /:/ 2)))"#),
-            parse(r#"(print (re/part $1 /:/ 2))"#)
-        );
+    fn parses_string_boundaries_with_threading() {
         assert_eq!(
             parse(r#"(print (-> $1 (s/after "=") (s/before ":")))"#),
             parse(r#"(print (s/before (s/after $1 "=") ":"))"#)
@@ -981,10 +948,6 @@ mod tests {
             "(print (path/ext $1 $2))",
             "(print (path/dir))",
             "(print (path/dir $1 $2))",
-            "(print (s/part))",
-            r#"(print (s/part ":"))"#,
-            r#"(print (s/part ":" 1))"#,
-            r#"(print (s/part ":" 1 $1 $2))"#,
             "(print (s/before))",
             "(print (s/before $1))",
             "(print (s/before $1 $2 $3))",
@@ -1132,10 +1095,6 @@ mod tests {
             r#"(print (re/extract $1 /:/ 1 $2))"#,
             r#"(print (re/extract $1 $2 1))"#,
             r#"(print (re/extract $1 /:/ /x/))"#,
-            r#"(print (re/part))"#,
-            r#"(print (re/part $1 /:/))"#,
-            r#"(print (re/part $1 /:/ 1 $2))"#,
-            r#"(print (re/part $1 $2 1))"#,
             r#"(print (->> $1 (re/replace /a/ "b")))"#,
             r#"(print (-> $1 n/fixed))"#,
             r#"(print (-> $1 unknown))"#,
