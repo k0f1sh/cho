@@ -8,14 +8,22 @@ Compare timestamps, check whether an IP belongs to a network, and format output
 without writing parsing code. It bridges the gap between shell one-liners and
 small standalone scripts.
 
+Filter logs by timestamp and subnet, then format the matching records:
+
 ```console
-# Filter logs by timestamp and CIDR subnet, then format and transform fields:
-$ cat access.log | cho '(f (dt/>= $1 "2026-08-01T00:00:00Z")) (f (cidr/contains? "10.0.0.0/8" $2)) (p (dt/fmt $1 "%m-%d %H:%M") (s/join ":" $2 $4))'
+$ printf '%s\n' \
+    '2026-08-02T09:00:00Z 10.1.2.3 GET /index.html' \
+    '2026-07-31T23:00:00Z 10.2.3.4 GET /old' \
+    '2026-08-03T12:00:00Z 8.8.8.8 GET /external' |
+    cho '(f (dt/>= $1 "2026-08-01T00:00:00Z"))
+         (f (cidr/contains? "10.0.0.0/8" $2))
+         (p (dt/fmt $1 "%m-%d %H:%M") (s/join ":" $2 $4))'
+08-02 09:00 10.1.2.3:/index.html
 ```
 
 - **Contextual type coercion**: Fields are strings until a function requires a type. Numbers, timestamps, IPs, and CIDRs convert automatically without manual parsing boilerplate.
 - **Batteries included**: Rich built-in primitives for dates, durations, byte sizes, IP/CIDR networking, URLs, SemVer, and regular expressions.
-- **First-class CSV & TSV**: Handles quoted fields, embedded newlines, and header skipping (`-s`) out of the box with `--csv` and `--tsv`.
+- **CSV & TSV input**: `--csv` supports quoted fields and embedded newlines; `--tsv` splits fields on tabs. Both support header skipping with `-s`.
 - **Self-documenting CLI**: Built-in search (`cho -k`) and per-function help (`cho --help s/trim`) keep you in the flow without opening a browser.
 
 > [!WARNING]
@@ -57,9 +65,9 @@ Bob
 Carol
 ```
 
-- **Records and fields**: Each line is a record; whitespace splits fields by default (`$0` is the full record; `$1`, `$2`, ... refer to fields). Use `-F`, `--csv`, or `--tsv` to change how fields are parsed.
+- **Records and fields**: By default, each line is a record and whitespace splits fields (`$0` is the full record; `$1`, `$2`, ... refer to fields). Use `-F`, `--csv`, or `--tsv` to change how input is parsed.
 - **Forms**: `p` (short for `print`) outputs values separated by spaces. `f` (short for `filter`) filters records; filters without an explicit `print` output the whole record.
-- **Automatic types**: Fields are strings until a function requires a specific type. In `(> $2 20)`, `$2` is compared as a number and reports an error with line and field info if it cannot be converted.
+- **Automatic types**: Fields are strings until a function requires a specific type. In `(> $2 20)`, `$2` is compared as a number. If conversion fails, the error identifies the record, function, argument position, and expected type.
 
 To call just one function on each input line, use `-c`:
 
@@ -117,18 +125,9 @@ worker
 When the delimiter needs to be a regular expression, use
 `(re/with VALUE PATTERN BODY)` instead.
 
-### Built-in domains
-
-Functions are organized by clear domain prefixes. Below is a selection of representative functions from common domains:
-
-- **Strings & Text**: `s/` (`s/trim`, `s/upper`, `s/replace-all`, `s/join`, `s/with`)
-- **Regular Expressions**: `~` (regex match), `re/` (`re/extract`, `re/replace`, `re/with`)
-- **Date & Time**: `dt/` (RFC 3339 timestamps: `dt/>=`, `dt/diff`, `dt/fmt`), `d/` (calendar dates: `d/>=`, `d/diff`), `du/` (durations: `du/s`, `du/h`)
-- **Networking**: `ip/` (`ip/v4?`, `ip/private?`), `cidr/` (`cidr/contains?`, `cidr/network`, `cidr/prefix`)
-- **Web & Identifiers**: `url/` (`url/host`, `url/path`, `url/query`), `semver/` (`semver/>=`), `uuid/` (`uuid/v7`), `ulid/` (`ulid/new`)
-- **Numbers & Units**: `n/` (`n/round`, `n/clamp`, `n/fixed`), `bs/` (byte sizes: `bs/to-b`, `bs/>=`), `path/` (`path/name`, `path/ext`)
-
-Run `cho --help` for the complete syntax, functions, and forms, or `cho -k` to search them.
+You can also calculate elapsed time, extract URL components, and compare
+version numbers. Run `cho --help` for the complete syntax and examples,
+or `cho -k QUERY` to find a function for your task.
 
 `cho` intentionally has no arrays, loops, user-defined functions, variable
 bindings, or assignment. It is designed for small, record-oriented
