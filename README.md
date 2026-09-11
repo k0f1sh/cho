@@ -3,28 +3,13 @@
 Filter, extract, and transform text with one-liners that understand numbers,
 dates, and IP addresses.
 
-`cho` is an awk-inspired command-line tool with composable Lisp-like expressions.
-Compare timestamps, check whether an IP belongs to a network, and format output
-without writing parsing code. It bridges the gap between shell one-liners and
-small standalone scripts.
-
-Filter logs by timestamp and subnet, then format the matching records:
+`cho` is an awk-inspired command-line tool that lets you combine small Lisp-like
+expressions. It fills the gap between shell one-liners and small scripts.
 
 ```console
-$ printf '%s\n' \
-    '2026-08-02T09:00:00Z 10.1.2.3 GET /index.html' \
-    '2026-07-31T23:00:00Z 10.2.3.4 GET /old' \
-    '2026-08-03T12:00:00Z 8.8.8.8 GET /external' |
-    cho '(f (dt/>= $1 "2026-08-01T00:00:00Z"))
-         (f (cidr/contains? "10.0.0.0/8" $2))
-         (p (dt/fmt $1 "%m-%d %H:%M") (s/join ":" $2 $4))'
-08-02 09:00 10.1.2.3:/index.html
+$ printf 'backup.zip 2GB\nnotes.txt 4kB\n' | cho '(f (bs/>= $2 "1GB")) (p $1)'
+backup.zip
 ```
-
-- **Contextual type coercion**: Fields are strings until a function requires a type. Numbers, timestamps, IPs, and CIDRs convert automatically without manual parsing boilerplate.
-- **Batteries included**: Rich built-in primitives for dates, durations, byte sizes, IP/CIDR networking, URLs, SemVer, and regular expressions.
-- **CSV & TSV input**: `--csv` supports quoted fields and embedded newlines; `--tsv` splits fields on tabs. Both support header skipping with `-s`.
-- **Self-documenting CLI**: Built-in search (`cho -k`) and per-function help (`cho --help s/trim`) keep you in the flow without opening a browser.
 
 > [!WARNING]
 > `cho` is experimental. Its syntax and behavior may change.
@@ -69,6 +54,9 @@ Carol
 - **Forms**: `p` (short for `print`) outputs values separated by spaces. `f` (short for `filter`) filters records; filters without an explicit `print` output the whole record.
 - **Automatic types**: Fields are strings until a function requires a specific type. In `(> $2 20)`, `$2` is compared as a number. If conversion fails, the error identifies the record, function, argument position, and expected type.
 
+`--csv` supports quoted fields and embedded newlines; `--tsv` splits fields
+on tabs. Both support header skipping with `-s`.
+
 To call just one function on each input line, use `-c`:
 
 ```console
@@ -77,6 +65,19 @@ HELLO
 ```
 
 ## Examples
+
+Filter logs by timestamp and subnet, then format the matching records:
+
+```console
+$ printf '%s\n' \
+    '2026-08-02T09:00:00Z 10.1.2.3 GET /index.html' \
+    '2026-07-31T23:00:00Z 10.2.3.4 GET /old' \
+    '2026-08-03T12:00:00Z 8.8.8.8 GET /external' |
+    cho '(f (dt/>= $1 "2026-08-01T00:00:00Z"))
+         (f (cidr/contains? "10.0.0.0/8" $2))
+         (p (dt/fmt $1 "%m-%d %H:%M") (s/join ":" $2 $4))'
+08-02 09:00 10.1.2.3:/index.html
+```
 
 Keep everything from the third field through the end of the record:
 
