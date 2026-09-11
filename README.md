@@ -8,6 +8,16 @@ Compare timestamps, check whether an IP belongs to a network, and format output
 without writing parsing code. It bridges the gap between shell one-liners and
 small standalone scripts.
 
+```console
+# Filter logs by timestamp and CIDR subnet, then format and transform fields:
+$ cat access.log | cho '(f (dt/>= $1 "2026-08-01T00:00:00Z")) (f (cidr/contains? "10.0.0.0/8" $2)) (p (dt/fmt $1 "%m-%d %H:%M") (s/join ":" $2 $4))'
+```
+
+- **Contextual type coercion**: Fields are strings until a function requires a type. Numbers, timestamps, IPs, and CIDRs convert automatically without manual parsing boilerplate.
+- **Batteries included**: Rich built-in primitives for dates, durations, byte sizes, IP/CIDR networking, URLs, SemVer, and regular expressions.
+- **First-class CSV & TSV**: Handles quoted fields, embedded newlines, and header skipping (`-s`) out of the box with `--csv` and `--tsv`.
+- **Self-documenting CLI**: Built-in search (`cho -k`) and per-function help (`cho --help s/trim`) keep you in the flow without opening a browser.
+
 > [!WARNING]
 > `cho` is experimental. Its syntax and behavior may change.
 
@@ -47,13 +57,9 @@ Bob
 Carol
 ```
 
-By default, cho treats each input line as a record and its whitespace-separated
-parts as fields. Use `-F`, `--csv`, or `--tsv` to change how fields are parsed.
-`$0` is the whole record; `$1`, `$2`, ... refer to its fields. `p` is short for `print`, `f` for
-`filter`. Filters without an explicit `print` output the whole record.
-
-Fields are strings; functions convert them to the types they require, so `>`
-above compares `$2` as a number and reports an error if it cannot be converted.
+- **Records and fields**: Each line is a record; whitespace splits fields by default (`$0` is the full record; `$1`, `$2`, ... refer to fields). Use `-F`, `--csv`, or `--tsv` to change how fields are parsed.
+- **Forms**: `p` (short for `print`) outputs values separated by spaces. `f` (short for `filter`) filters records; filters without an explicit `print` output the whole record.
+- **Automatic types**: Fields are strings until a function requires a specific type. In `(> $2 20)`, `$2` is compared as a number and reports an error with line and field info if it cannot be converted.
 
 To call just one function on each input line, use `-c`:
 
@@ -82,15 +88,15 @@ $ printf '%s\n' \
 Alice admin
 ```
 
-Filter by timestamp and CIDR block without manual type parsing:
+Filter records by human-readable byte sizes without manual conversion:
 
 ```console
 $ printf '%s\n' \
-    '2026-08-02T09:00:00Z 10.1.2.3 deploy' \
-    '2026-07-31T23:00:00Z 10.2.3.4 old' \
-    '2026-08-03T12:00:00Z 8.8.8.8 external' |
-    cho '(f (dt/>= $1 "2026-08-01T00:00:00Z")) (f (cidr/contains? "10.0.0.0/8" $2))'
-2026-08-02T09:00:00Z 10.1.2.3 deploy
+    'GET /index.html 200 4.2kB' \
+    'GET /video.mp4 200 15.4MB' \
+    'GET /style.css 200 850B' |
+    cho '(f (bs/>= $4 "1MB")) (p $2 $4)'
+/video.mp4 15.4MB
 ```
 
 Chain transformations with the threading macro:
@@ -111,8 +117,18 @@ worker
 When the delimiter needs to be a regular expression, use
 `(re/with VALUE PATTERN BODY)` instead.
 
-cho handles text, numbers, dates, durations, byte sizes, IPs, URLs, semver, and
-more. Run `cho --help` for the complete syntax, functions, and special forms.
+### Built-in domains
+
+Functions are organized by clear domain prefixes. Below is a selection of representative functions from common domains:
+
+- **Strings & Text**: `s/` (`s/trim`, `s/upper`, `s/replace-all`, `s/join`, `s/with`)
+- **Regular Expressions**: `~` (regex match), `re/` (`re/extract`, `re/replace`, `re/with`)
+- **Date & Time**: `dt/` (RFC 3339 timestamps: `dt/>=`, `dt/diff`, `dt/fmt`), `d/` (calendar dates: `d/>=`, `d/diff`), `du/` (durations: `du/s`, `du/h`)
+- **Networking**: `ip/` (`ip/v4?`, `ip/private?`), `cidr/` (`cidr/contains?`, `cidr/network`, `cidr/prefix`)
+- **Web & Identifiers**: `url/` (`url/host`, `url/path`, `url/query`), `semver/` (`semver/>=`), `uuid/` (`uuid/v7`), `ulid/` (`ulid/new`)
+- **Numbers & Units**: `n/` (`n/round`, `n/clamp`, `n/fixed`), `bs/` (byte sizes: `bs/to-b`, `bs/>=`), `path/` (`path/name`, `path/ext`)
+
+Run `cho --help` for the complete syntax, functions, and forms, or `cho -k` to search them.
 
 `cho` intentionally has no arrays, loops, user-defined functions, variable
 bindings, or assignment. It is designed for small, record-oriented
