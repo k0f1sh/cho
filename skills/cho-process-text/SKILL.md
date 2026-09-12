@@ -1,6 +1,6 @@
 ---
 name: cho-process-text
-description: Build and verify cho one-liners for line-oriented text, CSV, TSV, and typed data in Unix pipelines. Use when the user requests cho or when numeric, date/time, byte-size, network, URL, version, or identifier operations benefit from contextual type conversion.
+description: Build and verify cho shell one-liners. Use for cho commands or text pipelines that need typed field comparisons and conversions.
 ---
 
 # Process text with cho
@@ -8,15 +8,15 @@ description: Build and verify cho one-liners for line-oriented text, CSV, TSV, a
 cho evaluates small, composable Lisp-like expressions once per input record.
 Fields are strings; functions convert them to the types their signatures need.
 Malformed typed input produces an error rather than silently failing a match.
-Use cho for the user's requested text processing, especially when typed
-comparisons and conversions would otherwise require a separate script.
 Keep sorting and cross-record aggregation in other pipeline tools.
 
 ## Discover the available syntax
 
-Check the executable you will actually use. Start with `cho --help` for input
-options and language rules; use `cho -k QUERY` to find functions and
-`cho --help FUNCTION` for signatures, examples, and notes. `cho -k` lists names.
+Check syntax against the executable you will actually use. Use `cho -k QUERY`
+to find functions and `cho --help FUNCTION` for signatures, examples, and notes.
+For example, `cho -k trim` finds names and `cho --help s/trim` explains usage.
+Use full `cho --help` when input options or general language rules are needed;
+`cho -k` lists all function and form names.
 These discovery commands run separately from execution options and programs.
 Do not assume a function exists from its name or from another installed version.
 
@@ -46,17 +46,10 @@ cho is not a prerequisite for merely explaining a command.
   supplies only explicit arguments and runs once. For nested expressions or a
   different primary field, use regular program syntax. `--file` reads that
   same syntax from a UTF-8 file while stdin remains available for input records.
-- Replacement functions have short aliases for one-liners: `s/r` for
-  `s/replace`, `s/ra` for `s/replace-all`, `re/r` for `re/replace`, `re/ra` for
-  `re/replace-all`, and `re/ex` for `re/extract`.
-  With `--call`, pass the pattern without regex-literal `/`
+- With `--call`, pass regex patterns without regex-literal `/`
   delimiters, for example `cho -c re/ex 'id=(\w+)' 1`.
-
-- Use `s/with VALUE BODY` to evaluate BODY with VALUE as a whitespace-split
-  local record, or `s/with VALUE DELIMITER BODY` for a literal delimiter. Use
-  `re/with VALUE PATTERN BODY` for regex splitting. Inside BODY, `$0`, fields,
-  ranges, and `NF` refer to the local record; `NR` keeps the outer record number.
-  The result is a value, so compose it with ordinary functions or filters.
+- To split a field or transformed value into a local record, consult
+  `cho --help s/with` or `cho --help re/with` for literal or regex delimiters.
 
 Small starting points:
 
