@@ -49,6 +49,7 @@ enum ArgumentError {
     MissingProgram,
     MissingSeparator,
     MissingProgramFile,
+    UnknownOption(String),
     UnexpectedArgument(String),
     ConflictingInputFormats,
     SkipHeaderWithoutDelimitedInput,
@@ -68,6 +69,7 @@ impl std::fmt::Display for ArgumentError {
             Self::MissingProgram => formatter.write_str("missing PROGRAM"),
             Self::MissingSeparator => formatter.write_str("-F expects SEPARATOR"),
             Self::MissingProgramFile => formatter.write_str("--file expects FILE"),
+            Self::UnknownOption(option) => write!(formatter, "unknown option: {option}"),
             Self::UnexpectedArgument(argument) => {
                 write!(formatter, "unexpected argument: {argument}")
             }
@@ -226,6 +228,8 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, Ar
             field_separator = Some(separator.to_owned());
         } else if is_information_option(&argument) {
             return Err(ArgumentError::InformationCommandCannotBeCombined(argument));
+        } else if argument.starts_with("--") {
+            return Err(ArgumentError::UnknownOption(argument));
         } else if program.is_some() {
             return if matches!(program, Some(ProgramSource::File(_))) {
                 Err(ArgumentError::ConflictingProgramSources)

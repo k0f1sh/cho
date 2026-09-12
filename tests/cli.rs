@@ -711,6 +711,12 @@ fn skip_header_requires_csv_or_tsv_mode() {
 fn argument_errors_explain_the_invalid_arguments() {
     for (arguments, message) in [
         (vec![], "missing PROGRAM"),
+        (vec!["--wat"], "unknown option: --wat"),
+        (
+            vec!["--csv", "--wat", "(print $1)"],
+            "unknown option: --wat",
+        ),
+        (vec!["(print $1)", "--wat"], "unknown option: --wat"),
         (vec!["-F"], "-F expects SEPARATOR"),
         (vec!["--file"], "--file expects FILE"),
         (
