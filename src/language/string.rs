@@ -10,7 +10,7 @@ define_callable!(
         kind: CallableKind::Function,
         signatures: &[sig!([p!("value", Value, ZeroOrMore)] => Some(ValueType::String))]
     },
-    |_context, arguments| { value(Value::Concat(values(arguments)?)) },
+    |_context, arguments| { expr(Expr::Concat(exprs(arguments)?)) },
     String,
     "concatenate values",
     [],
@@ -28,9 +28,9 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let mut args = values(arguments)?;
+        let mut args = exprs(arguments)?;
         let separator = args.remove(0);
-        value(Value::Join {
+        expr(Expr::Join {
             separator: Box::new(separator),
             values: args,
         })
@@ -53,7 +53,7 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let args = values(arguments)?;
+        let args = exprs(arguments)?;
         let (value_arg, delimiter, body) = match args.len() {
             2 => {
                 let [value_arg, body] = args.try_into().expect("length was checked");
@@ -65,7 +65,7 @@ define_callable!(
             }
             _ => return Err(ParseError::InvalidSyntax),
         };
-        value(Value::WithLiteralInput {
+        expr(Expr::WithLiteralInput {
             value: Box::new(value_arg),
             delimiter: delimiter.map(Box::new),
             body: Box::new(body),
@@ -104,8 +104,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [value_arg, count] = value_array(arguments)?;
-        value(Value::Repeat {
+        let [value_arg, count] = expr_array(arguments)?;
+        expr(Expr::Repeat {
             value: Box::new(value_arg),
             count: Box::new(count),
         })
@@ -127,8 +127,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [value_arg, from, to] = value_array(arguments)?;
-        value(Value::Replace {
+        let [value_arg, from, to] = expr_array(arguments)?;
+        expr(Expr::Replace {
             mode: ReplaceMode::First,
             value: Box::new(value_arg),
             from: Box::new(from),
@@ -152,8 +152,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [value_arg, from, to] = value_array(arguments)?;
-        value(Value::Replace {
+        let [value_arg, from, to] = expr_array(arguments)?;
+        expr(Expr::Replace {
             mode: ReplaceMode::All,
             value: Box::new(value_arg),
             from: Box::new(from),
@@ -179,8 +179,8 @@ macro_rules! define_boundary {
                 ]
             },
             |_context, arguments| {
-                let [value_arg, delimiter] = value_array(arguments)?;
-                value(Value::Boundary {
+                let [value_arg, delimiter] = expr_array(arguments)?;
+                expr(Expr::Boundary {
                     kind: StringBoundary::$kind,
                     value: Box::new(value_arg),
                     delimiter: Box::new(delimiter),
@@ -220,10 +220,10 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let mut args = values(arguments)?.into_iter();
+        let mut args = exprs(arguments)?.into_iter();
         let value_arg = args.next().expect("signature requires value");
         let start = args.next().expect("signature requires start");
-        value(Value::Slice {
+        expr(Expr::Slice {
             value: Box::new(value_arg),
             start: Box::new(start),
             length: args.next().map(Box::new),
@@ -248,10 +248,10 @@ macro_rules! define_padding {
                 ]
             },
             |_context, arguments| {
-                let mut args = values(arguments)?.into_iter();
+                let mut args = exprs(arguments)?.into_iter();
                 let value_arg = args.next().expect("signature requires value");
                 let width = args.next().expect("signature requires width");
-                value(Value::Pad {
+                expr(Expr::Pad {
                     kind: StringPadding::$kind,
                     value: Box::new(value_arg),
                     width: Box::new(width),
@@ -290,8 +290,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Count(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::Count(Box::new(value_arg)))
     },
     String,
     "count Unicode characters",
@@ -308,8 +308,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::Boolean))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::StringEmpty(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::StringEmpty(Box::new(value_arg)))
     },
     String,
     "test whether a string is empty",
@@ -326,8 +326,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Escape(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::Escape(Box::new(value_arg)))
     },
     String,
     "escape tabs, newlines, and backslashes",
@@ -344,8 +344,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Quote {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::Quote {
             kind: StringQuote::Double,
             value: Box::new(value_arg),
         })
@@ -365,8 +365,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Quote {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::Quote {
             kind: StringQuote::Single,
             value: Box::new(value_arg),
         })
@@ -386,8 +386,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Unquote(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::Unquote(Box::new(value_arg)))
     },
     String,
     "remove matching quotes and decode backslash escapes",
@@ -406,8 +406,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::ShellQuote(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::ShellQuote(Box::new(value_arg)))
     },
     String,
     "stringify and quote as one shell-safe argument",
@@ -424,8 +424,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Lower(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::Lower(Box::new(value_arg)))
     },
     String,
     "lowercase",
@@ -442,8 +442,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Upper(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::Upper(Box::new(value_arg)))
     },
     String,
     "uppercase",
@@ -460,8 +460,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Reverse(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::Reverse(Box::new(value_arg)))
     },
     String,
     "reverse Unicode characters",
@@ -481,14 +481,14 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let mut arguments = values(arguments)?.into_iter();
+        let mut arguments = exprs(arguments)?.into_iter();
         let value_arg = arguments.next().expect("signature requires value");
         match (arguments.next(), arguments.next()) {
-            (None, None) => value(Value::Trim {
+            (None, None) => expr(Expr::Trim {
                 kind: StringTrim::Both,
                 value: Box::new(value_arg),
             }),
-            (Some(prefix), Some(suffix)) => value(Value::TrimAffixes {
+            (Some(prefix), Some(suffix)) => expr(Expr::TrimAffixes {
                 value: Box::new(value_arg),
                 prefix: Some(Box::new(prefix)),
                 suffix: Some(Box::new(suffix)),
@@ -523,14 +523,14 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let mut arguments = values(arguments)?.into_iter();
+        let mut arguments = exprs(arguments)?.into_iter();
         let value_arg = arguments.next().expect("signature requires value");
         match arguments.next() {
-            None => value(Value::Trim {
+            None => expr(Expr::Trim {
                 kind: StringTrim::Left,
                 value: Box::new(value_arg),
             }),
-            Some(prefix) => value(Value::TrimAffixes {
+            Some(prefix) => expr(Expr::TrimAffixes {
                 value: Box::new(value_arg),
                 prefix: Some(Box::new(prefix)),
                 suffix: None,
@@ -563,14 +563,14 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let mut arguments = values(arguments)?.into_iter();
+        let mut arguments = exprs(arguments)?.into_iter();
         let value_arg = arguments.next().expect("signature requires value");
         match arguments.next() {
-            None => value(Value::Trim {
+            None => expr(Expr::Trim {
                 kind: StringTrim::Right,
                 value: Box::new(value_arg),
             }),
-            Some(suffix) => value(Value::TrimAffixes {
+            Some(suffix) => expr(Expr::TrimAffixes {
                 value: Box::new(value_arg),
                 prefix: None,
                 suffix: Some(Box::new(suffix)),
@@ -602,8 +602,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [value_arg, pattern] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::StringTest {
+        let [value_arg, pattern] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::StringTest {
             kind: StringTest::StartsWith,
             value: value_arg,
             pattern,
@@ -626,8 +626,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [value_arg, pattern] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::StringTest {
+        let [value_arg, pattern] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::StringTest {
             kind: StringTest::EndsWith,
             value: value_arg,
             pattern,
@@ -650,8 +650,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [value_arg, pattern] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::StringTest {
+        let [value_arg, pattern] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::StringTest {
             kind: StringTest::Contains,
             value: value_arg,
             pattern,
@@ -674,8 +674,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::String,
             operator: ComparisonOperator::GreaterThan,
             left,
@@ -699,8 +699,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::String,
             operator: ComparisonOperator::GreaterThanOrEqual,
             left,
@@ -724,8 +724,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::String,
             operator: ComparisonOperator::LessThan,
             left,
@@ -749,8 +749,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::String,
             operator: ComparisonOperator::LessThanOrEqual,
             left,
@@ -774,8 +774,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::String,
             operator: ComparisonOperator::Equal,
             left,
@@ -799,8 +799,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::String,
             operator: ComparisonOperator::NotEqual,
             left,

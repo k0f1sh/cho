@@ -8,6 +8,7 @@ use uuid::Uuid;
 
 use super::datetime::render_duration;
 
+/// A typed result produced by evaluating an expression.
 // Only types that one expression can produce and pass as an argument to another have runtime
 // variants. Cidr, Url, and SemVer remain contextually parsed by their consumers until the
 // language has functions that naturally produce values of those types.

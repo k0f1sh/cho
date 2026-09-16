@@ -11,8 +11,8 @@ define_callable!(
         signatures: &[sig!([p!("value", IpAddr, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::IpVersion(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::IpVersion(Box::new(value_arg)))
     },
     Network,
     "return 4 or 6",
@@ -29,8 +29,8 @@ define_callable!(
         signatures: &[sig!([p!("value", IpAddr, Required)] => Some(ValueType::Boolean))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::IpClass {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::IpClass {
             kind: IpClass::V4,
             value: value_arg,
         })))
@@ -50,8 +50,8 @@ define_callable!(
         signatures: &[sig!([p!("value", IpAddr, Required)] => Some(ValueType::Boolean))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::IpClass {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::IpClass {
             kind: IpClass::V6,
             value: value_arg,
         })))
@@ -73,8 +73,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::IpAddr,
             operator: ComparisonOperator::Equal,
             left,
@@ -98,8 +98,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::IpAddr,
             operator: ComparisonOperator::NotEqual,
             left,
@@ -121,8 +121,8 @@ define_callable!(
         signatures: &[sig!([p!("value", IpAddr, Required)] => Some(ValueType::Boolean))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::IpClass {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::IpClass {
             kind: IpClass::Private,
             value: value_arg,
         })))
@@ -142,8 +142,8 @@ define_callable!(
         signatures: &[sig!([p!("value", IpAddr, Required)] => Some(ValueType::Boolean))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::IpClass {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::IpClass {
             kind: IpClass::Loopback,
             value: value_arg,
         })))
@@ -163,8 +163,8 @@ define_callable!(
         signatures: &[sig!([p!("value", IpAddr, Required)] => Some(ValueType::Boolean))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::IpClass {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::IpClass {
             kind: IpClass::LinkLocal,
             value: value_arg,
         })))
@@ -184,8 +184,8 @@ define_callable!(
         signatures: &[sig!([p!("value", IpAddr, Required)] => Some(ValueType::Boolean))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::IpClass {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::IpClass {
             kind: IpClass::Multicast,
             value: value_arg,
         })))
@@ -207,8 +207,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [cidr, ip] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::CidrContains {
+        let [cidr, ip] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::CidrContains {
             cidr,
             ip,
         })))
@@ -228,8 +228,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Cidr, Required)] => Some(ValueType::IpAddr))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::CidrPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::CidrPart {
             part: CidrPart::Network,
             value: Box::new(value_arg),
         })
@@ -249,8 +249,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Cidr, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::CidrPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::CidrPart {
             part: CidrPart::Prefix,
             value: Box::new(value_arg),
         })
@@ -270,8 +270,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Cidr, Required)] => Some(ValueType::IpAddr))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::CidrPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::CidrPart {
             part: CidrPart::First,
             value: Box::new(value_arg),
         })
@@ -291,8 +291,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Cidr, Required)] => Some(ValueType::IpAddr))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::CidrPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::CidrPart {
             part: CidrPart::Last,
             value: Box::new(value_arg),
         })
@@ -312,8 +312,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Cidr, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::CidrPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::CidrPart {
             part: CidrPart::Size,
             value: Box::new(value_arg),
         })

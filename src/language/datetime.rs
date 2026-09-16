@@ -11,8 +11,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Number, Required)] => Some(ValueType::DateTime))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::DateTimeFromUnix(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::DateTimeFromUnix(Box::new(value_arg)))
     },
     DateTime,
     "convert Unix seconds",
@@ -29,8 +29,8 @@ define_callable!(
         signatures: &[sig!([p!("datetime", DateTime, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::DateTimeToUnix(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::DateTimeToUnix(Box::new(value_arg)))
     },
     DateTime,
     "convert a datetime to Unix seconds",
@@ -50,10 +50,10 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let mut args = values(arguments)?.into_iter();
+        let mut args = exprs(arguments)?.into_iter();
         let value_arg = args.next().expect("signature requires datetime");
         let format = args.next().expect("signature requires format");
-        value(Value::FormatDateTime {
+        expr(Expr::FormatDateTime {
             value: Box::new(value_arg),
             format: Box::new(format),
             timezone: args.next().map(Box::new),
@@ -80,8 +80,8 @@ define_callable!(
         signatures: &[sig!([] => Some(ValueType::DateTime))]
     },
     |_context, arguments| {
-        let [] = value_array(arguments)?;
-        value(Value::DateTimeNow)
+        let [] = expr_array(arguments)?;
+        expr(Expr::DateTimeNow)
     },
     DateTime,
     "current UTC time at second precision",
@@ -101,9 +101,9 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let mut args = values(arguments)?.into_iter();
+        let mut args = exprs(arguments)?.into_iter();
         let value_arg = args.next().expect("signature requires datetime");
-        value(Value::FloorDateTime {
+        expr(Expr::FloorDateTime {
             unit: DateTimeFloorUnit::Second,
             value: Box::new(value_arg),
             timezone: args.next().map(Box::new),
@@ -130,9 +130,9 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let mut args = values(arguments)?.into_iter();
+        let mut args = exprs(arguments)?.into_iter();
         let value_arg = args.next().expect("signature requires datetime");
-        value(Value::FloorDateTime {
+        expr(Expr::FloorDateTime {
             unit: DateTimeFloorUnit::Minute,
             value: Box::new(value_arg),
             timezone: args.next().map(Box::new),
@@ -159,9 +159,9 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let mut args = values(arguments)?.into_iter();
+        let mut args = exprs(arguments)?.into_iter();
         let value_arg = args.next().expect("signature requires datetime");
-        value(Value::FloorDateTime {
+        expr(Expr::FloorDateTime {
             unit: DateTimeFloorUnit::Hour,
             value: Box::new(value_arg),
             timezone: args.next().map(Box::new),
@@ -188,9 +188,9 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let mut args = values(arguments)?.into_iter();
+        let mut args = exprs(arguments)?.into_iter();
         let value_arg = args.next().expect("signature requires datetime");
-        value(Value::FloorDateTime {
+        expr(Expr::FloorDateTime {
             unit: DateTimeFloorUnit::Day,
             value: Box::new(value_arg),
             timezone: args.next().map(Box::new),
@@ -216,8 +216,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [datetime, duration] = value_array(arguments)?;
-        value(Value::AddDateTime {
+        let [datetime, duration] = expr_array(arguments)?;
+        expr(Expr::AddDateTime {
             datetime: Box::new(datetime),
             duration: Box::new(duration),
         })
@@ -239,8 +239,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [datetime, duration] = value_array(arguments)?;
-        value(Value::SubtractDateTime {
+        let [datetime, duration] = expr_array(arguments)?;
+        expr(Expr::SubtractDateTime {
             datetime: Box::new(datetime),
             duration: Box::new(duration),
         })
@@ -262,8 +262,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::DifferenceDateTime {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::DifferenceDateTime {
             left: Box::new(left),
             right: Box::new(right),
         })
@@ -283,8 +283,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Number, Required)] => Some(ValueType::Duration))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::DurationSeconds(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::DurationSeconds(Box::new(value_arg)))
     },
     DateTime,
     "convert seconds to a duration",
@@ -301,8 +301,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Number, Required)] => Some(ValueType::Duration))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::DurationMilliseconds(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::DurationMilliseconds(Box::new(value_arg)))
     },
     DateTime,
     "convert milliseconds to a duration",
@@ -319,8 +319,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Number, Required)] => Some(ValueType::Duration))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::DurationMinutes(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::DurationMinutes(Box::new(value_arg)))
     },
     DateTime,
     "convert minutes to a duration",
@@ -337,8 +337,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Number, Required)] => Some(ValueType::Duration))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::DurationHours(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::DurationHours(Box::new(value_arg)))
     },
     DateTime,
     "convert hours to a duration",
@@ -355,8 +355,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Number, Required)] => Some(ValueType::Duration))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::DurationDays(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::DurationDays(Box::new(value_arg)))
     },
     DateTime,
     "convert fixed 24-hour days to a duration",
@@ -373,8 +373,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Duration, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::DurationToMilliseconds(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::DurationToMilliseconds(Box::new(value_arg)))
     },
     DateTime,
     "convert a duration to milliseconds",
@@ -391,8 +391,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Duration, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::DurationToSeconds(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::DurationToSeconds(Box::new(value_arg)))
     },
     DateTime,
     "convert a duration to seconds",
@@ -409,8 +409,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Duration, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::DurationToMinutes(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::DurationToMinutes(Box::new(value_arg)))
     },
     DateTime,
     "convert a duration to minutes",
@@ -427,8 +427,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Duration, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::DurationToHours(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::DurationToHours(Box::new(value_arg)))
     },
     DateTime,
     "convert a duration to hours",
@@ -445,8 +445,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Duration, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::DurationToDays(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::DurationToDays(Box::new(value_arg)))
     },
     DateTime,
     "convert a duration to fixed 24-hour days",
@@ -465,8 +465,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::DateTime,
             operator: ComparisonOperator::GreaterThan,
             left,
@@ -490,8 +490,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::DateTime,
             operator: ComparisonOperator::GreaterThanOrEqual,
             left,
@@ -515,8 +515,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::DateTime,
             operator: ComparisonOperator::LessThan,
             left,
@@ -540,8 +540,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::DateTime,
             operator: ComparisonOperator::LessThanOrEqual,
             left,
@@ -565,8 +565,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::DateTime,
             operator: ComparisonOperator::Equal,
             left,
@@ -590,8 +590,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::DateTime,
             operator: ComparisonOperator::NotEqual,
             left,

@@ -13,8 +13,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::SemVer,
             operator: ComparisonOperator::GreaterThan,
             left,
@@ -38,8 +38,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::SemVer,
             operator: ComparisonOperator::GreaterThanOrEqual,
             left,
@@ -63,8 +63,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::SemVer,
             operator: ComparisonOperator::LessThan,
             left,
@@ -88,8 +88,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::SemVer,
             operator: ComparisonOperator::LessThanOrEqual,
             left,
@@ -113,8 +113,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::SemVer,
             operator: ComparisonOperator::Equal,
             left,
@@ -138,8 +138,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::SemVer,
             operator: ComparisonOperator::NotEqual,
             left,
@@ -161,8 +161,8 @@ define_callable!(
         signatures: &[sig!([p!("value", SemVer, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::SemVerPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::SemVerPart {
             part: SemVerPart::Major,
             value: Box::new(value_arg),
         })
@@ -182,8 +182,8 @@ define_callable!(
         signatures: &[sig!([p!("value", SemVer, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::SemVerPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::SemVerPart {
             part: SemVerPart::Minor,
             value: Box::new(value_arg),
         })
@@ -203,8 +203,8 @@ define_callable!(
         signatures: &[sig!([p!("value", SemVer, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::SemVerPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::SemVerPart {
             part: SemVerPart::Patch,
             value: Box::new(value_arg),
         })
@@ -224,8 +224,8 @@ define_callable!(
         signatures: &[sig!([p!("value", SemVer, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::SemVerPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::SemVerPart {
             part: SemVerPart::Prerelease,
             value: Box::new(value_arg),
         })
@@ -245,8 +245,8 @@ define_callable!(
         signatures: &[sig!([p!("value", SemVer, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::SemVerPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::SemVerPart {
             part: SemVerPart::Build,
             value: Box::new(value_arg),
         })

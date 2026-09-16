@@ -1,20 +1,20 @@
-use crate::ast::{Form, Program, RegexId, Value};
+use crate::ast::{Expr, Form, Program, RegexId};
 use crate::language::{
     Arguments, AstContext, BoundArgument, CallableDefinition, CallableKind, Cardinality,
-    CompiledExpression, Parameter, Signature, ThreadDirection, ValueType, expect_value, lookup,
+    CompiledExpression, Parameter, Signature, ThreadDirection, ValueType, expect_expr, lookup,
 };
 use crate::parser::{Atom, MAX_EXPRESSION_DEPTH, ParseError, SExpr};
 
 #[derive(Debug)]
 enum InputArgument<'syntax> {
     Syntax(&'syntax SExpr),
-    Compiled(Value),
+    Compiled(Expr),
 }
 
 #[derive(Clone, Copy)]
 enum CompileContext {
     Form,
-    Value,
+    Expr,
 }
 
 pub(crate) fn compile(expressions: Vec<SExpr>) -> Result<Program, ParseError> {
@@ -52,13 +52,13 @@ impl Compiler {
                     return Err(ParseError::FilterAfterAutomaticValue);
                 }
                 CompiledExpression::Form(form) => forms.push(form),
-                CompiledExpression::Value(_) if has_explicit_print => {
+                CompiledExpression::Expr(_) if has_explicit_print => {
                     return Err(ParseError::AutomaticValueWithPrint);
                 }
-                CompiledExpression::Value(_) if has_implicit_print => {
+                CompiledExpression::Expr(_) if has_implicit_print => {
                     return Err(ParseError::MultipleAutomaticValues);
                 }
-                CompiledExpression::Value(value) => {
+                CompiledExpression::Expr(value) => {
                     has_implicit_print = true;
                     forms.push(Form::Print(vec![value]));
                 }
@@ -80,53 +80,51 @@ impl Compiler {
                 let context = if callable.definition().kind == CallableKind::ProgramForm {
                     CompileContext::Form
                 } else {
-                    CompileContext::Value
+                    CompileContext::Expr
                 };
                 self.compile_invocation(operator, syntax_arguments(arguments), context)
             }
-            _ => self
-                .compile_value(expression)
-                .map(CompiledExpression::Value),
+            _ => self.compile_expr(expression).map(CompiledExpression::Expr),
         }
     }
 
-    fn compile_value(&mut self, expression: &SExpr) -> Result<Value, ParseError> {
+    fn compile_expr(&mut self, expression: &SExpr) -> Result<Expr, ParseError> {
         match expression {
             SExpr::Atom(Atom::Symbol(symbol)) => self.compile_symbol(symbol),
-            SExpr::Atom(Atom::String(value)) => Ok(Value::String(value.clone())),
+            SExpr::Atom(Atom::String(value)) => Ok(Expr::String(value.clone())),
             SExpr::Atom(Atom::Regex(_)) => Err(ParseError::InvalidSyntax),
             SExpr::List(items) => self.compile_call(items),
         }
     }
 
-    fn compile_symbol(&mut self, symbol: &str) -> Result<Value, ParseError> {
+    fn compile_symbol(&mut self, symbol: &str) -> Result<Expr, ParseError> {
         match symbol {
-            "NR" => Ok(Value::RecordNumber),
-            "NF" => Ok(Value::FieldCount),
-            "true" => Ok(Value::Boolean(true)),
-            "false" => Ok(Value::Boolean(false)),
+            "NR" => Ok(Expr::RecordNumber),
+            "NF" => Ok(Expr::FieldCount),
+            "true" => Ok(Expr::Boolean(true)),
+            "false" => Ok(Expr::Boolean(false)),
             _ => match symbol.parse::<f64>() {
-                Ok(number) if number.is_finite() => Ok(Value::Number(number)),
+                Ok(number) if number.is_finite() => Ok(Expr::Number(number)),
                 Ok(_) => Err(ParseError::NonFiniteNumberLiteral(symbol.to_owned())),
                 Err(_) => {
                     let field = parse_field(symbol)?;
-                    self.contains_field_range |= matches!(field, Value::FieldRange { .. });
+                    self.contains_field_range |= matches!(field, Expr::FieldRange { .. });
                     Ok(field)
                 }
             },
         }
     }
 
-    fn compile_call(&mut self, items: &[SExpr]) -> Result<Value, ParseError> {
+    fn compile_call(&mut self, items: &[SExpr]) -> Result<Expr, ParseError> {
         let Some(SExpr::Atom(Atom::Symbol(operator))) = items.first() else {
             return Err(ParseError::InvalidSyntax);
         };
         match self.compile_invocation(
             operator,
             syntax_arguments(&items[1..]),
-            CompileContext::Value,
+            CompileContext::Expr,
         )? {
-            CompiledExpression::Value(value) => Ok(value),
+            CompiledExpression::Expr(value) => Ok(value),
             CompiledExpression::Form(_) => Err(ParseError::InvalidSyntax),
         }
     }
@@ -142,7 +140,7 @@ impl Compiler {
         let definition = callable.definition();
         let valid_context = match context {
             CompileContext::Form => definition.kind == CallableKind::ProgramForm,
-            CompileContext::Value => definition.kind != CallableKind::ProgramForm,
+            CompileContext::Expr => definition.kind != CallableKind::ProgramForm,
         };
         if !valid_context {
             return Err(ParseError::InvalidSyntax);
@@ -162,10 +160,10 @@ impl Compiler {
             .collect::<Result<Vec<_>, _>>()?;
         let compiled = callable.to_ast(self, Arguments(arguments))?;
         let depth = match &compiled {
-            CompiledExpression::Value(value) => value.depth(),
+            CompiledExpression::Expr(value) => value.depth(),
             CompiledExpression::Form(Form::Filter(value)) => 1 + value.depth(),
             CompiledExpression::Form(Form::Print(values)) => {
-                1 + values.iter().map(Value::depth).max().unwrap_or(0)
+                1 + values.iter().map(Expr::depth).max().unwrap_or(0)
             }
         };
         // Check every invocation, including each threading step, so an oversized
@@ -191,9 +189,9 @@ impl Compiler {
                 let outer_contains_field_range = self.contains_field_range;
                 let value = self.compile_argument(argument);
                 self.contains_field_range = outer_contains_field_range;
-                value.map(BoundArgument::Value)
+                value.map(BoundArgument::Expr)
             }
-            _ => self.compile_argument(argument).map(BoundArgument::Value),
+            _ => self.compile_argument(argument).map(BoundArgument::Expr),
         }
     }
 
@@ -211,9 +209,9 @@ impl Compiler {
         Ok(id)
     }
 
-    fn compile_argument(&mut self, argument: InputArgument<'_>) -> Result<Value, ParseError> {
+    fn compile_argument(&mut self, argument: InputArgument<'_>) -> Result<Expr, ParseError> {
         match argument {
-            InputArgument::Syntax(expression) => self.compile_value(expression),
+            InputArgument::Syntax(expression) => self.compile_expr(expression),
             InputArgument::Compiled(value) => Ok(value),
         }
     }
@@ -300,9 +298,9 @@ impl AstContext for Compiler {
         &mut self,
         direction: ThreadDirection,
         arguments: Arguments<'_>,
-    ) -> Result<Value, ParseError> {
+    ) -> Result<Expr, ParseError> {
         let mut arguments = arguments.0.into_iter();
-        let mut value = expect_value(arguments.next().ok_or(ParseError::InvalidSyntax)?)?;
+        let mut value = expect_expr(arguments.next().ok_or(ParseError::InvalidSyntax)?)?;
         for step in arguments {
             let step = expect_step(step)?;
             let (operator, expressions) = match step {
@@ -320,11 +318,10 @@ impl AstContext for Compiler {
                 ThreadDirection::First => step_arguments.insert(0, InputArgument::Compiled(value)),
                 ThreadDirection::Last => step_arguments.push(InputArgument::Compiled(value)),
             }
-            value =
-                match self.compile_invocation(operator, step_arguments, CompileContext::Value)? {
-                    CompiledExpression::Value(value) => value,
-                    CompiledExpression::Form(_) => return Err(ParseError::InvalidSyntax),
-                };
+            value = match self.compile_invocation(operator, step_arguments, CompileContext::Expr)? {
+                CompiledExpression::Expr(value) => value,
+                CompiledExpression::Form(_) => return Err(ParseError::InvalidSyntax),
+            };
         }
         Ok(value)
     }
@@ -347,16 +344,16 @@ fn syntax_arguments(arguments: &[SExpr]) -> Vec<InputArgument<'_>> {
 fn expect_step(argument: BoundArgument<'_>) -> Result<&SExpr, ParseError> {
     match argument {
         BoundArgument::Step(step) => Ok(step),
-        BoundArgument::Value(_) | BoundArgument::Regex(_) => Err(ParseError::InvalidSyntax),
+        BoundArgument::Expr(_) | BoundArgument::Regex(_) => Err(ParseError::InvalidSyntax),
     }
 }
 
-fn parse_field(field: &str) -> Result<Value, ParseError> {
+fn parse_field(field: &str) -> Result<Expr, ParseError> {
     let field = field.strip_prefix('$').ok_or(ParseError::InvalidSyntax)?;
     if !field.contains("..") {
         return field
             .parse::<usize>()
-            .map(Value::Field)
+            .map(Expr::Field)
             .map_err(|_| ParseError::InvalidField);
     }
 
@@ -371,7 +368,7 @@ fn parse_field(field: &str) -> Result<Value, ParseError> {
     {
         return Err(ParseError::InvalidField);
     }
-    Ok(Value::FieldRange { start, end })
+    Ok(Expr::FieldRange { start, end })
 }
 
 fn parse_range_bound(bound: &str) -> Result<Option<usize>, ParseError> {
@@ -409,16 +406,16 @@ mod tests {
             parse(r#"(filter (> (s/count $1) 3)) (print (str NR ":" $1))"#),
             Ok(Program {
                 forms: vec![
-                    Form::Filter(Value::Predicate(Box::new(Predicate::Compare {
+                    Form::Filter(Expr::Predicate(Box::new(Predicate::Compare {
                         kind: ComparisonType::Number,
                         operator: ComparisonOperator::GreaterThan,
-                        left: Value::Count(Box::new(Value::Field(1))),
-                        right: Value::Number(3.0),
+                        left: Expr::Count(Box::new(Expr::Field(1))),
+                        right: Expr::Number(3.0),
                     }))),
-                    Form::Print(vec![Value::Concat(vec![
-                        Value::RecordNumber,
-                        Value::String(":".into()),
-                        Value::Field(1),
+                    Form::Print(vec![Expr::Concat(vec![
+                        Expr::RecordNumber,
+                        Expr::String(":".into()),
+                        Expr::Field(1),
                     ])]),
                 ],
                 regex_patterns: vec![],
@@ -433,15 +430,15 @@ mod tests {
             parse("(print $..3 $3.. $2..4)"),
             Ok(Program {
                 forms: vec![Form::Print(vec![
-                    Value::FieldRange {
+                    Expr::FieldRange {
                         start: None,
                         end: Some(3),
                     },
-                    Value::FieldRange {
+                    Expr::FieldRange {
                         start: Some(3),
                         end: None,
                     },
-                    Value::FieldRange {
+                    Expr::FieldRange {
                         start: Some(2),
                         end: Some(4),
                     },
@@ -499,14 +496,14 @@ mod tests {
     fn assigns_regex_ids_in_source_order() {
         let program = parse(r#"(filter (and (reg /error/) (~ $1 "^warn")))"#).unwrap();
         assert_eq!(program.regex_patterns, vec!["error", "^warn"]);
-        let Form::Filter(Value::And(predicates)) = &program.forms[0] else {
+        let Form::Filter(Expr::And(predicates)) = &program.forms[0] else {
             panic!("expected an and filter");
         };
         assert!(matches!(
             predicates.as_slice(),
             [
-                Value::Predicate(predicate),
-                Value::Predicate(other_predicate),
+                Expr::Predicate(predicate),
+                Expr::Predicate(other_predicate),
             ] if matches!(predicate.as_ref(), Predicate::Regex {
                     regex: RegexId(0),
                     ..
@@ -553,9 +550,9 @@ mod tests {
         assert_eq!(
             parse(r#"(print (s/join "," $1 $2))"#),
             Ok(Program {
-                forms: vec![Form::Print(vec![Value::Join {
-                    separator: Box::new(Value::String(",".into())),
-                    values: vec![Value::Field(1), Value::Field(2)],
+                forms: vec![Form::Print(vec![Expr::Join {
+                    separator: Box::new(Expr::String(",".into())),
+                    values: vec![Expr::Field(1), Expr::Field(2)],
                 }])],
                 regex_patterns: vec![],
                 contains_field_range: false,
@@ -568,9 +565,9 @@ mod tests {
         assert_eq!(
             parse(r#"(print (csv/join $1 (s/upper $2)))"#),
             Ok(Program {
-                forms: vec![Form::Print(vec![Value::CsvJoin(vec![
-                    Value::Field(1),
-                    Value::Upper(Box::new(Value::Field(2))),
+                forms: vec![Form::Print(vec![Expr::CsvJoin(vec![
+                    Expr::Field(1),
+                    Expr::Upper(Box::new(Expr::Field(2))),
                 ])])],
                 regex_patterns: vec![],
                 contains_field_range: false,
@@ -597,8 +594,8 @@ mod tests {
         assert!(matches!(
             &program.forms[0],
             Form::Print(values)
-                if matches!(values[0], Value::Replace { mode: ReplaceMode::First, .. })
-                    && matches!(values[1], Value::RegexReplace {
+                if matches!(values[0], Expr::Replace { mode: ReplaceMode::First, .. })
+                    && matches!(values[1], Expr::RegexReplace {
                         mode: ReplaceMode::All,
                         regex: RegexId(0),
                         ..
@@ -619,8 +616,8 @@ mod tests {
         let program = parse(r#"(p (re/extract $0 /(x)/))"#).unwrap();
         assert_eq!(program.regex_patterns, vec!["(x)"]);
         assert!(matches!(&program.forms[0], Form::Print(values)
-            if matches!(&values[0], Value::RegexExtract { group, .. }
-                if **group == Value::Number(0.0))));
+            if matches!(&values[0], Expr::RegexExtract { group, .. }
+                if **group == Expr::Number(0.0))));
         assert_eq!(
             parse(r#"(p (-> $0 (re/extract /(x)/ (s/count "x"))))"#).unwrap(),
             parse(r#"(p (re/extract $0 /(x)/ (s/count "x")))"#).unwrap()
@@ -633,15 +630,15 @@ mod tests {
             parse(r#"(print (s/slice $1 2) (s/slice $1 2 3))"#),
             Ok(Program {
                 forms: vec![Form::Print(vec![
-                    Value::Slice {
-                        start: Box::new(Value::Number(2.0)),
+                    Expr::Slice {
+                        start: Box::new(Expr::Number(2.0)),
                         length: None,
-                        value: Box::new(Value::Field(1)),
+                        value: Box::new(Expr::Field(1)),
                     },
-                    Value::Slice {
-                        start: Box::new(Value::Number(2.0)),
-                        length: Some(Box::new(Value::Number(3.0))),
-                        value: Box::new(Value::Field(1)),
+                    Expr::Slice {
+                        start: Box::new(Expr::Number(2.0)),
+                        length: Some(Box::new(Expr::Number(3.0))),
+                        value: Box::new(Expr::Field(1)),
                     },
                 ])],
                 regex_patterns: vec![],
@@ -656,17 +653,17 @@ mod tests {
             parse(r#"(print (s/lpad $1 5) (s/rpad $2 4 "0"))"#),
             Ok(Program {
                 forms: vec![Form::Print(vec![
-                    Value::Pad {
+                    Expr::Pad {
                         kind: StringPadding::Left,
-                        value: Box::new(Value::Field(1)),
-                        width: Box::new(Value::Number(5.0)),
+                        value: Box::new(Expr::Field(1)),
+                        width: Box::new(Expr::Number(5.0)),
                         fill: None,
                     },
-                    Value::Pad {
+                    Expr::Pad {
                         kind: StringPadding::Right,
-                        value: Box::new(Value::Field(2)),
-                        width: Box::new(Value::Number(4.0)),
-                        fill: Some(Box::new(Value::String("0".into()))),
+                        value: Box::new(Expr::Field(2)),
+                        width: Box::new(Expr::Number(4.0)),
+                        fill: Some(Box::new(Expr::String("0".into()))),
                     },
                 ])],
                 regex_patterns: vec![],

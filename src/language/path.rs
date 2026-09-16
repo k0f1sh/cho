@@ -13,8 +13,8 @@ macro_rules! define_path_part {
                 signatures: &[sig!([p!("value", String, Required)] => Some(ValueType::String))]
             },
             |_context, arguments| {
-                let [value_arg] = value_array(arguments)?;
-                value(Value::PathPart {
+                let [value_arg] = expr_array(arguments)?;
+                expr(Expr::PathPart {
                     part: PathPart::$part,
                     value: Box::new(value_arg),
                 })

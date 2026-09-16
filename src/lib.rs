@@ -8,7 +8,7 @@ mod lexer;
 mod parser;
 mod runtime;
 
-pub use ast::{ComparisonOperator, Form, Predicate, Program, Value};
+pub use ast::{ComparisonOperator, Expr, Form, Predicate, Program};
 pub use parser::ParseError;
 pub use runtime::{run, run_csv, run_no_input, run_with_field_separator};
 

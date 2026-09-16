@@ -1,12 +1,12 @@
-use crate::ast::{ArithmeticOperator, NumberOperator, Value};
+use crate::ast::{ArithmeticOperator, Expr, NumberOperator};
 
 use super::eval::{EvalContext, evaluate};
 use super::value::{EvalError, EvalResult, RuntimeValue, expect_number};
 
 pub(super) fn evaluate_arithmetic(
     operator: &ArithmeticOperator,
-    left: &Value,
-    right: &Value,
+    left: &Expr,
+    right: &Expr,
     record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let function = match operator {
@@ -58,7 +58,7 @@ pub(super) fn evaluate_arithmetic(
 
 pub(super) fn evaluate_operation(
     operator: &NumberOperator,
-    value: &Value,
+    value: &Expr,
     record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let function = match operator {
@@ -84,8 +84,8 @@ pub(super) fn evaluate_operation(
 }
 
 pub(super) fn format_fixed(
-    value: &Value,
-    digits: &Value,
+    value: &Expr,
+    digits: &Expr,
     record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let value = expect_number(evaluate(value, record)?, "n/fixed", 1)?;
@@ -106,7 +106,7 @@ pub(super) fn format_fixed(
 }
 
 pub(super) fn evaluate_extreme(
-    values: &[Value],
+    values: &[Expr],
     function: &'static str,
     choose: impl Fn(f64, f64) -> f64,
     record: &EvalContext<'_, '_, '_>,
@@ -129,9 +129,9 @@ pub(super) fn evaluate_extreme(
 }
 
 pub(super) fn clamp(
-    value: &Value,
-    minimum: &Value,
-    maximum: &Value,
+    value: &Expr,
+    minimum: &Expr,
+    maximum: &Expr,
     record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let value = expect_number(evaluate(value, record)?, "n/clamp", 1)?;

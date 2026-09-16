@@ -2,7 +2,7 @@ use std::io;
 
 use regex::Regex;
 
-use crate::ast::{Form, Program, Value};
+use crate::ast::{Expr, Form, Program};
 use crate::parse;
 
 pub(super) struct CompiledProgram {
@@ -22,7 +22,7 @@ pub(super) fn compile_program(source: &str) -> io::Result<CompiledProgram> {
         .iter()
         .all(|form| matches!(form, Form::Filter(_)))
     {
-        program.forms.push(Form::Print(vec![Value::Field(0)]));
+        program.forms.push(Form::Print(vec![Expr::Field(0)]));
     }
     let regexes = program
         .regex_patterns

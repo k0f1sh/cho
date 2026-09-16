@@ -1,4 +1,4 @@
-use crate::ast::{Form, RegexId, Value};
+use crate::ast::{Expr, Form, RegexId};
 use crate::parser::{ParseError, SExpr};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -112,7 +112,7 @@ impl CallableDefinition {
 
 #[derive(Debug)]
 pub(crate) enum BoundArgument<'syntax> {
-    Value(Value),
+    Expr(Expr),
     Regex(RegexId),
     Step(&'syntax SExpr),
 }
@@ -121,7 +121,7 @@ pub(crate) struct Arguments<'syntax>(pub(crate) Vec<BoundArgument<'syntax>>);
 
 pub(crate) enum CompiledExpression {
     Form(Form),
-    Value(Value),
+    Expr(Expr),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -137,7 +137,7 @@ pub(crate) trait AstContext {
         &mut self,
         direction: ThreadDirection,
         arguments: Arguments<'_>,
-    ) -> Result<Value, ParseError>;
+    ) -> Result<Expr, ParseError>;
 }
 
 pub(crate) trait ToAst: Sync {
@@ -288,21 +288,21 @@ macro_rules! signature_documentation {
     };
 }
 
-pub(crate) fn values(arguments: Arguments<'_>) -> Result<Vec<Value>, ParseError> {
-    arguments.0.into_iter().map(expect_value).collect()
+pub(crate) fn exprs(arguments: Arguments<'_>) -> Result<Vec<Expr>, ParseError> {
+    arguments.0.into_iter().map(expect_expr).collect()
 }
 
-pub(crate) fn value_array<const N: usize>(
+pub(crate) fn expr_array<const N: usize>(
     arguments: Arguments<'_>,
-) -> Result<[Value; N], ParseError> {
-    values(arguments)?
+) -> Result<[Expr; N], ParseError> {
+    exprs(arguments)?
         .try_into()
         .map_err(|_| ParseError::InvalidSyntax)
 }
 
-pub(crate) fn expect_value(argument: BoundArgument<'_>) -> Result<Value, ParseError> {
+pub(crate) fn expect_expr(argument: BoundArgument<'_>) -> Result<Expr, ParseError> {
     match argument {
-        BoundArgument::Value(value) => Ok(value),
+        BoundArgument::Expr(value) => Ok(value),
         BoundArgument::Regex(_) | BoundArgument::Step(_) => Err(ParseError::InvalidSyntax),
     }
 }
@@ -310,12 +310,12 @@ pub(crate) fn expect_value(argument: BoundArgument<'_>) -> Result<Value, ParseEr
 pub(crate) fn expect_regex(argument: BoundArgument<'_>) -> Result<RegexId, ParseError> {
     match argument {
         BoundArgument::Regex(regex) => Ok(regex),
-        BoundArgument::Value(_) | BoundArgument::Step(_) => Err(ParseError::InvalidSyntax),
+        BoundArgument::Expr(_) | BoundArgument::Step(_) => Err(ParseError::InvalidSyntax),
     }
 }
 
-pub(crate) fn value(value: Value) -> Result<CompiledExpression, ParseError> {
-    Ok(CompiledExpression::Value(value))
+pub(crate) fn expr(value: Expr) -> Result<CompiledExpression, ParseError> {
+    Ok(CompiledExpression::Expr(value))
 }
 
 pub(crate) fn form(form: Form) -> Result<CompiledExpression, ParseError> {

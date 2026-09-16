@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use ulid::Ulid;
 use uuid::Uuid;
 
-use crate::ast::{ComparisonOperator, Value};
+use crate::ast::{ComparisonOperator, Expr};
 
 use super::eval::{EvalContext, evaluate};
 use super::predicate::apply_ordering;
@@ -67,8 +67,8 @@ pub(super) fn expect_ulid(
 
 pub(super) fn compare_uuid(
     operator: &ComparisonOperator,
-    left: &Value,
-    right: &Value,
+    left: &Expr,
+    right: &Expr,
     record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<bool> {
     let function = comparison_name("uuid", operator);
@@ -79,8 +79,8 @@ pub(super) fn compare_uuid(
 
 pub(super) fn compare_ulid(
     operator: &ComparisonOperator,
-    left: &Value,
-    right: &Value,
+    left: &Expr,
+    right: &Expr,
     record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<bool> {
     let function = comparison_name("ulid", operator);

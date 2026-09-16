@@ -1,4 +1,4 @@
-use crate::ast::{ComparisonOperator, ComparisonType, Predicate, StringTest, Value};
+use crate::ast::{ComparisonOperator, ComparisonType, Expr, Predicate, StringTest};
 
 use super::date::expect_date;
 use super::datetime::expect_datetime;
@@ -56,8 +56,8 @@ pub(super) fn matches(predicate: &Predicate, record: &EvalContext<'_, '_, '_>) -
 pub(super) fn compare(
     kind: &ComparisonType,
     operator: &ComparisonOperator,
-    left: &Value,
-    right: &Value,
+    left: &Expr,
+    right: &Expr,
     record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<bool> {
     let function = comparison_name(kind, operator);

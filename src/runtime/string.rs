@@ -1,12 +1,12 @@
-use crate::ast::{StringPadding, StringQuote, Value};
+use crate::ast::{Expr, StringPadding, StringQuote};
 
 use super::eval::{EvalContext, evaluate};
 use super::value::{EvalError, EvalResult, RuntimeValue, expect_number};
 
 pub(super) fn evaluate_string_slice(
-    start: &Value,
-    length: Option<&Value>,
-    value: &Value,
+    start: &Expr,
+    length: Option<&Expr>,
+    value: &Expr,
     record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let value = evaluate(value, record)?.render();
@@ -30,9 +30,9 @@ pub(super) fn evaluate_string_slice(
 
 pub(super) fn evaluate_string_padding(
     kind: &StringPadding,
-    value: &Value,
-    width: &Value,
-    fill: Option<&Value>,
+    value: &Expr,
+    width: &Expr,
+    fill: Option<&Expr>,
     record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let function = match kind {
@@ -105,8 +105,8 @@ pub(super) fn evaluate_string_padding(
 }
 
 pub(super) fn evaluate_string_repeat(
-    value: &Value,
-    count: &Value,
+    value: &Expr,
+    count: &Expr,
     record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let value = evaluate(value, record)?.render();
@@ -161,7 +161,7 @@ pub(super) fn evaluate_string_repeat(
 }
 
 fn expect_padding_width(
-    value: &Value,
+    value: &Expr,
     function: &'static str,
     record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<usize> {
@@ -190,7 +190,7 @@ fn expect_padding_width(
 }
 
 pub(super) fn expect_slice_index(
-    value: &Value,
+    value: &Expr,
     function: &'static str,
     argument: usize,
     allow_zero: bool,

@@ -11,8 +11,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Date, Required)] => Some(ValueType::Date))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::NormalizeDate(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::NormalizeDate(Box::new(value_arg)))
     },
     Date,
     "validate a calendar date",
@@ -31,8 +31,8 @@ macro_rules! part {
                 signatures: &[sig!([p!("date", Date, Required)] => Some(ValueType::Number))]
             },
             |_context, arguments| {
-                let [value_arg] = value_array(arguments)?;
-                value(Value::DatePart {
+                let [value_arg] = expr_array(arguments)?;
+                expr(Expr::DatePart {
                     part: DatePart::$part,
                     value: Box::new(value_arg),
                 })
@@ -79,8 +79,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [date, days] = value_array(arguments)?;
-        value(Value::AddDate {
+        let [date, days] = expr_array(arguments)?;
+        expr(Expr::AddDate {
             date: Box::new(date),
             days: Box::new(days),
         })
@@ -102,8 +102,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [date, days] = value_array(arguments)?;
-        value(Value::SubtractDate {
+        let [date, days] = expr_array(arguments)?;
+        expr(Expr::SubtractDate {
             date: Box::new(date),
             days: Box::new(days),
         })
@@ -125,8 +125,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::DifferenceDate {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::DifferenceDate {
             left: Box::new(left),
             right: Box::new(right),
         })
@@ -150,8 +150,8 @@ macro_rules! comparison {
                 ]
             },
             |_context, arguments| {
-                let [left, right] = value_array(arguments)?;
-                value(Value::Predicate(Box::new(Predicate::Compare {
+                let [left, right] = expr_array(arguments)?;
+                expr(Expr::Predicate(Box::new(Predicate::Compare {
                     kind: ComparisonType::Date,
                     operator: ComparisonOperator::$operator,
                     left,

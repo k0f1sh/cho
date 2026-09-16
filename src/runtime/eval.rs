@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use regex::Regex;
 
 use crate::ast::{
-    CidrPart, RegexId, ReplaceMode, StringBoundary, StringTrim, UrlEncoding, UrlPart, Value,
+    CidrPart, Expr, RegexId, ReplaceMode, StringBoundary, StringTrim, UrlEncoding, UrlPart,
 };
 
 use super::date::{checked_result, expect_date, expect_days, part as date_part, part_name};
@@ -134,7 +134,7 @@ fn delimited_field_spans<'a>(
 fn evaluate_with_input(
     value: String,
     field_spans: Vec<(usize, usize)>,
-    body: &Value,
+    body: &Expr,
     context: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let local_record = Record {
@@ -153,9 +153,9 @@ fn evaluate_with_input(
 }
 
 fn evaluate_with_literal_input(
-    value: &Value,
-    delimiter: Option<&Value>,
-    body: &Value,
+    value: &Expr,
+    delimiter: Option<&Expr>,
+    body: &Expr,
     context: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let value = evaluate(value, context)?.render();
@@ -178,9 +178,9 @@ fn evaluate_with_literal_input(
 }
 
 fn evaluate_with_regex_input(
-    value: &Value,
+    value: &Expr,
     regex: RegexId,
-    body: &Value,
+    body: &Expr,
     context: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let value = evaluate(value, context)?.render();
@@ -194,16 +194,13 @@ fn evaluate_with_regex_input(
     evaluate_with_input(value, field_spans, body, context)
 }
 
-pub(super) fn evaluate(
-    value: &Value,
-    record: &EvalContext<'_, '_, '_>,
-) -> EvalResult<RuntimeValue> {
-    match value {
-        Value::Field(0) => Ok(RuntimeValue::String(record.line.to_owned())),
-        Value::Field(number) => Ok(RuntimeValue::String(
+pub(super) fn evaluate(expr: &Expr, record: &EvalContext<'_, '_, '_>) -> EvalResult<RuntimeValue> {
+    match expr {
+        Expr::Field(0) => Ok(RuntimeValue::String(record.line.to_owned())),
+        Expr::Field(number) => Ok(RuntimeValue::String(
             record.field(*number).unwrap_or("").to_owned(),
         )),
-        Value::DynamicField(number) => {
+        Expr::DynamicField(number) => {
             let input = evaluate(number, record)?;
             let rendered = input.render();
             let number = expect_number(input, "field", 1)?;
@@ -223,10 +220,10 @@ pub(super) fn evaluate(
                 record.field(number).unwrap_or("").to_owned()
             }))
         }
-        Value::FieldRange { start, end } => Ok(RuntimeValue::String(
+        Expr::FieldRange { start, end } => Ok(RuntimeValue::String(
             record.field_range(*start, *end).to_owned(),
         )),
-        Value::DynamicFieldRange { start, end } => {
+        Expr::DynamicFieldRange { start, end } => {
             let function = match (start, end) {
                 (Some(_), Some(_)) => "fields",
                 (Some(_), None) => "fields-from",
@@ -257,47 +254,47 @@ pub(super) fn evaluate(
                 record.field_range(start, end).to_owned(),
             ))
         }
-        Value::RecordNumber => Ok(RuntimeValue::Number(record.number as f64)),
-        Value::FieldCount => Ok(RuntimeValue::Number(record.field_count() as f64)),
-        Value::WithLiteralInput {
+        Expr::RecordNumber => Ok(RuntimeValue::Number(record.number as f64)),
+        Expr::FieldCount => Ok(RuntimeValue::Number(record.field_count() as f64)),
+        Expr::WithLiteralInput {
             value,
             delimiter,
             body,
         } => evaluate_with_literal_input(value, delimiter.as_deref(), body, record),
-        Value::WithRegexInput { value, regex, body } => {
+        Expr::WithRegexInput { value, regex, body } => {
             evaluate_with_regex_input(value, *regex, body, record)
         }
-        Value::String(value) => Ok(RuntimeValue::String(value.clone())),
-        Value::Number(number) => Ok(RuntimeValue::Number(*number)),
-        Value::Boolean(value) => Ok(RuntimeValue::Boolean(*value)),
-        Value::StringEmpty(value) => Ok(RuntimeValue::Boolean(
+        Expr::String(value) => Ok(RuntimeValue::String(value.clone())),
+        Expr::Number(number) => Ok(RuntimeValue::Number(*number)),
+        Expr::Boolean(value) => Ok(RuntimeValue::Boolean(*value)),
+        Expr::StringEmpty(value) => Ok(RuntimeValue::Boolean(
             evaluate(value, record)?.render().is_empty(),
         )),
-        Value::Arithmetic {
+        Expr::Arithmetic {
             operator,
             left,
             right,
         } => number::evaluate_arithmetic(operator, left, right, record),
-        Value::NumberOperation { operator, value } => {
+        Expr::NumberOperation { operator, value } => {
             number::evaluate_operation(operator, value, record)
         }
-        Value::FormatNumberFixed { digits, value } => number::format_fixed(value, digits, record),
-        Value::NumberMinimum(values) => number::evaluate_extreme(values, "n/min", f64::min, record),
-        Value::NumberMaximum(values) => number::evaluate_extreme(values, "n/max", f64::max, record),
-        Value::ClampNumber {
+        Expr::FormatNumberFixed { digits, value } => number::format_fixed(value, digits, record),
+        Expr::NumberMinimum(values) => number::evaluate_extreme(values, "n/min", f64::min, record),
+        Expr::NumberMaximum(values) => number::evaluate_extreme(values, "n/max", f64::max, record),
+        Expr::ClampNumber {
             value,
             minimum,
             maximum,
         } => number::clamp(value, minimum, maximum, record),
-        Value::NormalizeByteSize(value) => {
+        Expr::NormalizeByteSize(value) => {
             let value = super::byte_size::expect(evaluate(value, record)?, "bs", 1)?;
             Ok(RuntimeValue::ByteSize(value))
         }
-        Value::ByteSizeToBytes(value) => {
+        Expr::ByteSizeToBytes(value) => {
             let value = super::byte_size::expect(evaluate(value, record)?, "bs/to-b", 1)?;
             super::byte_size::to_number(value)
         }
-        Value::UrlPart { part, value } => {
+        Expr::UrlPart { part, value } => {
             let function = url_part_name(part);
             let input = expect_string(evaluate(value, record)?, function, 1)?;
             let url = parse_absolute_url(&input, function, 1)?;
@@ -311,7 +308,7 @@ pub(super) fn evaluate(
             };
             Ok(RuntimeValue::String(part))
         }
-        Value::UrlEncoding { operation, value } => {
+        Expr::UrlEncoding { operation, value } => {
             let function = url_encoding_name(operation);
             let value = expect_string(evaluate(value, record)?, function, 1)?;
             match operation {
@@ -323,12 +320,12 @@ pub(super) fn evaluate(
                     }),
             }
         }
-        Value::PathPart { part, value } => {
+        Expr::PathPart { part, value } => {
             let function = super::path::function_name(part);
             let value = expect_string(evaluate(value, record)?, function, 1)?;
             Ok(RuntimeValue::String(super::path::part(&value, *part)))
         }
-        Value::UrlQueryGet { name, url } => {
+        Expr::UrlQueryGet { name, url } => {
             let input = expect_string(evaluate(url, record)?, "url/query-get", 1)?;
             let url = parse_absolute_url(&input, "url/query-get", 1)?;
             let name = expect_string(evaluate(name, record)?, "url/query-get", 2)?;
@@ -338,14 +335,14 @@ pub(super) fn evaluate(
                     .unwrap_or_default(),
             ))
         }
-        Value::IpVersion(value) => {
+        Expr::IpVersion(value) => {
             let ip = expect_ip(evaluate(value, record)?, "ip/version", 1)?;
             Ok(RuntimeValue::Number(match ip {
                 IpAddr::V4(_) => 4.0,
                 IpAddr::V6(_) => 6.0,
             }))
         }
-        Value::CidrPart { part, value } => {
+        Expr::CidrPart { part, value } => {
             let function = cidr_part_name(part);
             let cidr = expect_cidr(evaluate(value, record)?, function, 1)?;
             match part {
@@ -368,40 +365,40 @@ pub(super) fn evaluate(
                 }
             }
         }
-        Value::SemVerPart { part, value } => semver::evaluate_part(part, value, record),
-        Value::NormalizeUuid(value) => {
+        Expr::SemVerPart { part, value } => semver::evaluate_part(part, value, record),
+        Expr::NormalizeUuid(value) => {
             expect_uuid(evaluate(value, record)?, "uuid", 1).map(RuntimeValue::Uuid)
         }
-        Value::UuidV4 => Ok(RuntimeValue::Uuid(uuid::Uuid::new_v4())),
-        Value::UuidV7 => Ok(RuntimeValue::Uuid(uuid::Uuid::now_v7())),
-        Value::UuidVersion(value) => {
+        Expr::UuidV4 => Ok(RuntimeValue::Uuid(uuid::Uuid::new_v4())),
+        Expr::UuidV7 => Ok(RuntimeValue::Uuid(uuid::Uuid::now_v7())),
+        Expr::UuidVersion(value) => {
             let uuid = expect_uuid(evaluate(value, record)?, "uuid/version", 1)?;
             Ok(RuntimeValue::Number(uuid.get_version_num() as f64))
         }
-        Value::UuidTime(value) => {
+        Expr::UuidTime(value) => {
             let uuid = expect_uuid(evaluate(value, record)?, "uuid/time", 1)?;
             uuid_time(uuid)
         }
-        Value::NormalizeUlid(value) => {
+        Expr::NormalizeUlid(value) => {
             expect_ulid(evaluate(value, record)?, "ulid", 1).map(RuntimeValue::Ulid)
         }
-        Value::UlidNew => {
+        Expr::UlidNew => {
             let mut generator = record.ulid_generator.borrow_mut();
             let ulid = generator
                 .generate()
                 .unwrap_or_else(|overflow| overflow.commit_overflow_increment());
             Ok(RuntimeValue::Ulid(ulid))
         }
-        Value::UlidTime(value) => {
+        Expr::UlidTime(value) => {
             let ulid = expect_ulid(evaluate(value, record)?, "ulid/time", 1)?;
             ulid_time(ulid)
         }
-        Value::Predicate(predicate) => matches(predicate, record).map(RuntimeValue::Boolean),
-        Value::Not(value) => {
+        Expr::Predicate(predicate) => matches(predicate, record).map(RuntimeValue::Boolean),
+        Expr::Not(value) => {
             let value = expect_boolean(evaluate(value, record)?, "not", 1)?;
             Ok(RuntimeValue::Boolean(!value))
         }
-        Value::And(values) => {
+        Expr::And(values) => {
             for (index, value) in values.iter().enumerate() {
                 if !expect_boolean(evaluate(value, record)?, "and", index + 1)? {
                     return Ok(RuntimeValue::Boolean(false));
@@ -409,7 +406,7 @@ pub(super) fn evaluate(
             }
             Ok(RuntimeValue::Boolean(true))
         }
-        Value::Or(values) => {
+        Expr::Or(values) => {
             for (index, value) in values.iter().enumerate() {
                 if expect_boolean(evaluate(value, record)?, "or", index + 1)? {
                     return Ok(RuntimeValue::Boolean(true));
@@ -417,32 +414,32 @@ pub(super) fn evaluate(
             }
             Ok(RuntimeValue::Boolean(false))
         }
-        Value::NormalizeDate(value) => {
+        Expr::NormalizeDate(value) => {
             expect_date(evaluate(value, record)?, "date", 1).map(RuntimeValue::Date)
         }
-        Value::DatePart { part, value } => {
+        Expr::DatePart { part, value } => {
             let function = part_name(part);
             let date = expect_date(evaluate(value, record)?, function, 1)?;
             Ok(date_part(date, part))
         }
-        Value::AddDate { date, days } => {
+        Expr::AddDate { date, days } => {
             let date = expect_date(evaluate(date, record)?, "d/add", 1)?;
             let days = expect_days(evaluate(days, record)?, "d/add")?;
             checked_result(date.checked_add_signed(days), "d/add", &days)
         }
-        Value::SubtractDate { date, days } => {
+        Expr::SubtractDate { date, days } => {
             let date = expect_date(evaluate(date, record)?, "d/sub", 1)?;
             let days = expect_days(evaluate(days, record)?, "d/sub")?;
             checked_result(date.checked_sub_signed(days), "d/sub", &days)
         }
-        Value::DifferenceDate { left, right } => {
+        Expr::DifferenceDate { left, right } => {
             let left = expect_date(evaluate(left, record)?, "d/diff", 1)?;
             let right = expect_date(evaluate(right, record)?, "d/diff", 2)?;
             Ok(RuntimeValue::Number(
                 left.signed_duration_since(right).num_days() as f64,
             ))
         }
-        Value::DateTimeFromUnix(value) => {
+        Expr::DateTimeFromUnix(value) => {
             let seconds = expect_number(evaluate(value, record)?, "dt/unix", 1)?;
             if seconds.fract() != 0.0 || seconds < i64::MIN as f64 || seconds > i64::MAX as f64 {
                 return Err(EvalError::conversion(
@@ -465,14 +462,14 @@ pub(super) fn evaluate(
                     )
                 })
         }
-        Value::DateTimeToUnix(value) => {
+        Expr::DateTimeToUnix(value) => {
             let datetime = expect_datetime(evaluate(value, record)?, "dt/to-unix", 1)?;
             Ok(RuntimeValue::Number(
                 datetime.timestamp() as f64
                     + f64::from(datetime.timestamp_subsec_nanos()) / 1_000_000_000.0,
             ))
         }
-        Value::FormatDateTime {
+        Expr::FormatDateTime {
             format,
             timezone,
             value,
@@ -498,20 +495,18 @@ pub(super) fn evaluate(
             };
             Ok(RuntimeValue::String(formatted))
         }
-        Value::DurationSeconds(value) => duration_from_value(value, 1.0, "du/s", record),
-        Value::DurationMilliseconds(value) => duration_from_value(value, 0.001, "du/ms", record),
-        Value::DurationMinutes(value) => duration_from_value(value, 60.0, "du/m", record),
-        Value::DurationHours(value) => duration_from_value(value, 3600.0, "du/h", record),
-        Value::DurationDays(value) => duration_from_value(value, 86_400.0, "du/d", record),
-        Value::DurationToMilliseconds(value) => {
-            duration_as_number(value, 0.001, "du/to-ms", record)
-        }
-        Value::DurationToSeconds(value) => duration_as_number(value, 1.0, "du/to-s", record),
-        Value::DurationToMinutes(value) => duration_as_number(value, 60.0, "du/to-m", record),
-        Value::DurationToHours(value) => duration_as_number(value, 3600.0, "du/to-h", record),
-        Value::DurationToDays(value) => duration_as_number(value, 86_400.0, "du/to-d", record),
-        Value::DateTimeNow => Ok(RuntimeValue::DateTime(record.now)),
-        Value::FloorDateTime {
+        Expr::DurationSeconds(value) => duration_from_value(value, 1.0, "du/s", record),
+        Expr::DurationMilliseconds(value) => duration_from_value(value, 0.001, "du/ms", record),
+        Expr::DurationMinutes(value) => duration_from_value(value, 60.0, "du/m", record),
+        Expr::DurationHours(value) => duration_from_value(value, 3600.0, "du/h", record),
+        Expr::DurationDays(value) => duration_from_value(value, 86_400.0, "du/d", record),
+        Expr::DurationToMilliseconds(value) => duration_as_number(value, 0.001, "du/to-ms", record),
+        Expr::DurationToSeconds(value) => duration_as_number(value, 1.0, "du/to-s", record),
+        Expr::DurationToMinutes(value) => duration_as_number(value, 60.0, "du/to-m", record),
+        Expr::DurationToHours(value) => duration_as_number(value, 3600.0, "du/to-h", record),
+        Expr::DurationToDays(value) => duration_as_number(value, 86_400.0, "du/to-d", record),
+        Expr::DateTimeNow => Ok(RuntimeValue::DateTime(record.now)),
+        Expr::FloorDateTime {
             unit,
             timezone,
             value,
@@ -528,7 +523,7 @@ pub(super) fn evaluate(
             };
             Ok(RuntimeValue::DateTime(floored))
         }
-        Value::AddDateTime { datetime, duration } => {
+        Expr::AddDateTime { datetime, duration } => {
             let datetime = expect_datetime(evaluate(datetime, record)?, "dt/add", 1)?;
             let duration = expect_duration(evaluate(duration, record)?, "dt/add", 2)?;
             datetime
@@ -544,7 +539,7 @@ pub(super) fn evaluate(
                     )
                 })
         }
-        Value::SubtractDateTime { datetime, duration } => {
+        Expr::SubtractDateTime { datetime, duration } => {
             let datetime = expect_datetime(evaluate(datetime, record)?, "dt/sub", 1)?;
             let duration = expect_duration(evaluate(duration, record)?, "dt/sub", 2)?;
             datetime
@@ -560,7 +555,7 @@ pub(super) fn evaluate(
                     )
                 })
         }
-        Value::DifferenceDateTime { left, right } => {
+        Expr::DifferenceDateTime { left, right } => {
             let left = expect_datetime(evaluate(left, record)?, "dt/diff", 1)?;
             let right = expect_datetime(evaluate(right, record)?, "dt/diff", 2)?;
             let duration = left.signed_duration_since(right);
@@ -575,13 +570,13 @@ pub(super) fn evaluate(
             }
             Ok(RuntimeValue::Duration(duration))
         }
-        Value::Concat(values) => Ok(RuntimeValue::String(
+        Expr::Concat(values) => Ok(RuntimeValue::String(
             values
                 .iter()
                 .map(|value| evaluate(value, record).map(|value| value.render()))
                 .collect::<EvalResult<String>>()?,
         )),
-        Value::Join { separator, values } => {
+        Expr::Join { separator, values } => {
             let separator = evaluate(separator, record)?.render();
             let values = values
                 .iter()
@@ -589,15 +584,15 @@ pub(super) fn evaluate(
                 .collect::<EvalResult<Vec<_>>>()?;
             Ok(RuntimeValue::String(values.join(&separator)))
         }
-        Value::CsvJoin(values) => {
+        Expr::CsvJoin(values) => {
             let values = values
                 .iter()
                 .map(|value| evaluate(value, record).map(|value| value.render()))
                 .collect::<EvalResult<Vec<_>>>()?;
             Ok(RuntimeValue::String(super::csv::join(&values)))
         }
-        Value::Repeat { value, count } => evaluate_string_repeat(value, count, record),
-        Value::Replace {
+        Expr::Repeat { value, count } => evaluate_string_repeat(value, count, record),
+        Expr::Replace {
             mode,
             value,
             from,
@@ -612,7 +607,7 @@ pub(super) fn evaluate(
             };
             Ok(RuntimeValue::String(replaced))
         }
-        Value::RegexReplace {
+        Expr::RegexReplace {
             mode,
             regex,
             replacement,
@@ -627,7 +622,7 @@ pub(super) fn evaluate(
             };
             Ok(RuntimeValue::String(replaced.into_owned()))
         }
-        Value::RegexExtract {
+        Expr::RegexExtract {
             value,
             regex,
             group,
@@ -652,7 +647,7 @@ pub(super) fn evaluate(
                     .to_owned(),
             ))
         }
-        Value::Boundary {
+        Expr::Boundary {
             kind,
             delimiter,
             value,
@@ -680,32 +675,32 @@ pub(super) fn evaluate(
             };
             Ok(RuntimeValue::String(result.to_owned()))
         }
-        Value::Slice {
+        Expr::Slice {
             start,
             length,
             value,
         } => evaluate_string_slice(start, length.as_deref(), value, record),
-        Value::Pad {
+        Expr::Pad {
             kind,
             value,
             width,
             fill,
         } => evaluate_string_padding(kind, value, width, fill.as_deref(), record),
-        Value::Count(value) => Ok(RuntimeValue::Number(
+        Expr::Count(value) => Ok(RuntimeValue::Number(
             evaluate(value, record)?.render().chars().count() as f64,
         )),
-        Value::Escape(value) => Ok(RuntimeValue::String(escape(
+        Expr::Escape(value) => Ok(RuntimeValue::String(escape(
             &evaluate(value, record)?.render(),
         ))),
-        Value::Quote { kind, value } => Ok(RuntimeValue::String(quote(
+        Expr::Quote { kind, value } => Ok(RuntimeValue::String(quote(
             &evaluate(value, record)?.render(),
             kind,
         ))),
-        Value::Unquote(value) => unquote(&evaluate(value, record)?.render()),
-        Value::ShellQuote(value) => Ok(RuntimeValue::String(shell_quote(
+        Expr::Unquote(value) => unquote(&evaluate(value, record)?.render()),
+        Expr::ShellQuote(value) => Ok(RuntimeValue::String(shell_quote(
             &evaluate(value, record)?.render(),
         ))),
-        Value::If {
+        Expr::If {
             condition,
             then_value,
             else_value,
@@ -716,16 +711,16 @@ pub(super) fn evaluate(
                 evaluate(else_value, record)
             }
         }
-        Value::Lower(value) => Ok(RuntimeValue::String(
+        Expr::Lower(value) => Ok(RuntimeValue::String(
             evaluate(value, record)?.render().to_lowercase(),
         )),
-        Value::Upper(value) => Ok(RuntimeValue::String(
+        Expr::Upper(value) => Ok(RuntimeValue::String(
             evaluate(value, record)?.render().to_uppercase(),
         )),
-        Value::Reverse(value) => Ok(RuntimeValue::String(
+        Expr::Reverse(value) => Ok(RuntimeValue::String(
             evaluate(value, record)?.render().chars().rev().collect(),
         )),
-        Value::Trim { kind, value } => {
+        Expr::Trim { kind, value } => {
             let value = evaluate(value, record)?.render();
             let trimmed = match kind {
                 StringTrim::Both => value.trim(),
@@ -734,7 +729,7 @@ pub(super) fn evaluate(
             };
             Ok(RuntimeValue::String(trimmed.to_owned()))
         }
-        Value::TrimAffixes {
+        Expr::TrimAffixes {
             value,
             prefix,
             suffix,
@@ -758,7 +753,7 @@ pub(super) fn evaluate(
                 .unwrap_or(without_prefix);
             Ok(RuntimeValue::String(without_suffix.to_owned()))
         }
-        Value::Default { value, fallback } => match evaluate(value, record) {
+        Expr::Default { value, fallback } => match evaluate(value, record) {
             Ok(value) if !value.is_empty() => Ok(value),
             Ok(_) | Err(_) => evaluate(fallback, record),
         },
@@ -766,7 +761,7 @@ pub(super) fn evaluate(
 }
 
 fn evaluate_field_bound(
-    value: &Value,
+    value: &Expr,
     record: &EvalContext<'_, '_, '_>,
     function: &'static str,
     argument: usize,

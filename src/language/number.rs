@@ -13,8 +13,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Arithmetic {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Arithmetic {
             operator: ArithmeticOperator::Add,
             left: Box::new(left),
             right: Box::new(right),
@@ -37,8 +37,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Arithmetic {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Arithmetic {
             operator: ArithmeticOperator::Subtract,
             left: Box::new(left),
             right: Box::new(right),
@@ -61,8 +61,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Arithmetic {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Arithmetic {
             operator: ArithmeticOperator::Multiply,
             left: Box::new(left),
             right: Box::new(right),
@@ -85,8 +85,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Arithmetic {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Arithmetic {
             operator: ArithmeticOperator::Divide,
             left: Box::new(left),
             right: Box::new(right),
@@ -109,8 +109,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Arithmetic {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Arithmetic {
             operator: ArithmeticOperator::Remainder,
             left: Box::new(left),
             right: Box::new(right),
@@ -131,8 +131,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Number, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::NumberOperation {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::NumberOperation {
             operator: NumberOperator::Truncate,
             value: Box::new(value_arg),
         })
@@ -152,8 +152,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Number, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::NumberOperation {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::NumberOperation {
             operator: NumberOperator::Floor,
             value: Box::new(value_arg),
         })
@@ -173,8 +173,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Number, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::NumberOperation {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::NumberOperation {
             operator: NumberOperator::Ceil,
             value: Box::new(value_arg),
         })
@@ -194,8 +194,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Number, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::NumberOperation {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::NumberOperation {
             operator: NumberOperator::Round,
             value: Box::new(value_arg),
         })
@@ -215,8 +215,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Number, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::NumberOperation {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::NumberOperation {
             operator: NumberOperator::Absolute,
             value: Box::new(value_arg),
         })
@@ -238,8 +238,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [value_arg, digits] = value_array(arguments)?;
-        value(Value::FormatNumberFixed {
+        let [value_arg, digits] = expr_array(arguments)?;
+        expr(Expr::FormatNumberFixed {
             value: Box::new(value_arg),
             digits: Box::new(digits),
         })
@@ -258,7 +258,7 @@ define_callable!(
         kind: CallableKind::Function,
         signatures: &[sig!([p!("number", Number, OneOrMore)] => Some(ValueType::Number))]
     },
-    |_context, arguments| { value(Value::NumberMinimum(values(arguments)?)) },
+    |_context, arguments| { expr(Expr::NumberMinimum(exprs(arguments)?)) },
     Number,
     "return the smallest number",
     [],
@@ -273,7 +273,7 @@ define_callable!(
         kind: CallableKind::Function,
         signatures: &[sig!([p!("number", Number, OneOrMore)] => Some(ValueType::Number))]
     },
-    |_context, arguments| { value(Value::NumberMaximum(values(arguments)?)) },
+    |_context, arguments| { expr(Expr::NumberMaximum(exprs(arguments)?)) },
     Number,
     "return the largest number",
     [],
@@ -291,8 +291,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [value_arg, minimum, maximum] = value_array(arguments)?;
-        value(Value::ClampNumber {
+        let [value_arg, minimum, maximum] = expr_array(arguments)?;
+        expr(Expr::ClampNumber {
             value: Box::new(value_arg),
             minimum: Box::new(minimum),
             maximum: Box::new(maximum),
@@ -315,8 +315,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::Number,
             operator: ComparisonOperator::GreaterThan,
             left,
@@ -340,8 +340,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::Number,
             operator: ComparisonOperator::GreaterThanOrEqual,
             left,
@@ -365,8 +365,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::Number,
             operator: ComparisonOperator::LessThan,
             left,
@@ -390,8 +390,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::Number,
             operator: ComparisonOperator::LessThanOrEqual,
             left,
@@ -415,8 +415,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::Number,
             operator: ComparisonOperator::Equal,
             left,
@@ -440,8 +440,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [left, right] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::Compare {
+        let [left, right] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::Compare {
             kind: ComparisonType::Number,
             operator: ComparisonOperator::NotEqual,
             left,

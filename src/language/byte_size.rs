@@ -11,8 +11,8 @@ define_callable!(
         signatures: &[sig!([p!("value", ByteSize, Required)] => Some(ValueType::ByteSize))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::NormalizeByteSize(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::NormalizeByteSize(Box::new(value_arg)))
     },
     ByteSize,
     "validate and normalize a byte size",
@@ -29,8 +29,8 @@ define_callable!(
         signatures: &[sig!([p!("value", ByteSize, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::ByteSizeToBytes(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::ByteSizeToBytes(Box::new(value_arg)))
     },
     ByteSize,
     "convert a byte size to bytes",
@@ -51,8 +51,8 @@ macro_rules! comparison {
                 ]
             },
             |_context, arguments| {
-                let [left, right] = value_array(arguments)?;
-                value(Value::Predicate(Box::new(Predicate::Compare {
+                let [left, right] = expr_array(arguments)?;
+                expr(Expr::Predicate(Box::new(Predicate::Compare {
                     kind: ComparisonType::ByteSize,
                     operator: ComparisonOperator::$operator,
                     left,

@@ -1,6 +1,6 @@
 use ::semver::Version;
 
-use crate::ast::{ComparisonOperator, SemVerPart, Value};
+use crate::ast::{ComparisonOperator, Expr, SemVerPart};
 
 use super::eval::{EvalContext, evaluate};
 use super::predicate::apply_ordering;
@@ -8,7 +8,7 @@ use super::value::{EvalError, EvalResult, RuntimeValue, exact_u64_number};
 
 pub(super) fn evaluate_part(
     part: &SemVerPart,
-    value: &Value,
+    value: &Expr,
     record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<RuntimeValue> {
     let function = part_name(part);
@@ -24,8 +24,8 @@ pub(super) fn evaluate_part(
 
 pub(super) fn compare(
     operator: &ComparisonOperator,
-    left: &Value,
-    right: &Value,
+    left: &Expr,
+    right: &Expr,
     record: &EvalContext<'_, '_, '_>,
 ) -> EvalResult<bool> {
     let function = comparison_name(operator);

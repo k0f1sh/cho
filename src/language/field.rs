@@ -1,4 +1,4 @@
-use crate::ast::Value;
+use crate::ast::Expr;
 
 use super::*;
 
@@ -11,8 +11,8 @@ define_callable!(
         signatures: &[sig!([p!("number", Number, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [number] = value_array(arguments)?;
-        value(Value::DynamicField(Box::new(number)))
+        let [number] = expr_array(arguments)?;
+        expr(Expr::DynamicField(Box::new(number)))
     },
     Field,
     "get a field by its computed number",
@@ -34,9 +34,9 @@ define_callable!(
         ] => Some(ValueType::String))]
     },
     |context, arguments| {
-        let [start, end] = value_array(arguments)?;
+        let [start, end] = expr_array(arguments)?;
         context.mark_field_range();
-        value(Value::DynamicFieldRange {
+        expr(Expr::DynamicFieldRange {
             start: Some(Box::new(start)),
             end: Some(Box::new(end)),
         })
@@ -58,9 +58,9 @@ define_callable!(
         signatures: &[sig!([p!("start", Number, Required, "START")] => Some(ValueType::String))]
     },
     |context, arguments| {
-        let [start] = value_array(arguments)?;
+        let [start] = expr_array(arguments)?;
         context.mark_field_range();
-        value(Value::DynamicFieldRange {
+        expr(Expr::DynamicFieldRange {
             start: Some(Box::new(start)),
             end: None,
         })
@@ -80,9 +80,9 @@ define_callable!(
         signatures: &[sig!([p!("end", Number, Required, "END")] => Some(ValueType::String))]
     },
     |context, arguments| {
-        let [end] = value_array(arguments)?;
+        let [end] = expr_array(arguments)?;
         context.mark_field_range();
-        value(Value::DynamicFieldRange {
+        expr(Expr::DynamicFieldRange {
             start: None,
             end: Some(Box::new(end)),
         })

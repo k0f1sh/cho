@@ -18,15 +18,15 @@ define_callable!(
         let (target, regex) = match args.len() {
             1 => {
                 let [regex] = args.try_into().expect("length was checked");
-                (Value::Field(0), expect_regex(regex)?)
+                (Expr::Field(0), expect_regex(regex)?)
             }
             2 => {
                 let [target, regex] = args.try_into().expect("length was checked");
-                (expect_value(target)?, expect_regex(regex)?)
+                (expect_expr(target)?, expect_regex(regex)?)
             }
             _ => return Err(ParseError::InvalidSyntax),
         };
-        value(Value::Predicate(Box::new(Predicate::Regex {
+        expr(Expr::Predicate(Box::new(Predicate::Regex {
             target,
             regex,
         })))
@@ -52,11 +52,11 @@ define_callable!(
             .0
             .try_into()
             .map_err(|_| ParseError::InvalidSyntax)?;
-        value(Value::RegexReplace {
+        expr(Expr::RegexReplace {
             mode: ReplaceMode::First,
-            value: Box::new(expect_value(value_arg)?),
+            value: Box::new(expect_expr(value_arg)?),
             regex: expect_regex(regex)?,
-            replacement: Box::new(expect_value(replacement)?),
+            replacement: Box::new(expect_expr(replacement)?),
         })
     },
     RegularExpression,
@@ -80,11 +80,11 @@ define_callable!(
             .0
             .try_into()
             .map_err(|_| ParseError::InvalidSyntax)?;
-        value(Value::RegexReplace {
+        expr(Expr::RegexReplace {
             mode: ReplaceMode::All,
-            value: Box::new(expect_value(value_arg)?),
+            value: Box::new(expect_expr(value_arg)?),
             regex: expect_regex(regex)?,
-            replacement: Box::new(expect_value(replacement)?),
+            replacement: Box::new(expect_expr(replacement)?),
         })
     },
     RegularExpression,
@@ -108,10 +108,10 @@ define_callable!(
             .0
             .try_into()
             .map_err(|_| ParseError::InvalidSyntax)?;
-        value(Value::WithRegexInput {
-            value: Box::new(expect_value(value_arg)?),
+        expr(Expr::WithRegexInput {
+            value: Box::new(expect_expr(value_arg)?),
             regex: expect_regex(regex)?,
-            body: Box::new(expect_value(body)?),
+            body: Box::new(expect_expr(body)?),
         })
     },
     RegularExpression,
@@ -139,14 +139,14 @@ define_callable!(
     },
     |_context, arguments| {
         let mut args = arguments.0.into_iter();
-        let value_arg = expect_value(args.next().expect("signature requires value"))?;
+        let value_arg = expect_expr(args.next().expect("signature requires value"))?;
         let regex = expect_regex(args.next().expect("signature requires pattern"))?;
         let group = args
             .next()
-            .map(expect_value)
+            .map(expect_expr)
             .transpose()?
-            .unwrap_or(Value::Number(0.0));
-        value(Value::RegexExtract {
+            .unwrap_or(Expr::Number(0.0));
+        expr(Expr::RegexExtract {
             value: Box::new(value_arg),
             regex,
             group: Box::new(group),

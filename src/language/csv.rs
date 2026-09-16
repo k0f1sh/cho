@@ -1,4 +1,4 @@
-use crate::ast::Value;
+use crate::ast::Expr;
 
 use super::*;
 
@@ -10,7 +10,7 @@ define_callable!(
         kind: CallableKind::Function,
         signatures: &[sig!([p!("value", Value, ZeroOrMore)] => Some(ValueType::String))]
     },
-    |_context, arguments| { value(Value::CsvJoin(values(arguments)?)) },
+    |_context, arguments| { expr(Expr::CsvJoin(exprs(arguments)?)) },
     Csv,
     "join values as one CSV record",
     [

@@ -11,8 +11,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Url, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::UrlPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::UrlPart {
             part: UrlPart::Scheme,
             value: Box::new(value_arg),
         })
@@ -32,8 +32,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Url, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::UrlPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::UrlPart {
             part: UrlPart::Host,
             value: Box::new(value_arg),
         })
@@ -53,8 +53,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Url, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::UrlPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::UrlPart {
             part: UrlPart::Port,
             value: Box::new(value_arg),
         })
@@ -74,8 +74,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Url, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::UrlPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::UrlPart {
             part: UrlPart::Path,
             value: Box::new(value_arg),
         })
@@ -95,8 +95,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Url, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::UrlPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::UrlPart {
             part: UrlPart::Query,
             value: Box::new(value_arg),
         })
@@ -116,8 +116,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Url, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::UrlPart {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::UrlPart {
             part: UrlPart::Fragment,
             value: Box::new(value_arg),
         })
@@ -139,8 +139,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [url, name] = value_array(arguments)?;
-        value(Value::UrlQueryGet {
+        let [url, name] = expr_array(arguments)?;
+        expr(Expr::UrlQueryGet {
             url: Box::new(url),
             name: Box::new(name),
         })
@@ -162,8 +162,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [url, name] = value_array(arguments)?;
-        value(Value::Predicate(Box::new(Predicate::UrlQueryHas {
+        let [url, name] = expr_array(arguments)?;
+        expr(Expr::Predicate(Box::new(Predicate::UrlQueryHas {
             url,
             name,
         })))
@@ -183,8 +183,8 @@ define_callable!(
         signatures: &[sig!([p!("value", String, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::UrlEncoding {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::UrlEncoding {
             operation: UrlEncoding::Encode,
             value: Box::new(value_arg),
         })
@@ -204,8 +204,8 @@ define_callable!(
         signatures: &[sig!([p!("value", String, Required)] => Some(ValueType::String))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::UrlEncoding {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::UrlEncoding {
             operation: UrlEncoding::Decode,
             value: Box::new(value_arg),
         })

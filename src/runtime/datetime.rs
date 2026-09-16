@@ -3,13 +3,13 @@ use chrono::{
 };
 use chrono_tz::Tz;
 
-use crate::ast::{DateTimeFloorUnit, Value};
+use crate::ast::{DateTimeFloorUnit, Expr};
 
 use super::eval::{EvalContext, evaluate};
 use super::value::{EvalError, EvalResult, RuntimeValue, expect_number};
 
 pub(super) fn duration_from_value(
-    value: &Value,
+    value: &Expr,
     multiplier: f64,
     function: &'static str,
     record: &EvalContext<'_, '_, '_>,
@@ -31,7 +31,7 @@ pub(super) fn duration_from_value(
 }
 
 pub(super) fn duration_as_number(
-    value: &Value,
+    value: &Expr,
     divisor: f64,
     function: &'static str,
     record: &EvalContext<'_, '_, '_>,

@@ -13,7 +13,7 @@ define_callable!(
     |_context, arguments| {
         _context
             .compile_threading(ThreadDirection::First, arguments)
-            .and_then(value)
+            .and_then(expr)
     },
     Composition,
     "insert a value as each step's first argument",
@@ -34,7 +34,7 @@ define_callable!(
     |_context, arguments| {
         _context
             .compile_threading(ThreadDirection::Last, arguments)
-            .and_then(value)
+            .and_then(expr)
     },
     Composition,
     "insert a value as each step's last argument",

@@ -11,8 +11,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Boolean, Required)] => Some(ValueType::Boolean))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::Not(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::Not(Box::new(value_arg)))
     },
     Boolean,
     "negate",
@@ -31,8 +31,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [condition, then_value, else_value] = value_array(arguments)?;
-        value(Value::If {
+        let [condition, then_value, else_value] = expr_array(arguments)?;
+        expr(Expr::If {
             condition: Box::new(condition),
             then_value: Box::new(then_value),
             else_value: Box::new(else_value),
@@ -55,8 +55,8 @@ define_callable!(
         ]
     },
     |_context, arguments| {
-        let [value_arg, fallback] = value_array(arguments)?;
-        value(Value::Default {
+        let [value_arg, fallback] = expr_array(arguments)?;
+        expr(Expr::Default {
             value: Box::new(value_arg),
             fallback: Box::new(fallback),
         })
@@ -75,7 +75,7 @@ define_callable!(
         kind: CallableKind::SpecialForm,
         signatures: &[sig!([p!("value", Boolean, OneOrMore)] => Some(ValueType::Boolean))]
     },
-    |_context, arguments| { value(Value::And(values(arguments)?)) },
+    |_context, arguments| { expr(Expr::And(exprs(arguments)?)) },
     SpecialForm,
     "stop at the first false value",
     [],
@@ -90,7 +90,7 @@ define_callable!(
         kind: CallableKind::SpecialForm,
         signatures: &[sig!([p!("value", Boolean, OneOrMore)] => Some(ValueType::Boolean))]
     },
-    |_context, arguments| { value(Value::Or(values(arguments)?)) },
+    |_context, arguments| { expr(Expr::Or(exprs(arguments)?)) },
     SpecialForm,
     "stop at the first true value",
     [],

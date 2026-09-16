@@ -11,8 +11,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Uuid, Required)] => Some(ValueType::Uuid))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::NormalizeUuid(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::NormalizeUuid(Box::new(value_arg)))
     },
     Identifier,
     "validate and normalize a UUID",
@@ -29,8 +29,8 @@ define_callable!(
         signatures: &[sig!([] => Some(ValueType::Uuid))]
     },
     |_context, arguments| {
-        let [] = value_array(arguments)?;
-        value(Value::UuidV4)
+        let [] = expr_array(arguments)?;
+        expr(Expr::UuidV4)
     },
     Identifier,
     "generate a random UUID version 4",
@@ -47,8 +47,8 @@ define_callable!(
         signatures: &[sig!([] => Some(ValueType::Uuid))]
     },
     |_context, arguments| {
-        let [] = value_array(arguments)?;
-        value(Value::UuidV7)
+        let [] = expr_array(arguments)?;
+        expr(Expr::UuidV7)
     },
     Identifier,
     "generate a time-ordered UUID version 7",
@@ -65,8 +65,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Uuid, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::UuidVersion(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::UuidVersion(Box::new(value_arg)))
     },
     Identifier,
     "return the UUID version number",
@@ -83,8 +83,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Uuid, Required)] => Some(ValueType::DateTime))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::UuidTime(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::UuidTime(Box::new(value_arg)))
     },
     Identifier,
     "extract the timestamp from a UUID",
@@ -101,8 +101,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Ulid, Required)] => Some(ValueType::Ulid))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::NormalizeUlid(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::NormalizeUlid(Box::new(value_arg)))
     },
     Identifier,
     "validate and normalize a ULID",
@@ -119,8 +119,8 @@ define_callable!(
         signatures: &[sig!([] => Some(ValueType::Ulid))]
     },
     |_context, arguments| {
-        let [] = value_array(arguments)?;
-        value(Value::UlidNew)
+        let [] = expr_array(arguments)?;
+        expr(Expr::UlidNew)
     },
     Identifier,
     "generate a monotonic ULID",
@@ -137,8 +137,8 @@ define_callable!(
         signatures: &[sig!([p!("value", Ulid, Required)] => Some(ValueType::DateTime))]
     },
     |_context, arguments| {
-        let [value_arg] = value_array(arguments)?;
-        value(Value::UlidTime(Box::new(value_arg)))
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::UlidTime(Box::new(value_arg)))
     },
     Identifier,
     "extract the timestamp from a ULID",
@@ -159,8 +159,8 @@ macro_rules! comparison {
                 ]
             },
             |_context, arguments| {
-                let [left, right] = value_array(arguments)?;
-                value(Value::Predicate(Box::new(Predicate::Compare {
+                let [left, right] = expr_array(arguments)?;
+                expr(Expr::Predicate(Box::new(Predicate::Compare {
                     kind: ComparisonType::$kind,
                     operator: ComparisonOperator::$operator,
                     left,

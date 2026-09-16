@@ -10,7 +10,7 @@ define_callable!(
         kind: CallableKind::ProgramForm,
         signatures: &[sig!([p!("value", Value, ZeroOrMore)] => None)]
     },
-    |_context, arguments| { form(Form::Print(values(arguments)?)) },
+    |_context, arguments| { form(Form::Print(exprs(arguments)?)) },
     Program,
     "print values separated by spaces",
     [],
@@ -26,7 +26,7 @@ define_callable!(
         signatures: &[sig!([p!("condition", Boolean, Required)] => None)]
     },
     |_context, arguments| {
-        let [condition] = value_array(arguments)?;
+        let [condition] = expr_array(arguments)?;
         form(Form::Filter(condition))
     },
     Program,
