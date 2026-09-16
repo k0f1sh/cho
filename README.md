@@ -6,9 +6,17 @@ dates, and IP addresses.
 `cho` is an awk-inspired command-line tool that lets you combine small Lisp-like
 expressions. It fills the gap between shell one-liners and small scripts.
 
+Filter files by human-readable byte size (`bs/>=` compares byte sizes):
+
 ```console
-$ printf 'backup.zip 2GB\nnotes.txt 4kB\n' | cho '(f (bs/>= $2 "1GB")) (p $1)'
+$ printf '%s\n' \
+    'backup.zip 2GB' \
+    'notes.txt 4kB' \
+    'video.mp4 850MB' \
+    'disk.img 8GB' |
+    cho '(f (bs/>= $2 "1GB")) (p $1)'
 backup.zip
+disk.img
 ```
 
 > [!WARNING]
