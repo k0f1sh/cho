@@ -1,10 +1,11 @@
 # cho
 
-Filter, extract, and transform text with one-liners that understand numbers,
-dates, and IP addresses.
+Type-aware, line-oriented text processing for the command line.
 
 `cho` is an awk-inspired command-line tool that lets you combine small Lisp-like
-expressions. It fills the gap between shell one-liners and small scripts.
+expressions. It understands common data types in plain-text fields, so you can
+compare and transform them without manual conversion. It fills the gap between
+shell one-liners and small scripts.
 
 Filter files by human-readable byte size (`bs/>=` compares byte sizes):
 
