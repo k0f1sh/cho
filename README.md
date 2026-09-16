@@ -124,12 +124,13 @@ $ echo '  hello-world  ' | cho '(p (-> $0 s/trim (s/replace "-" "_") s/upper))'
 HELLO_WORLD
 ```
 
-Use `s/with` to split one field again and select a field from it. Pass a
-delimiter for literal splitting, or omit it to split on whitespace:
+Use `s/with` to split one field again and evaluate an expression using the
+resulting fields. Pass a delimiter for literal splitting, or omit it to split
+on whitespace:
 
 ```console
-$ echo 'job42 ready api:worker:8080' | cho '(p (s/with $3 ":" $2))'
-worker
+$ echo 'job42 ready api:worker:8080' | cho '(p (s/with $3 ":" (s/upper $2)))'
+WORKER
 ```
 
 When the delimiter needs to be a regular expression, use
