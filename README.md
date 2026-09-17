@@ -7,17 +7,25 @@ expressions. It understands common data types in plain-text fields, so you can
 compare and transform them without manual conversion. It fills the gap between
 shell one-liners and small scripts.
 
-Filter files by human-readable byte size (`bs/>=` compares byte sizes):
+![Building a backup retention report with cho](cho-demo.gif)
+
+Build a retention report for large backups. `cho` compares human-readable byte
+sizes, calculates expiration times, and composes string transformations in one
+expression:
 
 ```console
 $ printf '%s\n' \
-    'backup.zip 2GB' \
-    'notes.txt 4kB' \
-    'video.mp4 850MB' \
-    'disk.img 8GB' |
-    cho '(f (bs/>= $2 "1GB")) (p $1)'
-backup.zip
-disk.img
+    'daily-backup.tar 2GB 2026-09-15T23:30:00+09:00' \
+    'video-archive.mp4 850MB 2026-09-16T08:00:00Z' \
+    'database-snapshot.sql 8GB 2026-09-10T02:15:00Z' \
+    'release-bundle.tar 4GB 2026-09-17T18:45:00-04:00' |
+    cho '(f (bs/>= $2 "1GB"))
+          (p (s/join " | "
+            (-> $1 (s/replace-all "-" "_") s/upper) $2
+            (dt/fmt (dt/add $3 (du/d 7)) "%Y-%m-%d %H:%M UTC")))'
+DAILY_BACKUP.TAR | 2GB | 2026-09-22 14:30 UTC
+DATABASE_SNAPSHOT.SQL | 8GB | 2026-09-17 02:15 UTC
+RELEASE_BUNDLE.TAR | 4GB | 2026-09-24 22:45 UTC
 ```
 
 > [!WARNING]

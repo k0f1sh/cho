@@ -1,0 +1,4 @@
+daily-backup.tar 2GB 2026-09-15T23:30:00+09:00
+video-archive.mp4 850MB 2026-09-16T08:00:00Z
+database-snapshot.sql 8GB 2026-09-10T02:15:00Z
+release-bundle.tar 4GB 2026-09-17T18:45:00-04:00
