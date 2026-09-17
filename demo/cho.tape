@@ -45,7 +45,7 @@ Enter
 Sleep 3s
 
 Ctrl+L
-Type@25ms "# Build a retention report for large backups"
+Type@25ms "# Build a retention schedule for large backups"
 Enter
 Sleep 800ms
 Type `cho '(f (bs/>= $2 "1GB"))`

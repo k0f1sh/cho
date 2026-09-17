@@ -12,10 +12,10 @@ shell one-liners and small scripts.
 
 ## Demo
 
-Filter large backups, calculate their expiration times, and format a retention
-report by composing type-aware expressions:
+Filter large backups, calculate their expiration times, and build a retention
+schedule by composing type-aware expressions:
 
-![Building a backup retention report with cho](cho-demo.gif)
+![Building a backup retention schedule with cho](cho-demo.gif)
 
 ## Install
 
