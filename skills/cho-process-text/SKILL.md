@@ -46,7 +46,9 @@ cho is not a prerequisite for merely explaining a command.
   supplies only explicit arguments and runs once. `--call-exact` (or `-C`)
   passes only its listed arguments and uses shell-safe record references: `@0`
   for the record, `@1`, `@2`, ... for fields, `@NR` and `@NF` for record values,
-  and `@2..4` for a field range. A range is one value, not several arguments.
+  and `@2..4` for a field range. `@` replaces the program syntax's `$` here so
+  the shell does not expand references; these references do not need quoting.
+  A range is one value, not several arguments.
   Prefix a reference-shaped literal with another `@`, so `@@2` passes `@2`.
   Use regular program syntax for nested expressions.
   `--file` reads regular program syntax from a UTF-8 file while stdin remains

@@ -68,6 +68,8 @@ HELLO
 ```
 
 Use `-C` to place fields at exact argument positions without writing an S-expression:
+Its `@` references replace the program syntax's `$` references so the shell does
+not expand them, and they do not need quoting.
 
 ```console
 $ printf 'alice developer\n' | cho -C s/upper @2
