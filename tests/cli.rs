@@ -6,6 +6,7 @@ const USAGE: &str = concat!(
     "  cho [INPUT OPTIONS] 'PROGRAM'\n",
     "  cho [INPUT OPTIONS] --file FILE\n",
     "  cho [INPUT OPTIONS] --call FUNCTION [ARG ...]\n",
+    "  cho [INPUT OPTIONS] --call-exact FUNCTION [ARG ...]\n",
     "  cho --help [TOPIC]\n",
     "  cho --apropos [QUERY]\n",
     "  cho --version",
@@ -594,6 +595,68 @@ fn call_mode_calls_one_function_with_record_then_string_arguments() {
         assert!(output.status.success());
         assert_eq!(String::from_utf8(output.stdout).unwrap(), expected);
         assert!(output.stderr.is_empty());
+    }
+}
+
+#[test]
+fn exact_call_mode_places_record_values_at_explicit_argument_positions() {
+    for (arguments, input, expected) in [
+        (
+            vec!["-C", "s/upper", "@2"],
+            "alice developer\nbob operator\n",
+            "DEVELOPER\nOPERATOR\n",
+        ),
+        (
+            vec!["--call-exact", "cidr/contains?", "10.0.0.0/8", "@2"],
+            "web 10.1.2.3\ndns 8.8.8.8\n",
+            "true\nfalse\n",
+        ),
+        (vec!["-C", "s/join", ",", "@1", "@3"], "a b c\n", "a,c\n"),
+        (
+            vec!["-C", "str", "@NR", ":", "@NF", ":", "@0"],
+            "a b\nc\n",
+            "1:2:a b\n2:1:c\n",
+        ),
+        (vec!["-C", "str", "@@2", "@name"], "ignored\n", "@2@name\n"),
+        (
+            vec!["-n", "-C", "str", "constant"],
+            "ignored\n",
+            "constant\n",
+        ),
+    ] {
+        let output = run_with_args(&arguments, input);
+        assert!(output.status.success());
+        assert_eq!(String::from_utf8(output.stdout).unwrap(), expected);
+        assert!(output.stderr.is_empty());
+    }
+}
+
+#[test]
+fn exact_call_field_ranges_are_single_values_and_follow_csv_rules() {
+    let output = run_with_args(&["-C", "str", "[", "@2..3", "]"], "a  b c d\n");
+    assert!(output.status.success());
+    assert_eq!(output.stdout, b"[b c]\n");
+    assert!(output.stderr.is_empty());
+
+    let output = run_with_args(&["--csv", "-C", "str", "@1..2"], "a,b\n");
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "cho: field ranges are not supported with --csv\n"
+    );
+}
+
+#[test]
+fn exact_call_rejects_malformed_field_references() {
+    for reference in ["@..", "@0..2", "@2..1", "@2x"] {
+        let output = run_with_args(&["-C", "str", reference], "a b\n");
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        assert_eq!(
+            String::from_utf8(output.stderr).unwrap(),
+            "cho: invalid program: invalid field reference\n"
+        );
     }
 }
 
