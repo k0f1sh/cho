@@ -5,6 +5,7 @@ pub(crate) enum Token {
     LeftParen,
     RightParen,
     Atom(String),
+    HeaderField(String),
     String(String),
     Regex(String),
 }
@@ -18,6 +19,10 @@ pub(crate) fn tokenize(program: &str) -> Result<Vec<Token>, ParseError> {
             character if character.is_whitespace() => {}
             '(' => tokens.push(Token::LeftParen),
             ')' => tokens.push(Token::RightParen),
+            '%' if characters.peek() == Some(&'"') => {
+                characters.next();
+                tokens.push(Token::HeaderField(read_string(&mut characters)?));
+            }
             '"' => tokens.push(Token::String(read_string(&mut characters)?)),
             '/' if characters
                 .peek()
@@ -101,6 +106,21 @@ mod tests {
                 Token::Atom("print".into()),
                 Token::Atom("$1".into()),
                 Token::String("hello world".into()),
+                Token::RightParen,
+            ])
+        );
+    }
+
+    #[test]
+    fn tokenizes_quoted_header_fields() {
+        assert_eq!(
+            tokenize(r#"(print %name %"display name" %"a\"b")"#),
+            Ok(vec![
+                Token::LeftParen,
+                Token::Atom("print".into()),
+                Token::Atom("%name".into()),
+                Token::HeaderField("display name".into()),
+                Token::HeaderField("a\"b".into()),
                 Token::RightParen,
             ])
         );

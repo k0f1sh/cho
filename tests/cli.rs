@@ -729,6 +729,45 @@ fn skip_header_skips_one_logical_csv_record_and_preserves_nr() {
 }
 
 #[test]
+fn csv_header_fields_consume_one_header_with_or_without_skip_header() {
+    for arguments in [
+        vec!["--csv", "(print NR %name %\"display name\")"],
+        vec![
+            "--csv",
+            "--skip-header",
+            "(print NR %name %\"display name\")",
+        ],
+    ] {
+        let output = run_with_args(&arguments, "name,display name\nAlice,Alice A.\n");
+        assert!(output.status.success());
+        assert_eq!(
+            String::from_utf8(output.stdout).unwrap(),
+            "2 Alice Alice A.\n"
+        );
+        assert!(output.stderr.is_empty());
+    }
+}
+
+#[test]
+fn csv_header_field_errors_are_reported_before_output() {
+    let output = run_with_args(&["--csv", "(print %missing)"], "name,age\nAlice,20\n");
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "cho: CSV header has no field named \"missing\"\n"
+    );
+
+    let output = run_with_args(&["(print %name)"], "Alice\n");
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "cho: header field references require --csv\n"
+    );
+}
+
+#[test]
 fn skip_header_works_in_tsv_mode() {
     let output = run_with_args(
         &["--tsv", "-s", "(print NR $1 $2)"],

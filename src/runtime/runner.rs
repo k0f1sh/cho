@@ -17,6 +17,7 @@ pub fn run<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> io::
 
 pub fn run_no_input<W: Write>(program: &str, mut output: W) -> io::Result<()> {
     let program = compile_program(program)?;
+    reject_header_fields(&program.program.header_fields)?;
     let ulid_generator = RefCell::new(ulid::Generator::new());
     let record = Record {
         line: "",
@@ -28,6 +29,7 @@ pub fn run_no_input<W: Write>(program: &str, mut output: W) -> io::Result<()> {
     let context = EvalContext {
         record: &record,
         regexes: &program.regexes,
+        header_field_indices: &[],
         ulid_generator: &ulid_generator,
     };
     execute(&program.program.forms, &context, &mut output)
@@ -47,6 +49,19 @@ pub fn run_csv<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> 
     let mut physical_line = 1;
     let now = current_datetime();
     let ulid_generator = RefCell::new(ulid::Generator::new());
+    let header_field_indices = if program.program.header_fields.is_empty() {
+        Vec::new()
+    } else {
+        if !read_csv_record(&mut input, &mut raw, 1, &mut physical_line)? {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "CSV header is required for header field references",
+            ));
+        }
+        number = 1;
+        let header = parse_csv_fields(&raw)?;
+        resolve_header_fields(&program.program.header_fields, &header)?
+    };
 
     while read_csv_record(&mut input, &mut raw, number + 1, &mut physical_line)? {
         number += 1;
@@ -63,6 +78,7 @@ pub fn run_csv<R: BufRead, W: Write>(program: &str, input: R, mut output: W) -> 
         let context = EvalContext {
             record: &record,
             regexes: &program.regexes,
+            header_field_indices: &header_field_indices,
             ulid_generator: &ulid_generator,
         };
         execute(&program.program.forms, &context, &mut output)?;
@@ -77,6 +93,7 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
     mut output: W,
 ) -> io::Result<()> {
     let program = compile_program(program)?;
+    reject_header_fields(&program.program.header_fields)?;
     let field_separator = compile_field_separator(field_separator)?;
     let now = current_datetime();
     let ulid_generator = RefCell::new(ulid::Generator::new());
@@ -96,11 +113,48 @@ pub fn run_with_field_separator<R: BufRead, W: Write>(
         let context = EvalContext {
             record: &record,
             regexes: &program.regexes,
+            header_field_indices: &[],
             ulid_generator: &ulid_generator,
         };
         execute(&program.program.forms, &context, &mut output)?;
     }
     Ok(())
+}
+
+fn reject_header_fields(header_fields: &[String]) -> io::Result<()> {
+    if header_fields.is_empty() {
+        Ok(())
+    } else {
+        Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "header field references require --csv",
+        ))
+    }
+}
+
+fn resolve_header_fields(references: &[String], header: &[String]) -> io::Result<Vec<usize>> {
+    references
+        .iter()
+        .map(|name| {
+            let mut matches = header
+                .iter()
+                .enumerate()
+                .filter(|(_, field)| *field == name);
+            let Some((index, _)) = matches.next() else {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("CSV header has no field named {name:?}"),
+                ));
+            };
+            if matches.next().is_some() {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("CSV header has multiple fields named {name:?}"),
+                ));
+            }
+            Ok(index + 1)
+        })
+        .collect()
 }
 
 fn split_field_spans(line: &str, separator: Option<&Regex>) -> io::Result<Vec<(usize, usize)>> {

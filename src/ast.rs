@@ -3,6 +3,7 @@ pub struct Program {
     pub forms: Vec<Form>,
     pub regex_patterns: Vec<String>,
     pub contains_field_range: bool,
+    pub header_fields: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -196,6 +197,7 @@ pub enum SemVerPart {
 #[derive(Debug, PartialEq)]
 pub enum Expr {
     Field(usize),
+    HeaderField(usize),
     DynamicField(Box<Expr>),
     FieldRange {
         start: Option<usize>,
@@ -412,6 +414,7 @@ impl Expr {
     pub(crate) fn depth(&self) -> usize {
         let children = match self {
             Self::Field(_)
+            | Self::HeaderField(_)
             | Self::FieldRange { .. }
             | Self::RecordNumber
             | Self::FieldCount

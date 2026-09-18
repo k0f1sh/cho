@@ -20,7 +20,7 @@ Common recipes:
   Join values             cho '(p (s/join "," $1 $2))'
   Replace text            cho '(p (s/replace-all $1 "-" "_"))'
   Use a fallback          cho '(p (default $3 "unknown"))'
-  Read CSV with a header  cho --csv -s '(p $1 $3)'
+  Read CSV by header name cho --csv '(p %name %email)'
   Read TSV                cho --tsv '(p $1 $2)'
   Run without input       cho -n '(p (dt/now))'
   Call one function       cho -c s/upper
@@ -30,7 +30,7 @@ Common recipes:
 Input and options:
   -F SEPARATOR       split fields using this regular expression
   -FSEPARATOR        short form of -F SEPARATOR
-  --csv              parse strict CSV records, including quoted values
+  --csv              parse strict CSV records; %name refers to a header field
   --tsv              split fields on tabs
   -s, --skip-header  skip the first CSV or TSV record
   -n, --no-input     do not read input; run once with an empty record
@@ -54,6 +54,9 @@ Input and options:
   NF is the field count. Missing fields are empty strings. With --skip-header,
   the first data record keeps its input position and therefore has NR 2.
   With --no-input, $0 is empty, NR is 1, and NF is 0.
+  With --csv, %name refers to the column whose header is exactly "name" and
+  automatically consumes the first record as the header. Use %"display name"
+  for names containing whitespace. The first data record therefore has NR 2.
   With --call, $0 is the first function argument unless --no-input is also used.
   With --no-input, only the following ARG values are passed; -nc and -cn are
   shorthand for this combination. Arguments named $0, $1, ... are field
@@ -94,6 +97,7 @@ Program forms:
 
 Literals and fields:
   $0, $1, ...                    complete record or field
+  %name, %"display name"          CSV field selected by header name
   $..3, $3.., $2..4             inclusive field ranges, preserving separators
   NR, NF                         record number or field count
   "text", 12, 3.5                String or Number
@@ -112,6 +116,11 @@ Literals and fields:
   fields, fields-from, and fields-to require positive whole-number bounds;
   fields also requires START to be less than or equal to END.
   Field ranges are unavailable with --csv because CSV fields are decoded.
+  Header field references are available only with --csv. Header names use exact,
+  case-sensitive matching after CSV decoding. A missing or duplicated referenced
+  name is an error; duplicated names that are not referenced are allowed. Quoted
+  names accept the same escapes as String literals. An empty input is an error
+  when the program contains a header field reference.
   Invalid quoting in CSV input reports the logical record, physical line, and
   field, then exits nonzero. Quoted fields may contain newlines and use "" for
   an escaped quote.

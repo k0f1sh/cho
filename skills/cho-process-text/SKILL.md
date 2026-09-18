@@ -29,7 +29,10 @@ cho is not a prerequisite for merely explaining a command.
 
 - Inspect representative input for delimiters, headers, quoting, empty fields,
   and column meanings. Choose default whitespace splitting, regex `-F`,
-  `--csv`, or `--tsv` accordingly. Use `--skip-header` for CSV or TSV headers.
+  `--csv`, or `--tsv` accordingly. With `--csv`, use `%name` to select a column
+  by its exact header name; this consumes the header automatically. Use
+  `%"display name"` when the name contains whitespace. Use `--skip-header` when
+  selecting CSV columns by number, and for TSV headers.
 - Quote the program with single shell quotes so the shell preserves `$1` and
   other field references. Regex literals preserve backslashes; quoted cho
   strings require doubled backslashes. Consult help when patterns contain `/`.
@@ -62,6 +65,8 @@ Small starting points:
 
 ```sh
 printf 'Alice 18\nBob 30\n' | cho '(f (> $2 20)) (p $1)'
+# Bob
+printf 'name,age\nAlice,18\nBob,30\n' | cho --csv '(f (> %age 20)) (p %name)'
 # Bob
 printf '2026-08-24T01:30:00Z\n' | cho '(dt/fmt $1 "%Y-%m-%d %H:%M" "Asia/Tokyo")'
 # 2026-08-24 10:30

@@ -12,6 +12,7 @@ pub enum ParseError {
     NonFiniteNumberLiteral(String),
     UnknownFunction(String),
     InvalidField,
+    InvalidHeaderField,
     UnterminatedString,
     UnsupportedStringEscape(char),
     UnterminatedRegex,
@@ -43,6 +44,7 @@ impl fmt::Display for ParseError {
                 return write!(formatter, "no such function: {function}");
             }
             Self::InvalidField => "invalid field reference",
+            Self::InvalidHeaderField => "invalid header field reference",
             Self::UnterminatedString => "unterminated string literal",
             Self::UnsupportedStringEscape(character) => {
                 return write!(
@@ -83,6 +85,7 @@ pub(crate) enum Atom {
     Symbol(String),
     String(String),
     Regex(String),
+    HeaderField(String),
 }
 
 struct Parser {
@@ -111,6 +114,7 @@ impl Parser {
             Some(Token::Atom(symbol)) => Ok(SExpr::Atom(Atom::Symbol(symbol))),
             Some(Token::String(value)) => Ok(SExpr::Atom(Atom::String(value))),
             Some(Token::Regex(pattern)) => Ok(SExpr::Atom(Atom::Regex(pattern))),
+            Some(Token::HeaderField(name)) => Ok(SExpr::Atom(Atom::HeaderField(name))),
             Some(Token::LeftParen) => {
                 if depth == MAX_EXPRESSION_DEPTH {
                     return Err(ParseError::ExpressionNestingTooDeep);

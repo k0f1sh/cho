@@ -24,6 +24,7 @@ pub(crate) fn compile(expressions: Vec<SExpr>) -> Result<Program, ParseError> {
 struct Compiler {
     regex_patterns: Vec<String>,
     contains_field_range: bool,
+    header_fields: Vec<String>,
 }
 
 impl Compiler {
@@ -31,6 +32,7 @@ impl Compiler {
         Self {
             regex_patterns: Vec::new(),
             contains_field_range: false,
+            header_fields: Vec::new(),
         }
     }
 
@@ -68,6 +70,7 @@ impl Compiler {
             forms,
             regex_patterns: self.regex_patterns,
             contains_field_range: self.contains_field_range,
+            header_fields: self.header_fields,
         })
     }
 
@@ -92,12 +95,19 @@ impl Compiler {
         match expression {
             SExpr::Atom(Atom::Symbol(symbol)) => self.compile_symbol(symbol),
             SExpr::Atom(Atom::String(value)) => Ok(Expr::String(value.clone())),
+            SExpr::Atom(Atom::HeaderField(name)) => Ok(self.compile_header_field(name)),
             SExpr::Atom(Atom::Regex(_)) => Err(ParseError::InvalidSyntax),
             SExpr::List(items) => self.compile_call(items),
         }
     }
 
     fn compile_symbol(&mut self, symbol: &str) -> Result<Expr, ParseError> {
+        if let Some(name) = symbol.strip_prefix('%') {
+            if name.is_empty() {
+                return Err(ParseError::InvalidHeaderField);
+            }
+            return Ok(self.compile_header_field(name));
+        }
         match symbol {
             "NR" => Ok(Expr::RecordNumber),
             "NF" => Ok(Expr::FieldCount),
@@ -113,6 +123,18 @@ impl Compiler {
                 }
             },
         }
+    }
+
+    fn compile_header_field(&mut self, name: &str) -> Expr {
+        let id = self
+            .header_fields
+            .iter()
+            .position(|existing| existing == name)
+            .unwrap_or_else(|| {
+                self.header_fields.push(name.to_owned());
+                self.header_fields.len() - 1
+            });
+        Expr::HeaderField(id)
     }
 
     fn compile_call(&mut self, items: &[SExpr]) -> Result<Expr, ParseError> {
@@ -420,8 +442,28 @@ mod tests {
                 ],
                 regex_patterns: vec![],
                 contains_field_range: false,
+                header_fields: vec![],
             })
         );
+    }
+
+    #[test]
+    fn parses_and_interns_header_field_references() {
+        assert_eq!(
+            parse(r#"(print %name %"display name" %name %"")"#),
+            Ok(Program {
+                forms: vec![Form::Print(vec![
+                    Expr::HeaderField(0),
+                    Expr::HeaderField(1),
+                    Expr::HeaderField(0),
+                    Expr::HeaderField(2),
+                ])],
+                regex_patterns: vec![],
+                contains_field_range: false,
+                header_fields: vec!["name".into(), "display name".into(), "".into()],
+            })
+        );
+        assert_eq!(parse("%"), Err(ParseError::InvalidHeaderField));
     }
 
     #[test]
@@ -445,6 +487,7 @@ mod tests {
                 ])],
                 regex_patterns: vec![],
                 contains_field_range: true,
+                header_fields: vec![],
             })
         );
     }
@@ -556,6 +599,7 @@ mod tests {
                 }])],
                 regex_patterns: vec![],
                 contains_field_range: false,
+                header_fields: vec![],
             })
         );
     }
@@ -571,6 +615,7 @@ mod tests {
                 ])])],
                 regex_patterns: vec![],
                 contains_field_range: false,
+                header_fields: vec![],
             })
         );
         assert!(parse("(print (csv/join))").is_ok());
@@ -643,6 +688,7 @@ mod tests {
                 ])],
                 regex_patterns: vec![],
                 contains_field_range: false,
+                header_fields: vec![],
             })
         );
     }
@@ -668,6 +714,7 @@ mod tests {
                 ])],
                 regex_patterns: vec![],
                 contains_field_range: false,
+                header_fields: vec![],
             })
         );
         assert_eq!(

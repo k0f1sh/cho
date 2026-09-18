@@ -44,6 +44,7 @@ pub(super) struct Record<'line> {
 pub(super) struct EvalContext<'record, 'line, 'program> {
     pub(super) record: &'record Record<'line>,
     pub(super) regexes: &'program [Regex],
+    pub(super) header_field_indices: &'program [usize],
     pub(super) ulid_generator: &'program RefCell<ulid::Generator>,
 }
 
@@ -147,6 +148,7 @@ fn evaluate_with_input(
     let local_context = EvalContext {
         record: &local_record,
         regexes: context.regexes,
+        header_field_indices: context.header_field_indices,
         ulid_generator: context.ulid_generator,
     };
     evaluate(body, &local_context)
@@ -199,6 +201,12 @@ pub(super) fn evaluate(expr: &Expr, record: &EvalContext<'_, '_, '_>) -> EvalRes
         Expr::Field(0) => Ok(RuntimeValue::String(record.line.to_owned())),
         Expr::Field(number) => Ok(RuntimeValue::String(
             record.field(*number).unwrap_or("").to_owned(),
+        )),
+        Expr::HeaderField(id) => Ok(RuntimeValue::String(
+            record
+                .field(record.header_field_indices[*id])
+                .unwrap_or("")
+                .to_owned(),
         )),
         Expr::DynamicField(number) => {
             let input = evaluate(number, record)?;
