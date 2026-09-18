@@ -43,9 +43,16 @@ cho is not a prerequisite for merely explaining a command.
   encoding. Filters alone print the original record when they pass. A false
   filter skips the remaining expressions for that record.
 - `--call` supplies `$0` as the first argument; `--no-input --call` (or `-nc`)
-  supplies only explicit arguments and runs once. For nested expressions or a
-  different primary field, use regular program syntax. `--file` reads that
-  same syntax from a UTF-8 file while stdin remains available for input records.
+  supplies only explicit arguments and runs once. `--call-exact` (or `-C`)
+  passes only its listed arguments and uses shell-safe record references: `@0`
+  for the record, `@1`, `@2`, ... for fields, `@NR` and `@NF` for record values,
+  and `@2..4` for a field range. `@` replaces the program syntax's `$` here so
+  the shell does not expand references; these references do not need quoting.
+  A range is one value, not several arguments.
+  Prefix a reference-shaped literal with another `@`, so `@@2` passes `@2`.
+  Use regular program syntax for nested expressions.
+  `--file` reads regular program syntax from a UTF-8 file while stdin remains
+  available for input records.
 - With `--call`, pass regex patterns without regex-literal `/`
   delimiters, for example `cho -c re/ex 'id=(\w+)' 1`.
 - To split a field or transformed value into a local record, consult
@@ -62,6 +69,8 @@ printf '10.1.2.3\n8.8.8.8\n' | cho '(f (cidr/contains? "10.0.0.0/8" $1))'
 # 10.1.2.3
 cho -nc uuid/v4
 # One generated UUID
+printf 'web 10.1.2.3\n' | cho -C cidr/contains? 10.0.0.0/8 @2
+# true
 ```
 
 In a cho checkout, `examples/` contains complete pipelines and sample data.

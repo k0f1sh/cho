@@ -4,6 +4,7 @@ Usage:
   cho [INPUT OPTIONS] 'PROGRAM'
   cho [INPUT OPTIONS] --file FILE
   cho [INPUT OPTIONS] --call FUNCTION [ARG ...]
+  cho [INPUT OPTIONS] --call-exact FUNCTION [ARG ...]
   cho --help [TOPIC]
   cho --apropos [QUERY]
   cho --version
@@ -23,6 +24,7 @@ Common recipes:
   Read TSV                cho --tsv '(p $1 $2)'
   Run without input       cho -n '(p (dt/now))'
   Call one function       cho -c s/upper
+  Call with exact args    cho -C s/join , @1 @3
   Find a function         cho -k trim
 
 Input and options:
@@ -34,6 +36,7 @@ Input and options:
   -n, --no-input     do not read input; run once with an empty record
   -f, --file FILE    read PROGRAM from FILE
   -c, --call         call FUNCTION with $0 followed by ARG values
+  -C, --call-exact   call FUNCTION with exactly the listed ARG values
   -nc, -cn           call FUNCTION without input, using only ARG values
   -k, --apropos [QUERY] list all functions and forms, or search their documentation
   -h, --help [TOPIC] print full help or help for one function or form
@@ -43,8 +46,8 @@ Input and options:
   with PROGRAM or input options.
   PROGRAM runs once per input record. Whitespace splits fields by default.
   --file reads the same program syntax from a UTF-8 file while standard input
-  remains the record input. It cannot be combined with PROGRAM or --call. An
-  empty program file has the same behavior as an empty PROGRAM and prints $0.
+  remains the record input. It cannot be combined with PROGRAM or a call option.
+  An empty program file has the same behavior as an empty PROGRAM and prints $0.
   Example: printf '(f (> $2 20)) (p $1)\n' > adults.cho
            printf 'Alice 30\nBob 18\n' | cho -f adults.cho  # => Alice
   $0 is the complete record; $1, $2, ... are fields. NR is the record number;
@@ -56,10 +59,21 @@ Input and options:
   shorthand for this combination. Arguments named $0, $1, ... are field
   references; all others are Strings. You cannot pass NR or NF as record values;
   both are treated as Strings. Quote field references such as $1 from the shell.
-  Options must precede --call because every following argument belongs to the
-  call. Use the regular program syntax to select another primary input.
+  --call-exact passes only its listed arguments. @0 is the complete record;
+  @1, @2, ... are fields; @NR and @NF are the record number and field count.
+  It uses @ instead of the program syntax's $ so the shell does not expand
+  references; @ references do not need quoting.
+  Field ranges use @..3, @3.., or @2..4 and remain one String that preserves
+  the original separators; they do not expand into multiple arguments. Prefix
+  a reference-shaped String with another @: @@2 passes the String @2. Other
+  arguments, including unrecognized values such as @name, are Strings. An
+  invalid field-shaped reference such as @2..1 is an error.
+  Options must precede a call option because every following argument belongs
+  to the call. Use regular program syntax for nested expressions.
   Examples: echo production | cho -c s/upper  # => PRODUCTION
             echo api-server | cho -c s/replace - _  # => api_server
+            printf 'alice developer\n' | cho -C s/upper @2  # => DEVELOPER
+            printf 'a b c\n' | cho -C p @1 @3  # => a c
             cho -nc s/upper production  # => PRODUCTION
   The -F separator must be a valid regular expression and must not produce a
   zero-length match. An input-dependent zero-length match is a runtime error.

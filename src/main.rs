@@ -9,6 +9,7 @@ const USAGE: &str = concat!(
     "  cho [INPUT OPTIONS] 'PROGRAM'\n",
     "  cho [INPUT OPTIONS] --file FILE\n",
     "  cho [INPUT OPTIONS] --call FUNCTION [ARG ...]\n",
+    "  cho [INPUT OPTIONS] --call-exact FUNCTION [ARG ...]\n",
     "  cho --help [TOPIC]\n",
     "  cho --apropos [QUERY]\n",
     "  cho --version",
@@ -214,9 +215,17 @@ fn parse_args(arguments: impl IntoIterator<Item = String>) -> Result<Options, Ar
             if matches!(argument.as_str(), "-nc" | "-cn") {
                 no_input = true;
             }
+            let exact = matches!(argument.as_str(), "-C" | "--call-exact");
             let function = arguments.next().ok_or(ArgumentError::MissingCallFunction)?;
+            let mode = if exact {
+                CallMode::Exact
+            } else if no_input {
+                CallMode::Explicit
+            } else {
+                CallMode::RecordFirst
+            };
             program = Some(ProgramSource::CommandLine(call_program(
-                &function, arguments, !no_input,
+                &function, arguments, mode,
             )?));
             break;
         } else if argument == "-F" {
@@ -322,13 +331,23 @@ fn is_cli_option(argument: &str) -> bool {
 }
 
 fn is_call_option(argument: &str) -> bool {
-    matches!(argument, "-c" | "--call" | "-nc" | "-cn")
+    matches!(
+        argument,
+        "-c" | "--call" | "-nc" | "-cn" | "-C" | "--call-exact"
+    )
+}
+
+#[derive(Clone, Copy)]
+enum CallMode {
+    RecordFirst,
+    Explicit,
+    Exact,
 }
 
 fn call_program(
     function: &str,
     arguments: impl IntoIterator<Item = String>,
-    include_record: bool,
+    mode: CallMode,
 ) -> Result<String, ArgumentError> {
     if function.starts_with('(') || function.ends_with(')') {
         return Err(ArgumentError::CallExpression);
@@ -342,29 +361,61 @@ fn call_program(
     }
 
     let mut program = format!("({function}");
-    if include_record {
+    if matches!(mode, CallMode::RecordFirst) {
         program.push_str(" $0");
     }
     for argument in arguments {
         program.push(' ');
-        if is_call_reference(&argument) {
+        if matches!(mode, CallMode::Exact) {
+            if let Some(reference) = exact_call_reference(&argument) {
+                program.push_str(&reference);
+            } else {
+                let literal = if argument.starts_with("@@") {
+                    argument.strip_prefix('@').expect("prefix was checked")
+                } else {
+                    &argument
+                };
+                push_call_string(&mut program, literal);
+            }
+        } else if is_call_reference(&argument) {
             program.push_str(&argument);
         } else {
-            program.push('"');
-            for character in argument.chars() {
-                match character {
-                    '\\' => program.push_str("\\\\"),
-                    '"' => program.push_str("\\\""),
-                    '\n' => program.push_str("\\n"),
-                    '\t' => program.push_str("\\t"),
-                    other => program.push(other),
-                }
-            }
-            program.push('"');
+            push_call_string(&mut program, &argument);
         }
     }
     program.push(')');
     Ok(program)
+}
+
+fn exact_call_reference(argument: &str) -> Option<String> {
+    if argument.starts_with("@@") {
+        return None;
+    }
+    match argument {
+        "@NR" => return Some("NR".into()),
+        "@NF" => return Some("NF".into()),
+        _ => {}
+    }
+    let field = argument.strip_prefix('@')?;
+    field
+        .chars()
+        .next()
+        .is_some_and(|character| character.is_ascii_digit() || character == '.')
+        .then(|| format!("${field}"))
+}
+
+fn push_call_string(program: &mut String, argument: &str) {
+    program.push('"');
+    for character in argument.chars() {
+        match character {
+            '\\' => program.push_str("\\\\"),
+            '"' => program.push_str("\\\""),
+            '\n' => program.push_str("\\n"),
+            '\t' => program.push_str("\\t"),
+            other => program.push(other),
+        }
+    }
+    program.push('"');
 }
 
 fn is_call_reference(argument: &str) -> bool {
@@ -663,13 +714,26 @@ mod tests {
 
     #[test]
     fn call_mode_builds_one_function_call() {
-        assert_eq!(call_program("s/upper", [], true).unwrap(), "(s/upper $0)");
         assert_eq!(
-            call_program("str", args(&["$1", "$2", "NR", "NF"]), true).unwrap(),
+            call_program("s/upper", [], CallMode::RecordFirst).unwrap(),
+            "(s/upper $0)"
+        );
+        assert_eq!(
+            call_program(
+                "str",
+                args(&["$1", "$2", "NR", "NF"]),
+                CallMode::RecordFirst,
+            )
+            .unwrap(),
             r#"(str $0 $1 $2 "NR" "NF")"#
         );
         assert_eq!(
-            call_program("str", args(&["a b", "a\\b", "a\"b", "a\nb", "a\tb"]), true,).unwrap(),
+            call_program(
+                "str",
+                args(&["a b", "a\\b", "a\"b", "a\nb", "a\tb"]),
+                CallMode::RecordFirst,
+            )
+            .unwrap(),
             r#"(str $0 "a b" "a\\b" "a\"b" "a\nb" "a\tb")"#
         );
         assert_eq!(
@@ -686,6 +750,31 @@ mod tests {
                 ProgramSource::CommandLine(r#"(s/upper "hoge")"#.into())
             );
         }
+    }
+
+    #[test]
+    fn exact_call_mode_builds_a_call_from_only_explicit_arguments() {
+        assert_eq!(
+            call_program(
+                "str",
+                args(&[
+                    "@0", "@2", "@..3", "@3..", "@2..4", "@NR", "@NF", "@@2", "@name",
+                ]),
+                CallMode::Exact,
+            )
+            .unwrap(),
+            r#"(str $0 $2 $..3 $3.. $2..4 NR NF "@2" "@name")"#
+        );
+        assert_eq!(
+            parse_args(args(&["-C", "s/upper", "@2"])).unwrap().program,
+            ProgramSource::CommandLine("(s/upper $2)".into())
+        );
+        assert_eq!(
+            parse_args(args(&["--call-exact", "str", "--help"]))
+                .unwrap()
+                .program,
+            ProgramSource::CommandLine(r#"(str "--help")"#.into())
+        );
     }
 
     #[test]
