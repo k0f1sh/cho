@@ -167,8 +167,8 @@ incompatible change.
 
 The [`examples`](examples/README.md) directory contains runnable recipes for
 overdue invoices, slow API requests, connection timeouts, deployment updates,
-long-running jobs, error counts, and daily export paths. Each script includes
-sample input and its expected output.
+long-running jobs, error counts, connections by subnet, and daily export paths.
+Each script includes sample input and its expected output.
 
 ## Development
 
