@@ -100,14 +100,14 @@ $ echo '2026-08-24 INFO service   started successfully' | cho '(p $3..)'
 service   started successfully
 ```
 
-Filter CSV records by timestamp, using `-s` to skip the header:
+Filter CSV records by timestamp, selecting columns by header name:
 
 ```console
 $ printf '%s\n' \
     'name,role,created_at' \
     'Alice,admin,2026-08-02T09:00:00Z' \
     'Bob,viewer,2026-07-31T12:00:00Z' |
-    cho --csv -s '(f (dt/>= $3 "2026-08-01T00:00:00Z")) (p $1 $2)'
+    cho --csv '(f (dt/>= %created_at "2026-08-01T00:00:00Z")) (p %name %role)'
 Alice admin
 ```
 
