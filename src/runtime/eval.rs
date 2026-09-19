@@ -6,9 +6,7 @@ use chrono::format::{Item, StrftimeItems};
 use chrono::{DateTime, Utc};
 use regex::Regex;
 
-use crate::ast::{
-    CidrPart, Expr, RegexId, ReplaceMode, StringBoundary, StringTrim, UrlEncoding, UrlPart,
-};
+use crate::ast::{Expr, RegexId, ReplaceMode, StringBoundary, StringTrim, UrlEncoding, UrlPart};
 
 use super::date::{checked_result, expect_date, expect_days, part as date_part, part_name};
 use super::datetime::{
@@ -16,7 +14,7 @@ use super::datetime::{
     floor_datetime_in_timezone, floor_name, format_datetime_in_timezone, render_duration,
 };
 use super::identifier::{expect_ulid, expect_uuid, ulid_time, uuid_time};
-use super::network::{cidr_part_name, expect_cidr, expect_ip};
+use super::network::{self, cidr_part_name, expect_cidr, expect_ip};
 use super::number;
 use super::predicate::matches;
 use super::semver;
@@ -29,8 +27,7 @@ use super::url::{
     url_part_name,
 };
 use super::value::{
-    EvalError, EvalResult, RuntimeValue, exact_u64_number, expect_boolean, expect_number,
-    expect_string,
+    EvalError, EvalResult, RuntimeValue, expect_boolean, expect_number, expect_string,
 };
 
 pub(super) struct Record<'line> {
@@ -350,28 +347,29 @@ pub(super) fn evaluate(expr: &Expr, record: &EvalContext<'_, '_, '_>) -> EvalRes
                 IpAddr::V6(_) => 6.0,
             }))
         }
+        Expr::NormalizeIp(value) => {
+            expect_ip(evaluate(value, record)?, "ip", 1).map(RuntimeValue::IpAddr)
+        }
+        Expr::FormatIp { format, value } => {
+            let ip = expect_ip(evaluate(value, record)?, network::ip_format_name(format), 1)?;
+            Ok(RuntimeValue::String(network::format_ip(ip, format)))
+        }
+        Expr::NormalizeCidr(value) => {
+            let cidr = expect_cidr(evaluate(value, record)?, "cidr", 1)?;
+            Ok(RuntimeValue::Cidr(cidr.trunc()))
+        }
+        Expr::MakeCidr { ip, prefix } => {
+            let ip = expect_ip(evaluate(ip, record)?, "cidr", 1)?;
+            network::make_cidr(ip, evaluate(prefix, record)?)
+        }
+        Expr::CidrFromMask { ip, mask } => {
+            let ip = expect_ip(evaluate(ip, record)?, "cidr/from-mask", 1)?;
+            let mask = expect_ip(evaluate(mask, record)?, "cidr/from-mask", 2)?;
+            network::cidr_from_mask(ip, mask)
+        }
         Expr::CidrPart { part, value } => {
-            let function = cidr_part_name(part);
-            let cidr = expect_cidr(evaluate(value, record)?, function, 1)?;
-            match part {
-                CidrPart::Network | CidrPart::First => Ok(RuntimeValue::IpAddr(cidr.network())),
-                CidrPart::Prefix => Ok(RuntimeValue::Number(cidr.prefix_len() as f64)),
-                CidrPart::Last => Ok(RuntimeValue::IpAddr(cidr.broadcast())),
-                CidrPart::Size => {
-                    let address_bits = if cidr.addr().is_ipv4() { 32 } else { 128 };
-                    let host_bits = address_bits - cidr.prefix_len();
-                    if host_bits >= 53 {
-                        return Err(EvalError::conversion(
-                            function,
-                            1,
-                            "Cidr whose size fits Number's safe integer range",
-                            cidr.to_string(),
-                            "contains more than 2^53 - 1 addresses",
-                        ));
-                    }
-                    exact_u64_number(1_u64 << host_bits, function, 1, cidr.to_string())
-                }
-            }
+            let cidr = expect_cidr(evaluate(value, record)?, cidr_part_name(part), 1)?;
+            network::cidr_part(cidr, part)
         }
         Expr::SemVerPart { part, value } => semver::evaluate_part(part, value, record),
         Expr::NormalizeUuid(value) => {

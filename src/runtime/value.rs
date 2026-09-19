@@ -2,6 +2,7 @@ use std::fmt;
 use std::net::IpAddr;
 
 use chrono::{DateTime, NaiveDate, SecondsFormat, TimeDelta, Utc};
+use ipnet::IpNet;
 use rust_decimal::Decimal;
 use ulid::Ulid;
 use uuid::Uuid;
@@ -10,7 +11,7 @@ use super::datetime::render_duration;
 
 /// A typed result produced by evaluating an expression.
 // Only types that one expression can produce and pass as an argument to another have runtime
-// variants. Cidr, Url, and SemVer remain contextually parsed by their consumers until the
+// variants. Url and SemVer remain contextually parsed by their consumers until the
 // language has functions that naturally produce values of those types.
 #[derive(Debug, Clone)]
 pub(super) enum RuntimeValue {
@@ -22,6 +23,7 @@ pub(super) enum RuntimeValue {
     Duration(TimeDelta),
     ByteSize(Decimal),
     IpAddr(IpAddr),
+    Cidr(IpNet),
     Uuid(Uuid),
     Ulid(Ulid),
 }
@@ -37,6 +39,7 @@ impl RuntimeValue {
             Self::Duration(value) => render_duration(value),
             Self::ByteSize(value) => format!("{}B", value.normalize()),
             Self::IpAddr(value) => value.to_string(),
+            Self::Cidr(value) => value.trunc().to_string(),
             Self::Uuid(value) => value.to_string(),
             Self::Ulid(value) => value.to_string(),
         }
@@ -52,6 +55,7 @@ impl RuntimeValue {
             Self::Duration(_) => "Duration",
             Self::ByteSize(_) => "ByteSize",
             Self::IpAddr(_) => "IpAddr",
+            Self::Cidr(_) => "Cidr",
             Self::Uuid(_) => "UUID",
             Self::Ulid(_) => "ULID",
         }

@@ -423,6 +423,44 @@ mod tests {
     }
 
     #[test]
+    fn network_calculations_validate_arity_and_recursive_arguments() {
+        for name in [
+            "ip",
+            "ip/expand",
+            "ip/binary",
+            "cidr/netmask",
+            "cidr/wildcard",
+            "cidr/host-first",
+            "cidr/host-last",
+            "cidr/host-count",
+            "cidr/size-str",
+        ] {
+            assert!(parse(&format!("({name})")).is_err(), "{name}");
+            assert!(parse(&format!("({name} $1 $2)")).is_err(), "{name}");
+            assert!(parse(&format!("({name} /regex/)")).is_err(), "{name}");
+        }
+        for program in [
+            "(cidr)",
+            "(cidr $1 24 32)",
+            "(cidr/from-mask)",
+            "(cidr/from-mask $1)",
+            "(cidr/from-mask $1 $2 $3)",
+            "(cidr $1 (print 24))",
+            "(cidr/from-mask $1 /mask/)",
+        ] {
+            assert!(parse(program).is_err(), "{program}");
+        }
+        for program in [
+            "(cidr/host-first (cidr (ip $1) (+ 20 4)))",
+            "(cidr/prefix (cidr/from-mask (ip $1) (cidr/netmask $2)))",
+            "(ip/binary (cidr/wildcard (cidr $1)))",
+            "(-> $1 (ip) (cidr 24) (cidr/host-count))",
+        ] {
+            assert!(parse(program).is_ok(), "{program}");
+        }
+    }
+
+    #[test]
     fn parses_a_complete_program() {
         assert_eq!(
             parse(r#"(filter (> (s/count $1) 3)) (print (str NR ":" $1))"#),

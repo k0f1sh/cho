@@ -910,3 +910,36 @@ fn regex_extract_cli_and_runtime_error_preserve_output() {
             .contains("record 2: re/extract: argument 3 expects Number")
     );
 }
+
+#[test]
+fn network_calculations_preserve_output_before_a_bad_record() {
+    let result = run(
+        "(p (cidr/netmask $1) (cidr/host-first $1) (cidr/host-last $1) (cidr/host-count $1))",
+        "192.168.1.42/24\ninvalid\n",
+    );
+    assert!(!result.status.success());
+    assert_eq!(
+        String::from_utf8(result.stdout).unwrap(),
+        "255.255.255.0 192.168.1.1 192.168.1.254 254\n"
+    );
+    assert!(
+        String::from_utf8(result.stderr)
+            .unwrap()
+            .starts_with("cho: record 2: cidr/netmask: argument 1 expects Cidr")
+    );
+}
+
+#[test]
+fn network_constructors_work_through_call_and_call_exact() {
+    let result = run_with_args(&["--call", "cidr", "24"], "192.168.1.42\n");
+    assert!(result.status.success());
+    assert!(result.stderr.is_empty());
+    assert_eq!(result.stdout, b"192.168.1.0/24\n");
+    let result = run_with_args(
+        &["--call-exact", "cidr/from-mask", "@1", "@2"],
+        "192.168.1.42 255.255.255.0\n",
+    );
+    assert!(result.status.success());
+    assert!(result.stderr.is_empty());
+    assert_eq!(result.stdout, b"192.168.1.0/24\n");
+}

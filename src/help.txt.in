@@ -230,6 +230,22 @@ Byte sizes:
 IP and CIDR:
 {{callables:network}}
 
+  cidr returns a typed network/prefix value for functions that take CIDR.
+  cidr/first and cidr/last include all addresses. cidr/host-first and
+  cidr/host-last exclude IPv4 network and broadcast addresses only for /0
+  through /30; /31, /32, and IPv6 include both endpoints. These calculations
+  do not check whether an address is reserved or assignable.
+  cidr/size returns Number with a 2^53 - 1 limit. cidr/size-str and
+  cidr/host-count return exact decimal Strings, even for IPv6 /0.
+
+  Calculate a netmask and host range:
+    echo '192.168.1.42/24' | cho '(p (cidr/netmask $1) (cidr/host-first $1) (cidr/host-last $1) (cidr/host-count $1))'
+    # => 255.255.255.0 192.168.1.1 192.168.1.254 254
+
+  Compose a CIDR with a calculation:
+    echo '2001:db8::42' | cho '(cidr/size-str (cidr $1 64))'
+    # => 18446744073709551616
+
 URLs:
 {{callables:url}}
 

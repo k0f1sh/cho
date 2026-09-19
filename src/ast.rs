@@ -176,12 +176,24 @@ pub enum ReplaceMode {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
+pub enum IpFormat {
+    Expanded,
+    Binary,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum CidrPart {
     Network,
     Prefix,
     First,
     Last,
     Size,
+    SizeString,
+    Netmask,
+    Wildcard,
+    HostFirst,
+    HostLast,
+    HostCount,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -250,6 +262,20 @@ pub enum Expr {
     UrlQueryGet {
         url: Box<Expr>,
         name: Box<Expr>,
+    },
+    NormalizeIp(Box<Expr>),
+    FormatIp {
+        format: IpFormat,
+        value: Box<Expr>,
+    },
+    NormalizeCidr(Box<Expr>),
+    MakeCidr {
+        ip: Box<Expr>,
+        prefix: Box<Expr>,
+    },
+    CidrFromMask {
+        ip: Box<Expr>,
+        mask: Box<Expr>,
     },
     IpVersion(Box<Expr>),
     CidrPart {
@@ -426,6 +452,9 @@ impl Expr {
             | Self::StringEmpty(value)
             | Self::NormalizeByteSize(value)
             | Self::ByteSizeToBytes(value)
+            | Self::NormalizeIp(value)
+            | Self::NormalizeCidr(value)
+            | Self::FormatIp { value, .. }
             | Self::IpVersion(value)
             | Self::NormalizeUuid(value)
             | Self::UuidVersion(value)
@@ -471,6 +500,8 @@ impl Expr {
             Self::Arithmetic { left, right, .. }
             | Self::DifferenceDate { left, right }
             | Self::DifferenceDateTime { left, right } => left.depth().max(right.depth()),
+            Self::MakeCidr { ip, prefix } => ip.depth().max(prefix.depth()),
+            Self::CidrFromMask { ip, mask } => ip.depth().max(mask.depth()),
             Self::FormatNumberFixed { value, digits } => value.depth().max(digits.depth()),
             Self::NumberMinimum(values)
             | Self::NumberMaximum(values)

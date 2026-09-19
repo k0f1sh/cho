@@ -360,6 +360,18 @@ Byte sizes:
   decimal range has up to 28 fractional digits and a 96-bit significand.
 
 IP and CIDR:
+  (ip IPADDR) -> IPADDR                     validate and normalize an IP address
+  (ip/expand IPADDR) -> STRING              return the full IP address as a string
+  (ip/binary IPADDR) -> STRING              return the address bits as a string
+  (cidr CIDR) -> CIDR                       create a CIDR normalized to its network address
+  (cidr IPADDR PREFIX) -> CIDR              create a CIDR normalized to its network address
+  (cidr/from-mask IPADDR MASK) -> CIDR      create a CIDR from an IP address and netmask
+  (cidr/netmask CIDR) -> IPADDR             return the network mask
+  (cidr/wildcard CIDR) -> IPADDR            return the inverse network mask
+  (cidr/host-first CIDR) -> IPADDR          return the first host address
+  (cidr/host-last CIDR) -> IPADDR           return the last host address
+  (cidr/host-count CIDR) -> STRING          return the exact host count as a decimal string
+  (cidr/size-str CIDR) -> STRING            return the exact address count as a decimal string
   (ip/version IPADDR) -> NUMBER             return 4 or 6
   (ip/v4? IPADDR) -> BOOLEAN                test an IPv4 address
   (ip/v6? IPADDR) -> BOOLEAN                test an IPv6 address
@@ -375,6 +387,22 @@ IP and CIDR:
   (cidr/first CIDR) -> IPADDR               return the lowest address
   (cidr/last CIDR) -> IPADDR                return the highest address
   (cidr/size CIDR) -> NUMBER                return the address count up to 2^53 - 1
+
+  cidr returns a typed network/prefix value for functions that take CIDR.
+  cidr/first and cidr/last include all addresses. cidr/host-first and
+  cidr/host-last exclude IPv4 network and broadcast addresses only for /0
+  through /30; /31, /32, and IPv6 include both endpoints. These calculations
+  do not check whether an address is reserved or assignable.
+  cidr/size returns Number with a 2^53 - 1 limit. cidr/size-str and
+  cidr/host-count return exact decimal Strings, even for IPv6 /0.
+
+  Calculate a netmask and host range:
+    echo '192.168.1.42/24' | cho '(p (cidr/netmask $1) (cidr/host-first $1) (cidr/host-last $1) (cidr/host-count $1))'
+    # => 255.255.255.0 192.168.1.1 192.168.1.254 254
+
+  Compose a CIDR with a calculation:
+    echo '2001:db8::42' | cho '(cidr/size-str (cidr $1 64))'
+    # => 18446744073709551616
 
 URLs:
   (url/scheme URL) -> STRING                extract the scheme

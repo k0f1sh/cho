@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.35.0",
+  "cho_version": "0.36.0",
   "callables": [
     {
       "name": "print",
@@ -3350,6 +3350,293 @@
       ]
     },
     {
+      "name": "ip",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "validate and normalize an IP address",
+      "notes": [
+        "IPv6 renders in compressed form; IPv4 renders in dotted decimal."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "IpAddr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "IpAddr",
+          "summary": null,
+          "example": "(ip $1)"
+        }
+      ]
+    },
+    {
+      "name": "ip/expand",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "return the full IP address as a string",
+      "notes": [
+        "IPv6 uses eight lowercase, zero-padded four-digit groups; IPv4 uses dotted decimal."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "IpAddr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(ip/expand $1)"
+        }
+      ]
+    },
+    {
+      "name": "ip/binary",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "return the address bits as a string",
+      "notes": [
+        "IPv4 uses four 8-bit groups separated by dots; IPv6 uses eight 16-bit groups separated by colons."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "IpAddr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(ip/binary $1)"
+        }
+      ]
+    },
+    {
+      "name": "cidr",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "create a CIDR normalized to its network address",
+      "notes": [
+        "PREFIX must be an integer from 0 to 32 for IPv4 or 0 to 128 for IPv6.",
+        "A single input requires address/prefix notation. No class-based default mask is inferred."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Cidr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Cidr",
+          "summary": null,
+          "example": "(cidr $1)"
+        },
+        {
+          "parameters": [
+            {
+              "name": "ip",
+              "type": "IpAddr",
+              "cardinality": "required"
+            },
+            {
+              "name": "prefix",
+              "type": "Number",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Cidr",
+          "summary": null,
+          "example": "(cidr $1 64)"
+        }
+      ]
+    },
+    {
+      "name": "cidr/from-mask",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "create a CIDR from an IP address and netmask",
+      "notes": [
+        "MASK must use the same address family and contain leading ones followed by zeros; inverse masks are not inferred."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "ip",
+              "type": "IpAddr",
+              "cardinality": "required"
+            },
+            {
+              "name": "mask",
+              "type": "IpAddr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Cidr",
+          "summary": null,
+          "example": "(cidr/from-mask $1 $2)"
+        }
+      ]
+    },
+    {
+      "name": "cidr/netmask",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "return the network mask",
+      "notes": [
+        "Returns an IPv4 or IPv6 address with the prefix bits set to one."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Cidr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "IpAddr",
+          "summary": null,
+          "example": "(cidr/netmask $1)"
+        }
+      ]
+    },
+    {
+      "name": "cidr/wildcard",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "return the inverse network mask",
+      "notes": [
+        "Inverts all 32 IPv4 or 128 IPv6 bits of the netmask."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Cidr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "IpAddr",
+          "summary": null,
+          "example": "(cidr/wildcard $1)"
+        }
+      ]
+    },
+    {
+      "name": "cidr/host-first",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "return the first host address",
+      "notes": [
+        "IPv4 /0 through /30 exclude network and broadcast; /31, /32, and IPv6 include both endpoints. This is a range calculation, not an allocation check."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Cidr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "IpAddr",
+          "summary": null,
+          "example": "(cidr/host-first $1)"
+        }
+      ]
+    },
+    {
+      "name": "cidr/host-last",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "return the last host address",
+      "notes": [
+        "IPv4 /0 through /30 exclude network and broadcast; /31, /32, and IPv6 include both endpoints. This is a range calculation, not an allocation check."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Cidr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "IpAddr",
+          "summary": null,
+          "example": "(cidr/host-last $1)"
+        }
+      ]
+    },
+    {
+      "name": "cidr/host-count",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "return the exact host count as a decimal string",
+      "notes": [
+        "IPv4 /0 through /30 subtract network and broadcast; /31, /32, and IPv6 count every address. Other reserved addresses may be included; the count does not guarantee assignability. String output has no units or separators; conversion to Number can lose precision."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Cidr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(cidr/host-count $1)"
+        }
+      ]
+    },
+    {
+      "name": "cidr/size-str",
+      "aliases": [],
+      "kind": "function",
+      "category": "network",
+      "summary": "return the exact address count as a decimal string",
+      "notes": [
+        "Counts every address, including IPv6 /0 (2^128). String output has no units or separators; conversion to Number can lose precision."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Cidr",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "String",
+          "summary": null,
+          "example": "(cidr/size-str $1)"
+        }
+      ]
+    },
+    {
       "name": "ip/version",
       "aliases": [],
       "kind": "function",
@@ -3656,7 +3943,9 @@
       "kind": "function",
       "category": "network",
       "summary": "return the highest address",
-      "notes": [],
+      "notes": [
+        "For IPv4 /0 through /30 this is the broadcast address. IPv4 /31 and /32 have no ordinary subnet broadcast; IPv6 has no broadcast."
+      ],
       "signatures": [
         {
           "parameters": [
