@@ -43,6 +43,11 @@ CONNECTIONS
   sort | uniq -c |
   cho -C csv/join @2 @1
 
+# Equivalent pipeline using S-expressions, with the same records on stdin:
+# cho '(str (cidr/network (s/join "/" (url/host $2) 24)) "/24")' |
+#   sort | uniq -c |
+#   cho '(csv/join $2 $1)'
+
 # Expected output:
 # 10.20.4.0/24,9
 # 10.20.5.0/24,7
