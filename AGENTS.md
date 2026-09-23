@@ -9,6 +9,8 @@
 - `tests/runtime/`は分野別の実行テスト、`tests/cli.rs`はCLIの入出力・終了コードのテスト。
 - `skills/cho-process-text/`は配布する利用者向けskill。開発手順はこのAGENTS.mdに、
   完全な言語仕様はhelpに置き、skillにはコマンドの組み立て方と注意点を置く。
+- `editors/emacs/`は配布するEmacsモード。`cho-mode-data.el`は`metadata.json`から
+  生成するため直接編集しない。Bashの起動設定は含めない。
 
 ## 設計思想
 
@@ -121,6 +123,13 @@ $ cargo clippy --all-targets -- -D warnings
 関連仕様との整合性を確認する。
 依頼した変更に起因する失敗は修正し、影響する検証を再実行して完了まで進める。
 検証が通った後は、新たな変更や懸念がなければ同じ検証を繰り返さない。
+
+Emacsモードの実装や生成データを変更した場合は、以下も実行する。
+
+```console
+$ emacs -Q --batch -L editors/emacs -l generate-cho-mode-data -f cho-mode-generate-data
+$ emacs -Q --batch -L editors/emacs -l cho-mode-tests.el -f ert-run-tests-batch-and-exit
+```
 
 ユーザー向けの構文を変更した場合は、代表的なコマンドを実際のバイナリで実行し、
 標準出力、標準エラー、終了コードを確認する。`cho --help`、README、対応するexample、
