@@ -10,7 +10,7 @@
 - `skills/cho-process-text/`は配布する利用者向けskill。開発手順はこのAGENTS.mdに、
   完全な言語仕様はhelpに置き、skillにはコマンドの組み立て方と注意点を置く。
 - `editors/emacs/`は配布するEmacsモード。`cho-mode-data.el`は`metadata.json`から
-  生成するため直接編集しない。Bashの起動設定は含めない。
+  生成するため直接編集しない。
 
 ## 設計思想
 

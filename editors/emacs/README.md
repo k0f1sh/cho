@@ -38,9 +38,6 @@ quotes and comments. This covers ordinary one-line commands; complex shell
 constructs such as command substitutions and here-documents are not parsed as
 full Bash syntax.
 
-Shell editor bindings, temporary-file handling, and the behavior when Emacs
-exits belong in the user's own shell and Emacs configuration.
-
 ## Updating generated data
 
 `cho-mode-data.el` is generated from the repository's `metadata.json`. Run
