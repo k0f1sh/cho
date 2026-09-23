@@ -165,6 +165,9 @@ keeping standard input available for the records being processed.
 forms. Its `schema_version` changes when the JSON structure makes an
 incompatible change.
 
+The [Emacs mode](editors/emacs/README.md) adds Cho highlighting, completion,
+Eldoc, and parenthesis editing to shell command buffers.
+
 The [`examples`](examples/README.md) directory contains runnable recipes for
 overdue invoices, slow API requests, connection timeouts, deployment updates,
 long-running jobs, error counts, connections by subnet, and daily export paths.
