@@ -48,6 +48,25 @@
                     (point) (scan-sexps (point) 1))
                    "(print (s/trim $1))"))))
 
+(ert-deftest cho-mode-does-not-highlight-cho-string-contents ()
+  (with-temp-buffer
+    (insert "cho '(p \"(print $1 true)\" (print $1))'")
+    (cho-mode)
+    (font-lock-ensure)
+    (goto-char (point-min))
+    (search-forward "print")
+    (should-not (eq (get-text-property (1- (point)) 'face)
+                    'font-lock-function-name-face))
+    (search-forward "$1")
+    (should-not (eq (get-text-property (1- (point)) 'face)
+                    'font-lock-variable-name-face))
+    (search-forward "true")
+    (should-not (eq (get-text-property (1- (point)) 'face)
+                    'font-lock-constant-face))
+    (search-forward "print")
+    (should (eq (get-text-property (1- (point)) 'face)
+                'font-lock-function-name-face))))
+
 (ert-deftest cho-mode-generated-data-is-current ()
   (let ((temporary-file (make-temp-file "cho-mode-data-")))
     (unwind-protect

@@ -106,8 +106,12 @@ Only an unquoted `cho' command word can introduce a program."
   "Search REGEXP up to LIMIT, accepting matches inside Cho programs only."
   (let (found)
     (while (and (not found) (re-search-forward regexp limit t))
-      (when (cho-mode--in-program-p (match-beginning 0))
-        (setq found t)))
+      (let ((match-start (match-beginning 0)))
+        (when (and (cho-mode--in-program-p match-start)
+                   (let ((syntax (save-excursion
+                                   (save-match-data (syntax-ppss match-start)))))
+                     (not (or (nth 3 syntax) (nth 4 syntax)))))
+          (setq found t))))
     found))
 
 (defun cho-mode--match-function (limit)
