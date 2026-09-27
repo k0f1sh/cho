@@ -225,6 +225,9 @@ fn execute<W: Write>(
             Form::Filter(condition) => {
                 evaluate(condition, record).and_then(|value| expect_boolean(value, "filter", 1))
             }
+            Form::FilterNot(condition) => evaluate(condition, record)
+                .and_then(|value| expect_boolean(value, "filter-not", 1))
+                .map(|condition| !condition),
         };
         match result {
             Ok(true) => {}

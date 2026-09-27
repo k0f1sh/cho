@@ -12,8 +12,9 @@ Usage:
 Common recipes:
   Pick fields             cho '(p $1 $3)'
   Exclude fields          cho '(p $..2 $4..)'
-  Skip empty records      cho '(f (not (s/empty? $0)))'
+  Skip empty records      cho '(fn (s/empty? $0))'
   Filter numbers          cho '(f (> $2 20))'
+  Skip health checks      cho '(fn (~ /health/))'
   Match a field           cho '(f (~ $1 /^api-/))'
   Match the whole record  cho '(f (~ /ERROR|WARN/))'
   Transform one value     cho '(s/upper $1)'
@@ -86,11 +87,14 @@ Program forms:
   (p VALUE ...)                             short form of print
   (filter BOOLEAN)                          continue only when true
   (f BOOLEAN)                               short form of filter
+  (filter-not BOOLEAN)                      continue only when false
+  (fn BOOLEAN)                              short form of filter-not
 
   A single top-level value is printed automatically. It may follow filters.
   Use print to output multiple values separated by spaces. Do not mix an
   automatic top-level value with print or place multiple values at the top level.
-  A program containing only filters implicitly prints $0 after they pass.
+  A program containing only filter or filter-not forms implicitly prints $0
+  after they pass.
   An empty program also prints $0. Any explicit print disables implicit output.
   Expressions may contain at most 256 nested lists, including the nesting
   produced by expanding -> and ->> steps.
@@ -494,9 +498,9 @@ Types and errors:
 Composition:
   A VALUE can be a literal, field, function call, or special form. Values nest
   anywhere a VALUE is accepted. Multiple program forms run left to right; a
-  failed filter skips the rest of that record. Multiple filters therefore act
-  like AND. If the program is empty or contains only filters,
-  cho implicitly prints $0 after the filters pass.
+  failed filter or filter-not skips the rest of that record. Multiple filter
+  forms therefore act like AND. If the program is empty or contains only
+  filter and filter-not forms, cho implicitly prints $0 after they pass.
   Functions with one primary input put it first, followed by configuration.
   Variadic functions such as str and s/join have no single primary input.
 

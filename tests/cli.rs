@@ -319,8 +319,9 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("Combining marks and joined emoji"));
     assert!(stdout.contains("(p VALUE ...)"));
     assert!(stdout.contains("(f BOOLEAN)"));
+    assert!(stdout.contains("(fn BOOLEAN)"));
     assert!(stdout.contains("(s/empty? VALUE)"));
-    assert!(stdout.contains("only filters implicitly prints $0"));
+    assert!(stdout.contains("only filter or filter-not forms implicitly prints $0"));
     assert!(stdout.contains("An empty program also prints $0"));
     assert!(stdout.contains("true, false"));
     assert!(stdout.contains("(if BOOLEAN VALUE VALUE)"));

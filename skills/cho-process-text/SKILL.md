@@ -44,7 +44,8 @@ cho is not a prerequisite for merely explaining a command.
 - A single top-level value prints automatically. `(p VALUE ...)` prints values
   separated by spaces; use `s/join` for another delimiter and `csv/join` for CSV
   encoding. Filters alone print the original record when they pass. A false
-  filter skips the remaining expressions for that record.
+  filter skips the remaining expressions for that record. `(fn BOOLEAN)` is
+  short for `filter-not` and skips a record when the condition is true.
 - `--call` supplies `$0` as the first argument; `--no-input --call` (or `-nc`)
   supplies only explicit arguments and runs once. `--call-exact` (or `-C`)
   passes only its listed arguments and uses shell-safe record references: `@0`
@@ -72,6 +73,8 @@ printf '2026-08-24T01:30:00Z\n' | cho '(dt/fmt $1 "%Y-%m-%d %H:%M" "Asia/Tokyo")
 # 2026-08-24 10:30
 printf '10.1.2.3\n8.8.8.8\n' | cho '(f (cidr/contains? "10.0.0.0/8" $1))'
 # 10.1.2.3
+printf 'GET /health\nGET /users\n' | cho '(fn (~ /health/))'
+# GET /users
 cho -nc uuid/v4
 # One generated UUID
 printf 'web 10.1.2.3\n' | cho -C cidr/contains? 10.0.0.0/8 @2

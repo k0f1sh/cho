@@ -13,6 +13,7 @@ pub struct RegexId(pub usize);
 pub enum Form {
     Print(Vec<Expr>),
     Filter(Expr),
+    FilterNot(Expr),
 }
 
 #[derive(Debug, PartialEq)]

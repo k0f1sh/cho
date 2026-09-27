@@ -20,7 +20,7 @@ pub(super) fn compile_program(source: &str) -> io::Result<CompiledProgram> {
     if program
         .forms
         .iter()
-        .all(|form| matches!(form, Form::Filter(_)))
+        .all(|form| matches!(form, Form::Filter(_) | Form::FilterNot(_)))
     {
         program.forms.push(Form::Print(vec![Expr::Field(0)]));
     }

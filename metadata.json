@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.36.0",
+  "cho_version": "0.37.0",
   "callables": [
     {
       "name": "print",
@@ -47,6 +47,30 @@
           "returns": null,
           "summary": null,
           "example": "(filter (> $2 20))"
+        }
+      ]
+    },
+    {
+      "name": "filter-not",
+      "aliases": [
+        "fn"
+      ],
+      "kind": "program_form",
+      "category": "program",
+      "summary": "continue only when false",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "condition",
+              "type": "Boolean",
+              "cardinality": "required"
+            }
+          ],
+          "returns": null,
+          "summary": null,
+          "example": "(filter-not (~ /health/))"
         }
       ]
     },

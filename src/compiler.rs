@@ -50,7 +50,9 @@ impl Compiler {
                     has_explicit_print = true;
                     forms.push(Form::Print(values));
                 }
-                CompiledExpression::Form(Form::Filter(_)) if has_implicit_print => {
+                CompiledExpression::Form(Form::Filter(_) | Form::FilterNot(_))
+                    if has_implicit_print =>
+                {
                     return Err(ParseError::FilterAfterAutomaticValue);
                 }
                 CompiledExpression::Form(form) => forms.push(form),
@@ -183,7 +185,9 @@ impl Compiler {
         let compiled = callable.to_ast(self, Arguments(arguments))?;
         let depth = match &compiled {
             CompiledExpression::Expr(value) => value.depth(),
-            CompiledExpression::Form(Form::Filter(value)) => 1 + value.depth(),
+            CompiledExpression::Form(Form::Filter(value) | Form::FilterNot(value)) => {
+                1 + value.depth()
+            }
             CompiledExpression::Form(Form::Print(values)) => {
                 1 + values.iter().map(Expr::depth).max().unwrap_or(0)
             }
@@ -537,6 +541,10 @@ mod tests {
             parse("(filter (> $2 20)) (print $1)")
         );
         assert_eq!(parse("(p)"), parse("(print)"));
+        assert_eq!(
+            parse("(fn (~ /health/)) (p $0)"),
+            parse("(filter-not (~ /health/)) (print $0)")
+        );
     }
 
     #[test]
@@ -561,6 +569,10 @@ mod tests {
         );
         assert_eq!(
             parse("$1 (filter (> $2 20))"),
+            Err(ParseError::FilterAfterAutomaticValue)
+        );
+        assert_eq!(
+            parse("$1 (fn true)"),
             Err(ParseError::FilterAfterAutomaticValue)
         );
     }
@@ -986,6 +998,11 @@ mod tests {
         assert_invalid("(filter (> $1))");
         assert_invalid("(f)");
         assert_invalid("(f (> $1 0) $2)");
+        assert_invalid("(filter-not)");
+        assert_invalid("(fn)");
+        assert_invalid("(filter-not true false)");
+        assert_invalid("(fn (not))");
+        assert_invalid("(print (fn true))");
         assert_invalid("(filter (reg $1))");
         assert_invalid("(filter (not))");
         assert_invalid("(filter (and))");

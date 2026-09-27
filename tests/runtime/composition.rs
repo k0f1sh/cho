@@ -53,6 +53,30 @@ fn filter_only_programs_implicitly_print_passing_records() {
 }
 
 #[test]
+fn filter_not_skips_matching_records_and_implicitly_prints_others() {
+    let input = "GET /health\nGET /users\nGET /health/live\n";
+    assert_eq!(output("(filter-not (~ /health/))", input), "GET /users\n");
+    assert_eq!(output("(fn (~ /health/))", input), "GET /users\n");
+    assert_eq!(
+        output("(f (~ /GET/)) (fn (~ /health/))", input),
+        "GET /users\n"
+    );
+}
+
+#[test]
+fn filter_not_composes_with_nested_predicates_and_other_forms() {
+    assert_eq!(
+        output(
+            r#"(print "seen" $1) (fn (or (ip/loopback? $1) (ip/private? $1))) (print "kept" $1)"#,
+            "127.0.0.1\n10.1.2.3\n8.8.8.8\n",
+        ),
+        "seen 127.0.0.1\nseen 10.1.2.3\nseen 8.8.8.8\nkept 8.8.8.8\n"
+    );
+    assert_eq!(output("(fn false)", "x\n"), "x\n");
+    assert_eq!(output("(fn true)", "x\n"), "");
+}
+
+#[test]
 fn not_inverts_a_predicate() {
     assert_eq!(
         output(
@@ -103,6 +127,10 @@ fn boolean_values_compose_in_filter_if_and_logical_functions() {
 fn boolean_consumers_reject_other_types_without_implicit_conversion() {
     for (program, function) in [
         (r#"(filter "true")"#, "filter"),
+        (r#"(filter-not "true")"#, "filter-not"),
+        (r#"(fn "true")"#, "filter-not"),
+        (r#"(fn "")"#, "filter-not"),
+        ("(fn $2)", "filter-not"),
         (r#"(print (if 1 "yes" "no"))"#, "if"),
         ("(print (not 1))", "not"),
         ("(print (and true 1))", "and"),

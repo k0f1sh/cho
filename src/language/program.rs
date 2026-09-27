@@ -34,3 +34,21 @@ define_callable!(
     [],
     [(None, "(filter (> $2 20))")]
 );
+
+define_callable!(
+    FilterNot,
+    CallableDefinition {
+        name: "filter-not",
+        aliases: &["fn"],
+        kind: CallableKind::ProgramForm,
+        signatures: &[sig!([p!("condition", Boolean, Required)] => None)]
+    },
+    |_context, arguments| {
+        let [condition] = expr_array(arguments)?;
+        form(Form::FilterNot(condition))
+    },
+    Program,
+    "continue only when false",
+    [],
+    [(None, "(filter-not (~ /health/))")]
+);

@@ -292,6 +292,7 @@ pub(crate) fn exprs(arguments: Arguments<'_>) -> Result<Vec<Expr>, ParseError> {
     arguments.0.into_iter().map(expect_expr).collect()
 }
 
+// The destructuring pattern at the call site determines N (for example, [condition] means 1).
 pub(crate) fn expr_array<const N: usize>(
     arguments: Arguments<'_>,
 ) -> Result<[Expr; N], ParseError> {
@@ -350,6 +351,7 @@ macro_rules! registry {
 registry!(
     program::Print,
     program::Filter,
+    program::FilterNot,
     field::Field,
     field::Fields,
     field::FieldsFrom,
