@@ -39,6 +39,8 @@ cho is not a prerequisite for merely explaining a command.
 - Compose values and predicates with the required type: numeric comparisons
   use `>`, `=`, etc.; strings use `s/`, calendar dates `d/`, timestamps `dt/`.
   Check signatures for other domains rather than inventing type constructors.
+  Use `s/in?` for exact matches against one or more string candidates and
+  `s/blank?` for empty or whitespace-only text.
 - `$0` is the whole record; missing fields are empty strings. Ranges such as
   `$3..` preserve separators and are unavailable with `--csv`.
 - A single top-level value prints automatically. `(p VALUE ...)` prints values
@@ -75,6 +77,8 @@ printf '10.1.2.3\n8.8.8.8\n' | cho '(f (cidr/contains? "10.0.0.0/8" $1))'
 # 10.1.2.3
 printf 'GET /health\nGET /users\n' | cho '(fn (~ /health/))'
 # GET /users
+printf 'api debug\napi error\napi trace\n' | cho '(fn (s/in? $2 "debug" "trace"))'
+# api error
 cho -nc uuid/v4
 # One generated UUID
 printf 'web 10.1.2.3\n' | cho -C cidr/contains? 10.0.0.0/8 @2

@@ -430,6 +430,45 @@ fn empty_predicate_composes_and_distinguishes_empty_from_whitespace() {
 }
 
 #[test]
+fn blank_predicate_matches_empty_and_unicode_whitespace() {
+    assert_eq!(
+        output(r#"(p (s/blank? $2) (s/blank? "\t"))"#, "value\nvalue x\n"),
+        "true true\nfalse true\n"
+    );
+    assert_eq!(
+        output("(fn (s/blank? $0))", "first\n\n \t \n\u{2003}\nlast\n"),
+        "first\nlast\n"
+    );
+    assert_eq!(
+        output(r#"(p (s/blank? 0) (s/blank? false))"#, "x\n"),
+        "false false\n"
+    );
+}
+
+#[test]
+fn string_in_matches_exact_values_and_composes_with_filters() {
+    assert_eq!(
+        output(
+            r#"(fn (s/in? $2 "debug" "trace"))"#,
+            "one debug\ntwo info\nthree trace\nfour debug-extra\n",
+        ),
+        "two info\nfour debug-extra\n"
+    );
+    assert_eq!(
+        output(
+            r#"(p (s/in? $2 "" "x") (s/in? (s/lower $1) "foo" "bar") (s/in? 2 "1" "2"))"#,
+            "FOO\n",
+        ),
+        "true true true\n"
+    );
+    assert_eq!(output(r#"(p (s/in? "foo" "FOO" "fo"))"#, "x\n"), "false\n");
+    assert_eq!(
+        output(r#"(p (s/in? "ok" "ok" (+ "bad" 1)))"#, "x\n"),
+        "true\n"
+    );
+}
+
+#[test]
 fn escape_makes_tabs_and_backslashes_visible() {
     assert_eq!(
         output(r#"(print (s/escape $0))"#, "first\tsecond\\third\r\n"),

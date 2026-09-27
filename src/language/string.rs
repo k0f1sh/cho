@@ -318,6 +318,24 @@ define_callable!(
 );
 
 define_callable!(
+    Blank,
+    CallableDefinition {
+        name: "s/blank?",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::Boolean))]
+    },
+    |_context, arguments| {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::StringBlank(Box::new(value_arg)))
+    },
+    String,
+    "test whether a string is empty or whitespace only",
+    [],
+    [(None, "(s/blank? \"  \")")]
+);
+
+define_callable!(
     Escape,
     CallableDefinition {
         name: "s/escape",
@@ -661,6 +679,30 @@ define_callable!(
     "test a substring",
     [],
     [(None, "(s/contains? $1 \"error\")")]
+);
+
+define_callable!(
+    In,
+    CallableDefinition {
+        name: "s/in?",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[
+            sig!([p!("value", Value, Required), p!("candidate", Value, OneOrMore, "CANDIDATE")] => Some(ValueType::Boolean))
+        ]
+    },
+    |_context, arguments| {
+        let mut values = exprs(arguments)?;
+        let value = values.remove(0);
+        expr(Expr::StringIn {
+            value: Box::new(value),
+            candidates: values,
+        })
+    },
+    String,
+    "test exact equality with any candidate",
+    ["Candidates are checked from left to right and stop at the first match."],
+    [(None, "(s/in? \"WARN\" \"INFO\" \"WARN\")")]
 );
 
 define_callable!(

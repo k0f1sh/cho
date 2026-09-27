@@ -53,6 +53,13 @@ Bob
 Carol
 ```
 
+Exclude noisy log levels with exact string matches:
+
+```console
+$ printf 'api debug\napi error\napi trace\n' | cho '(fn (s/in? $2 "debug" "trace"))'
+api error
+```
+
 - **Records and fields**: By default, each line is a record and whitespace splits fields (`$0` is the full record; `$1`, `$2`, ... refer to fields). Use `-F`, `--csv`, or `--tsv` to change how input is parsed.
 - **Forms**: `p` (short for `print`) outputs values separated by spaces. `f` (short for `filter`) keeps matching records, while `fn` (short for `filter-not`) excludes them. Filters without an explicit `print` output the whole record.
 - **Automatic types**: Fields are strings until a function requires a specific type. In `(> $2 20)`, `$2` is compared as a number. If conversion fails, the error identifies the record, function, argument position, and expected type.

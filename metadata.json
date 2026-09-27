@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.37.0",
+  "cho_version": "0.38.0",
   "callables": [
     {
       "name": "print",
@@ -1310,6 +1310,28 @@
       ]
     },
     {
+      "name": "s/blank?",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "test whether a string is empty or whitespace only",
+      "notes": [],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(s/blank? \"  \")"
+        }
+      ]
+    },
+    {
       "name": "s/escape",
       "aliases": [],
       "kind": "function",
@@ -1699,6 +1721,35 @@
           "returns": "Boolean",
           "summary": null,
           "example": "(s/contains? $1 \"error\")"
+        }
+      ]
+    },
+    {
+      "name": "s/in?",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "test exact equality with any candidate",
+      "notes": [
+        "Candidates are checked from left to right and stop at the first match."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "candidate",
+              "type": "Value",
+              "cardinality": "one_or_more"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(s/in? \"WARN\" \"INFO\" \"WARN\")"
         }
       ]
     },

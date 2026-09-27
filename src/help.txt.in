@@ -12,8 +12,9 @@ Usage:
 Common recipes:
   Pick fields             cho '(p $1 $3)'
   Exclude fields          cho '(p $..2 $4..)'
-  Skip empty records      cho '(fn (s/empty? $0))'
+  Skip blank records      cho '(fn (s/blank? $0))'
   Filter numbers          cho '(f (> $2 20))'
+  Exclude log levels      cho '(fn (s/in? $2 "debug" "trace"))'
   Skip health checks      cho '(fn (~ /health/))'
   Match a field           cho '(f (~ $1 /^api-/))'
   Match the whole record  cho '(f (~ /ERROR|WARN/))'

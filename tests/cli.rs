@@ -321,6 +321,8 @@ fn help_lists_types_and_signatures() {
     assert!(stdout.contains("(f BOOLEAN)"));
     assert!(stdout.contains("(fn BOOLEAN)"));
     assert!(stdout.contains("(s/empty? VALUE)"));
+    assert!(stdout.contains("(s/blank? VALUE)"));
+    assert!(stdout.contains("(s/in? VALUE CANDIDATE CANDIDATE ...)"));
     assert!(stdout.contains("only filter or filter-not forms implicitly prints $0"));
     assert!(stdout.contains("An empty program also prints $0"));
     assert!(stdout.contains("true, false"));

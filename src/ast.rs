@@ -226,6 +226,11 @@ pub enum Expr {
     Number(f64),
     Boolean(bool),
     StringEmpty(Box<Expr>),
+    StringBlank(Box<Expr>),
+    StringIn {
+        value: Box<Expr>,
+        candidates: Vec<Expr>,
+    },
     Arithmetic {
         operator: ArithmeticOperator,
         left: Box<Expr>,
@@ -451,6 +456,7 @@ impl Expr {
             Self::UuidV4 | Self::UuidV7 | Self::UlidNew | Self::DateTimeNow => 0,
             Self::DynamicField(value)
             | Self::StringEmpty(value)
+            | Self::StringBlank(value)
             | Self::NormalizeByteSize(value)
             | Self::ByteSizeToBytes(value)
             | Self::NormalizeIp(value)
@@ -510,6 +516,9 @@ impl Expr {
             | Self::Or(values)
             | Self::Concat(values)
             | Self::CsvJoin(values) => values.iter().map(Self::depth).max().unwrap_or(0),
+            Self::StringIn { value, candidates } => value
+                .depth()
+                .max(candidates.iter().map(Self::depth).max().unwrap_or(0)),
             Self::ClampNumber {
                 value,
                 minimum,

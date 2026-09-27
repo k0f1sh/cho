@@ -275,6 +275,18 @@ pub(super) fn evaluate(expr: &Expr, record: &EvalContext<'_, '_, '_>) -> EvalRes
         Expr::StringEmpty(value) => Ok(RuntimeValue::Boolean(
             evaluate(value, record)?.render().is_empty(),
         )),
+        Expr::StringBlank(value) => Ok(RuntimeValue::Boolean(
+            evaluate(value, record)?.render().trim().is_empty(),
+        )),
+        Expr::StringIn { value, candidates } => {
+            let value = evaluate(value, record)?.render();
+            for candidate in candidates {
+                if value == evaluate(candidate, record)?.render() {
+                    return Ok(RuntimeValue::Boolean(true));
+                }
+            }
+            Ok(RuntimeValue::Boolean(false))
+        }
         Expr::Arithmetic {
             operator,
             left,

@@ -618,6 +618,8 @@ mod tests {
         assert!(parse("(print (not (if (> $1 0) true false)))").is_ok());
         assert!(parse(r#"(filter (s/starts-with? $1 "api-"))"#).is_ok());
         assert!(parse(r#"(print (s/ends-with? $1 ".log") (s/contains? $1 "error"))"#).is_ok());
+        assert!(parse(r#"(fn (s/in? (s/lower $2) "debug" "trace"))"#).is_ok());
+        assert!(parse(r#"(f (s/blank? (s/trim $1)))"#).is_ok());
         assert_eq!(
             parse(r#"(print (-> $1 (s/starts-with? "api-")))"#),
             parse(r#"(print (s/starts-with? $1 "api-"))"#)
@@ -1014,6 +1016,10 @@ mod tests {
         assert_invalid("(print (s/join))");
         assert_invalid("(print (s/empty?))");
         assert_invalid("(print (s/empty? $1 $2))");
+        assert_invalid("(print (s/blank?))");
+        assert_invalid("(print (s/blank? $1 $2))");
+        assert_invalid("(print (s/in?))");
+        assert_invalid("(print (s/in? $1))");
         for program in [
             "(print (+))",
             "(print (+ $1))",

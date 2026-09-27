@@ -12,8 +12,9 @@ Usage:
 Common recipes:
   Pick fields             cho '(p $1 $3)'
   Exclude fields          cho '(p $..2 $4..)'
-  Skip empty records      cho '(fn (s/empty? $0))'
+  Skip blank records      cho '(fn (s/blank? $0))'
   Filter numbers          cho '(f (> $2 20))'
+  Exclude log levels      cho '(fn (s/in? $2 "debug" "trace"))'
   Skip health checks      cho '(fn (~ /health/))'
   Match a field           cho '(f (~ $1 /^api-/))'
   Match the whole record  cho '(f (~ /ERROR|WARN/))'
@@ -156,47 +157,49 @@ Numbers:
   integer identifiers as strings with s/=. Decimal arithmetic may round.
 
 Strings:
-  (str VALUE ...) -> STRING                 concatenate values
-  (s/join SEPARATOR VALUE ...) -> STRING    join values
-  (s/with VALUE BODY) -> VALUE              split on whitespace
-  (s/with VALUE DELIMITER BODY) -> VALUE    split on a literal delimiter
-  (s/repeat VALUE COUNT) -> STRING          repeat a value
-  (s/replace VALUE FROM TO) -> STRING       replace the first literal match
-  (s/r VALUE FROM TO) -> STRING             short form of s/replace
-  (s/replace-all VALUE FROM TO) -> STRING   replace all literal matches
-  (s/ra VALUE FROM TO) -> STRING            short form of s/replace-all
-  (s/before VALUE DELIMITER) -> STRING      take text before the first literal delimiter
-  (s/after VALUE DELIMITER) -> STRING       take text after the first literal delimiter
-  (s/slice VALUE START [LENGTH]) -> STRING  take Unicode characters from a 1-based start
-  (s/lpad VALUE WIDTH [FILL]) -> STRING     pad the left side to a Unicode character width
-  (s/rpad VALUE WIDTH [FILL]) -> STRING     pad the right side to a Unicode character width
-  (s/count VALUE) -> NUMBER                 count Unicode characters
-  (s/empty? VALUE) -> BOOLEAN               test whether a string is empty
-  (s/escape VALUE) -> STRING                escape tabs, newlines, and backslashes
-  (s/dquote VALUE) -> STRING                stringify and wrap in escaped double quotes
-  (dq VALUE) -> STRING                      short form of s/dquote
-  (s/squote VALUE) -> STRING                stringify and wrap in escaped single quotes
-  (sq VALUE) -> STRING                      short form of s/squote
-  (s/unquote VALUE) -> STRING               remove matching quotes and decode backslash escapes
-  (shq VALUE) -> STRING                     stringify and quote as one shell-safe argument
-  (s/lower VALUE) -> STRING                 lowercase
-  (s/upper VALUE) -> STRING                 uppercase
-  (s/reverse VALUE) -> STRING               reverse Unicode characters
-  (s/trim VALUE) -> STRING                  remove Unicode whitespace from both ends
-  (s/trim VALUE PREFIX SUFFIX) -> STRING    remove one exact prefix and suffix
-  (s/ltrim VALUE) -> STRING                 remove Unicode whitespace from the left
-  (s/ltrim VALUE PREFIX) -> STRING          remove one exact prefix
-  (s/rtrim VALUE) -> STRING                 remove Unicode whitespace from the right
-  (s/rtrim VALUE SUFFIX) -> STRING          remove one exact suffix
-  (s/starts-with? VALUE PREFIX) -> BOOLEAN  test a prefix
-  (s/ends-with? VALUE SUFFIX) -> BOOLEAN    test a suffix
-  (s/contains? VALUE NEEDLE) -> BOOLEAN     test a substring
-  (s/> VALUE VALUE) -> BOOLEAN              greater than
-  (s/>= VALUE VALUE) -> BOOLEAN             greater than or equal
-  (s/< VALUE VALUE) -> BOOLEAN              less than
-  (s/<= VALUE VALUE) -> BOOLEAN             less than or equal
-  (s/= VALUE VALUE) -> BOOLEAN              equal
-  (s/!= VALUE VALUE) -> BOOLEAN             not equal
+  (str VALUE ...) -> STRING                         concatenate values
+  (s/join SEPARATOR VALUE ...) -> STRING            join values
+  (s/with VALUE BODY) -> VALUE                      split on whitespace
+  (s/with VALUE DELIMITER BODY) -> VALUE            split on a literal delimiter
+  (s/repeat VALUE COUNT) -> STRING                  repeat a value
+  (s/replace VALUE FROM TO) -> STRING               replace the first literal match
+  (s/r VALUE FROM TO) -> STRING                     short form of s/replace
+  (s/replace-all VALUE FROM TO) -> STRING           replace all literal matches
+  (s/ra VALUE FROM TO) -> STRING                    short form of s/replace-all
+  (s/before VALUE DELIMITER) -> STRING              take text before the first literal delimiter
+  (s/after VALUE DELIMITER) -> STRING               take text after the first literal delimiter
+  (s/slice VALUE START [LENGTH]) -> STRING          take Unicode characters from a 1-based start
+  (s/lpad VALUE WIDTH [FILL]) -> STRING             pad the left side to a Unicode character width
+  (s/rpad VALUE WIDTH [FILL]) -> STRING             pad the right side to a Unicode character width
+  (s/count VALUE) -> NUMBER                         count Unicode characters
+  (s/empty? VALUE) -> BOOLEAN                       test whether a string is empty
+  (s/blank? VALUE) -> BOOLEAN                       test whether a string is empty or whitespace only
+  (s/escape VALUE) -> STRING                        escape tabs, newlines, and backslashes
+  (s/dquote VALUE) -> STRING                        stringify and wrap in escaped double quotes
+  (dq VALUE) -> STRING                              short form of s/dquote
+  (s/squote VALUE) -> STRING                        stringify and wrap in escaped single quotes
+  (sq VALUE) -> STRING                              short form of s/squote
+  (s/unquote VALUE) -> STRING                       remove matching quotes and decode backslash escapes
+  (shq VALUE) -> STRING                             stringify and quote as one shell-safe argument
+  (s/lower VALUE) -> STRING                         lowercase
+  (s/upper VALUE) -> STRING                         uppercase
+  (s/reverse VALUE) -> STRING                       reverse Unicode characters
+  (s/trim VALUE) -> STRING                          remove Unicode whitespace from both ends
+  (s/trim VALUE PREFIX SUFFIX) -> STRING            remove one exact prefix and suffix
+  (s/ltrim VALUE) -> STRING                         remove Unicode whitespace from the left
+  (s/ltrim VALUE PREFIX) -> STRING                  remove one exact prefix
+  (s/rtrim VALUE) -> STRING                         remove Unicode whitespace from the right
+  (s/rtrim VALUE SUFFIX) -> STRING                  remove one exact suffix
+  (s/starts-with? VALUE PREFIX) -> BOOLEAN          test a prefix
+  (s/ends-with? VALUE SUFFIX) -> BOOLEAN            test a suffix
+  (s/contains? VALUE NEEDLE) -> BOOLEAN             test a substring
+  (s/in? VALUE CANDIDATE CANDIDATE ...) -> BOOLEAN  test exact equality with any candidate
+  (s/> VALUE VALUE) -> BOOLEAN                      greater than
+  (s/>= VALUE VALUE) -> BOOLEAN                     greater than or equal
+  (s/< VALUE VALUE) -> BOOLEAN                      less than
+  (s/<= VALUE VALUE) -> BOOLEAN                     less than or equal
+  (s/= VALUE VALUE) -> BOOLEAN                      equal
+  (s/!= VALUE VALUE) -> BOOLEAN                     not equal
 
   String functions render VALUE arguments with their default representation
   before processing. The s/ prefix therefore explicitly selects string
