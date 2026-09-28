@@ -124,6 +124,7 @@ fn example_input(
         ("s/rpad", _) => "api",
         ("s/count", _) => "café",
         ("s/empty?", _) => "",
+        ("s/ascii?", _) => "hello",
         ("s/escape", _) => r"hello\tworld",
         ("s/dquote", _) | ("s/squote", _) => "hello world",
         ("s/unquote", _) => r#""hello""#,

@@ -446,6 +446,32 @@ fn blank_predicate_matches_empty_and_unicode_whitespace() {
 }
 
 #[test]
+fn ascii_predicate_handles_empty_controls_unicode_and_nested_values() {
+    assert_eq!(
+        output(
+            r#"(p (s/ascii? "") (s/ascii? "\t") (s/ascii? "A7!?"))"#,
+            "record\n"
+        ),
+        "true true true\n"
+    );
+    assert_eq!(
+        output(
+            "(p (s/ascii? $1) (s/ascii? (s/lower $1)))",
+            "cafe\ncafé\n東京\n🦀\n"
+        ),
+        "true true\nfalse false\nfalse false\nfalse false\n"
+    );
+    assert_eq!(
+        output("(f (s/ascii? (s/trim $0))) (p $0)", " plain \n café \n\n"),
+        " plain \n\n"
+    );
+    assert_eq!(
+        output("(p (s/ascii? $2) (s/ascii? 42))", "one\n"),
+        "true true\n"
+    );
+}
+
+#[test]
 fn string_in_matches_exact_values_and_composes_with_filters() {
     assert_eq!(
         output(

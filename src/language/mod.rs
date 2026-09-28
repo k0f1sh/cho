@@ -398,6 +398,7 @@ registry!(
     string::Count,
     string::Empty,
     string::Blank,
+    string::Ascii,
     string::Escape,
     string::DoubleQuote,
     string::SingleQuote,

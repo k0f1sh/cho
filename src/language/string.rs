@@ -336,6 +336,24 @@ define_callable!(
 );
 
 define_callable!(
+    Ascii,
+    CallableDefinition {
+        name: "s/ascii?",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::Boolean))]
+    },
+    |_context, arguments| {
+        let [value_arg] = expr_array(arguments)?;
+        expr(Expr::StringAscii(Box::new(value_arg)))
+    },
+    String,
+    "test whether every byte is ASCII",
+    ["Empty strings and ASCII control characters count as ASCII."],
+    [(None, "(s/ascii? $1)")]
+);
+
+define_callable!(
     Escape,
     CallableDefinition {
         name: "s/escape",

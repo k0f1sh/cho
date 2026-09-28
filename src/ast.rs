@@ -227,6 +227,7 @@ pub enum Expr {
     Boolean(bool),
     StringEmpty(Box<Expr>),
     StringBlank(Box<Expr>),
+    StringAscii(Box<Expr>),
     StringIn {
         value: Box<Expr>,
         candidates: Vec<Expr>,
@@ -457,6 +458,7 @@ impl Expr {
             Self::DynamicField(value)
             | Self::StringEmpty(value)
             | Self::StringBlank(value)
+            | Self::StringAscii(value)
             | Self::NormalizeByteSize(value)
             | Self::ByteSizeToBytes(value)
             | Self::NormalizeIp(value)

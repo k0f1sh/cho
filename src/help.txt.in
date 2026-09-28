@@ -138,6 +138,8 @@ Strings:
   s/count and s/reverse operate on Unicode code points, not grapheme clusters
   or terminal display columns. Combining marks and joined emoji therefore
   count and reverse independently.
+  s/ascii? accepts only bytes in 0x00..0x7F, including control characters.
+  The empty string is ASCII; non-ASCII Unicode characters return false.
 
   s/before and s/after use the first delimiter and preserve the complete value
   on the other side. Without a delimiter, s/before returns the complete value

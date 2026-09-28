@@ -278,6 +278,9 @@ pub(super) fn evaluate(expr: &Expr, record: &EvalContext<'_, '_, '_>) -> EvalRes
         Expr::StringBlank(value) => Ok(RuntimeValue::Boolean(
             evaluate(value, record)?.render().trim().is_empty(),
         )),
+        Expr::StringAscii(value) => Ok(RuntimeValue::Boolean(
+            evaluate(value, record)?.render().is_ascii(),
+        )),
         Expr::StringIn { value, candidates } => {
             let value = evaluate(value, record)?.render();
             for candidate in candidates {

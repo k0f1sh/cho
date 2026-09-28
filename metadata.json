@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.38.0",
+  "cho_version": "0.38.1",
   "callables": [
     {
       "name": "print",
@@ -1328,6 +1328,30 @@
           "returns": "Boolean",
           "summary": null,
           "example": "(s/blank? \"  \")"
+        }
+      ]
+    },
+    {
+      "name": "s/ascii?",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "test whether every byte is ASCII",
+      "notes": [
+        "Empty strings and ASCII control characters count as ASCII."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Boolean",
+          "summary": null,
+          "example": "(s/ascii? $1)"
         }
       ]
     },
