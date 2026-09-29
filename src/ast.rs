@@ -411,6 +411,10 @@ pub enum Expr {
         fill: Option<Box<Expr>>,
     },
     Count(Box<Expr>),
+    CountOf {
+        value: Box<Expr>,
+        needle: Box<Expr>,
+    },
     Escape(Box<Expr>),
     Quote {
         kind: StringQuote,
@@ -500,6 +504,7 @@ impl Expr {
             | Self::DatePart { value, .. }
             | Self::Quote { value, .. }
             | Self::Trim { value, .. } => value.depth(),
+            Self::CountOf { value, needle } => value.depth().max(needle.depth()),
             Self::DynamicFieldRange { start, end } => start
                 .iter()
                 .chain(end.iter())

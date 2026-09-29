@@ -1090,6 +1090,10 @@ mod tests {
         }
         assert_invalid("(print (s/count))");
         assert_invalid("(print (s/count $1 $2))");
+        assert_invalid("(print (s/count-of))");
+        assert_invalid("(print (s/count-of $1))");
+        assert_invalid("(print (s/count-of $1 $2 $3))");
+        assert_invalid("(print (s/count-of $1 /regex/))");
         assert_invalid("(print (s/escape))");
         assert_invalid("(print (s/escape $1 $2))");
         for program in [
@@ -1241,14 +1245,14 @@ mod tests {
             Err(ParseError::UnknownFunction("unknown".to_owned()))
         );
         assert_eq!(
-            parse("(print (s/count $1 $x))"),
+            parse("(print (s/count-of $1 $2 $x))"),
             Err(ParseError::InvalidArity {
-                expression: "s/count".into(),
-                expected: "1 argument".into(),
-                actual: 2,
+                expression: "s/count-of".into(),
+                expected: "2 arguments".into(),
+                actual: 3,
             })
         );
-        assert_invalid("(print (-> $1 (s/count $x $2)))");
+        assert_invalid("(print (-> $1 (s/count-of $x $2)))");
         assert_eq!(
             parse("(print (-> $x unknown))"),
             Err(ParseError::InvalidField)

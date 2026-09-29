@@ -290,13 +290,36 @@ define_callable!(
         signatures: &[sig!([p!("value", Value, Required)] => Some(ValueType::Number))]
     },
     |_context, arguments| {
-        let [value_arg] = expr_array(arguments)?;
-        expr(Expr::Count(Box::new(value_arg)))
+        let [value] = expr_array(arguments)?;
+        expr(Expr::Count(Box::new(value)))
     },
     String,
     "count Unicode characters",
     [],
     [(None, "(s/count $1)")]
+);
+
+define_callable!(
+    CountOf,
+    CallableDefinition {
+        name: "s/count-of",
+        aliases: &[],
+        kind: CallableKind::Function,
+        signatures: &[
+            sig!([p!("value", Value, Required), p!("needle", Value, Required, "NEEDLE")] => Some(ValueType::Number))
+        ]
+    },
+    |_context, arguments| {
+        let [value, needle] = expr_array(arguments)?;
+        expr(Expr::CountOf {
+            value: Box::new(value),
+            needle: Box::new(needle),
+        })
+    },
+    String,
+    "count literal substring occurrences",
+    ["Counts non-overlapping matches. NEEDLE must not be empty."],
+    [(None, "(s/count-of $0 \"-\")", "api--worker", "2")]
 );
 
 define_callable!(

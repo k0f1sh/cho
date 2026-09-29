@@ -396,6 +396,7 @@ registry!(
     string::LeftPad,
     string::RightPad,
     string::Count,
+    string::CountOf,
     string::Empty,
     string::Blank,
     string::Ascii,

@@ -21,6 +21,7 @@ Common recipes:
   Transform one value     cho '(s/upper $1)'
   Join values             cho '(p (s/join "," $1 $2))'
   Replace text            cho '(p (s/replace-all $1 "-" "_"))'
+  Count hyphens           cho '(p (s/count-of $0 "-") $0)'
   Use a fallback          cho '(p (default $3 "unknown"))'
   Read CSV by header name cho --csv '(p %name %email)'
   Read TSV                cho --tsv '(p $1 $2)'

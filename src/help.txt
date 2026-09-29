@@ -21,6 +21,7 @@ Common recipes:
   Transform one value     cho '(s/upper $1)'
   Join values             cho '(p (s/join "," $1 $2))'
   Replace text            cho '(p (s/replace-all $1 "-" "_"))'
+  Count hyphens           cho '(p (s/count-of $0 "-") $0)'
   Use a fallback          cho '(p (default $3 "unknown"))'
   Read CSV by header name cho --csv '(p %name %email)'
   Read TSV                cho --tsv '(p $1 $2)'
@@ -172,6 +173,7 @@ Strings:
   (s/lpad VALUE WIDTH [FILL]) -> STRING             pad the left side to a Unicode character width
   (s/rpad VALUE WIDTH [FILL]) -> STRING             pad the right side to a Unicode character width
   (s/count VALUE) -> NUMBER                         count Unicode characters
+  (s/count-of VALUE NEEDLE) -> NUMBER               count literal substring occurrences
   (s/empty? VALUE) -> BOOLEAN                       test whether a string is empty
   (s/blank? VALUE) -> BOOLEAN                       test whether a string is empty or whitespace only
   (s/ascii? VALUE) -> BOOLEAN                       test whether every byte is ASCII

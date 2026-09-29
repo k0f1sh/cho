@@ -710,6 +710,20 @@ pub(super) fn evaluate(expr: &Expr, record: &EvalContext<'_, '_, '_>) -> EvalRes
         Expr::Count(value) => Ok(RuntimeValue::Number(
             evaluate(value, record)?.render().chars().count() as f64,
         )),
+        Expr::CountOf { value, needle } => {
+            let value = evaluate(value, record)?.render();
+            let needle = evaluate(needle, record)?.render();
+            if needle.is_empty() {
+                return Err(EvalError::conversion(
+                    "s/count-of",
+                    2,
+                    "a non-empty needle",
+                    needle,
+                    "is empty",
+                ));
+            }
+            Ok(RuntimeValue::Number(value.matches(&needle).count() as f64))
+        }
         Expr::Escape(value) => Ok(RuntimeValue::String(escape(
             &evaluate(value, record)?.render(),
         ))),

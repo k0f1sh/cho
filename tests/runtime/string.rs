@@ -404,6 +404,43 @@ fn count_counts_unicode_characters() {
 }
 
 #[test]
+fn count_of_counts_non_overlapping_literal_occurrences_and_composes() {
+    assert_eq!(
+        output(
+            r#"(p (s/count-of $0 "-") (s/count-of $0 "--") (s/count-of $0 "🦀") $0)"#,
+            "plain\na-b\na--b\n----\n🦀-🦀\n\n",
+        ),
+        "0 0 0 plain\n1 0 0 a-b\n2 1 0 a--b\n4 2 0 ----\n1 0 2 🦀-🦀\n0 0 0 \n"
+    );
+    assert_eq!(
+        output(
+            r#"(f (= (s/count-of $0 "-") 2)) (p (s/count-of (s/upper $0) "A") $0)"#,
+            "a--b\na-b\nnone\n",
+        ),
+        "1 a--b\n"
+    );
+    assert_eq!(output(r#"(s/count-of 123 "2")"#, "ignored\n"), "1\n");
+}
+
+#[test]
+fn count_of_rejects_an_empty_needle_after_prior_output() {
+    let mut stdout = Vec::new();
+    let error = cho::run(
+        r#"(p (s/count-of $0 $1))"#,
+        Cursor::new("a-b -\n\n"),
+        &mut stdout,
+    )
+    .unwrap_err();
+    assert_eq!(String::from_utf8(stdout).unwrap(), "1\n");
+    assert!(
+        error
+            .to_string()
+            .starts_with("record 2: s/count-of: argument 2 expects a non-empty needle"),
+        "{error}"
+    );
+}
+
+#[test]
 fn count_can_be_used_in_filters() {
     assert_eq!(
         output(

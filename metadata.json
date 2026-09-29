@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cho_version": "0.38.1",
+  "cho_version": "0.39.0",
   "callables": [
     {
       "name": "print",
@@ -1284,6 +1284,35 @@
           "returns": "Number",
           "summary": null,
           "example": "(s/count $1)"
+        }
+      ]
+    },
+    {
+      "name": "s/count-of",
+      "aliases": [],
+      "kind": "function",
+      "category": "string",
+      "summary": "count literal substring occurrences",
+      "notes": [
+        "Counts non-overlapping matches. NEEDLE must not be empty."
+      ],
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "value",
+              "type": "Value",
+              "cardinality": "required"
+            },
+            {
+              "name": "needle",
+              "type": "Value",
+              "cardinality": "required"
+            }
+          ],
+          "returns": "Number",
+          "summary": null,
+          "example": "(s/count-of $0 \"-\")"
         }
       ]
     },
