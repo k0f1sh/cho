@@ -947,3 +947,42 @@ fn network_constructors_work_through_call_and_call_exact() {
     assert!(result.stderr.is_empty());
     assert_eq!(result.stdout, b"192.168.1.0/24\n");
 }
+
+#[test]
+fn nested_program_forms_explain_the_value_requirement() {
+    for (program, message) in [
+        (
+            r#"(s/with $0 "a" (p $1 $2 $3 $5))"#,
+            "s/with: argument 3 expects a value; p",
+        ),
+        (
+            r#"(s/with $0 (print $1))"#,
+            "s/with: argument 2 expects a value; print",
+        ),
+        (
+            "(s/join \" \" (f true))",
+            "s/join: argument 2 expects a value; f",
+        ),
+        ("(-> $0 p)", "p"),
+    ] {
+        let output = run_with_args(&[program], "abc\n");
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert_eq!(
+            stderr.contains("use (s/join \" \" ...) instead to combine values with spaces"),
+            message != "s/join: argument 2 expects a value; f",
+            "{stderr}"
+        );
+        if message == "p" {
+            assert!(stderr.contains("p is a top-level form and does not return a value"));
+        } else {
+            assert!(
+                stderr.contains(&format!(
+                    "{message} is a top-level form and does not return a value"
+                )),
+                "{stderr}"
+            );
+        }
+    }
+}

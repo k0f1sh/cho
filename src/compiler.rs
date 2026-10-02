@@ -167,7 +167,10 @@ impl Compiler {
             CompileContext::Expr => definition.kind != CallableKind::ProgramForm,
         };
         if !valid_context {
-            return Err(ParseError::InvalidSyntax);
+            return Err(ParseError::ProgramFormAsValue {
+                form: operator.to_owned(),
+                argument: None,
+            });
         }
         let signature = definition
             .signature(arguments.len())
@@ -180,6 +183,16 @@ impl Compiler {
                     .parameter(index)
                     .expect("signature accepts argument");
                 self.bind_argument(parameter, argument)
+                    .map_err(|error| match error {
+                        ParseError::ProgramFormAsValue {
+                            form,
+                            argument: None,
+                        } => ParseError::ProgramFormAsValue {
+                            form,
+                            argument: Some((operator.to_owned(), index + 1)),
+                        },
+                        error => error,
+                    })
             })
             .collect::<Result<Vec<_>, _>>()?;
         let compiled = callable.to_ast(self, Arguments(arguments))?;
@@ -419,6 +432,7 @@ mod tests {
             matches!(
                 parse(program),
                 Err(ParseError::InvalidSyntax
+                    | ParseError::ProgramFormAsValue { .. }
                     | ParseError::InvalidArity { .. }
                     | ParseError::UnknownFunction(_))
             ),
@@ -1257,7 +1271,13 @@ mod tests {
             parse("(print (-> $x unknown))"),
             Err(ParseError::InvalidField)
         );
-        assert_eq!(parse("(print (print $x))"), Err(ParseError::InvalidSyntax));
+        assert_eq!(
+            parse("(print (print $x))"),
+            Err(ParseError::ProgramFormAsValue {
+                form: "print".into(),
+                argument: Some(("print".into(), 1)),
+            })
+        );
         assert_eq!(parse("(s/count $x)"), Err(ParseError::InvalidField));
     }
 }

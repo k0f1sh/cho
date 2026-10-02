@@ -74,6 +74,7 @@ define_callable!(
     String,
     "evaluate a value using fields split from another value",
     [
+        "BODY must return a value; print/p and filter/f are top-level forms and cannot be used in BODY. Use s/join to combine fields into a value.",
         "Without DELIMITER, Unicode whitespace splits fields and runs of whitespace are ignored.",
         "With DELIMITER, empty fields are preserved and DELIMITER must not be empty. BODY sees the local value as $0; NR is unchanged."
     ],

@@ -6,6 +6,10 @@ pub(crate) const MAX_EXPRESSION_DEPTH: usize = 256;
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
     InvalidSyntax,
+    ProgramFormAsValue {
+        form: String,
+        argument: Option<(String, usize)>,
+    },
     AutomaticValueWithPrint,
     MultipleAutomaticValues,
     FilterAfterAutomaticValue,
@@ -29,6 +33,25 @@ pub enum ParseError {
 impl fmt::Display for ParseError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let message = match self {
+            Self::ProgramFormAsValue { form, argument } => {
+                if let Some((expression, position)) = argument {
+                    write!(
+                        formatter,
+                        "{expression}: argument {position} expects a value; "
+                    )?;
+                }
+                write!(
+                    formatter,
+                    "{form} is a top-level form and does not return a value"
+                )?;
+                if matches!(form.as_str(), "print" | "p") {
+                    write!(
+                        formatter,
+                        "; use (s/join \" \" ...) instead to combine values with spaces"
+                    )?;
+                }
+                return Ok(());
+            }
             Self::InvalidSyntax => "invalid syntax",
             Self::AutomaticValueWithPrint => {
                 "cannot combine an automatic top-level value with print"
